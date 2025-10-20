@@ -60,7 +60,7 @@ namespace FarmaciaSolidariaCristiana.Controllers
         }
 
         // GET: Medicines/Create
-        [Authorize(Roles = "Farmaceutico")]
+        [Authorize(Roles = "Admin,Farmaceutico")]
         public IActionResult Create()
         {
             return View();
@@ -68,7 +68,7 @@ namespace FarmaciaSolidariaCristiana.Controllers
 
         // POST: Medicines/Create
         [HttpPost]
-        [Authorize(Roles = "Farmaceutico")]
+        [Authorize(Roles = "Admin,Farmaceutico")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create([Bind("Name,Description,StockQuantity,Unit,NationalCode")] Medicine medicine)
         {
@@ -84,7 +84,7 @@ namespace FarmaciaSolidariaCristiana.Controllers
         }
 
         // GET: Medicines/Edit/5
-        [Authorize(Roles = "Farmaceutico")]
+        [Authorize(Roles = "Admin,Farmaceutico")]
         public async Task<IActionResult> Edit(int? id)
         {
             if (id == null)
@@ -102,7 +102,7 @@ namespace FarmaciaSolidariaCristiana.Controllers
 
         // POST: Medicines/Edit/5
         [HttpPost]
-        [Authorize(Roles = "Farmaceutico")]
+        [Authorize(Roles = "Admin,Farmaceutico")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(int id, [Bind("Id,Name,Description,StockQuantity,Unit,NationalCode")] Medicine medicine)
         {
@@ -137,7 +137,7 @@ namespace FarmaciaSolidariaCristiana.Controllers
         }
 
         // GET: Medicines/Delete/5
-        [Authorize(Roles = "Farmaceutico")]
+        [Authorize(Roles = "Admin,Farmaceutico")]
         public async Task<IActionResult> Delete(int? id)
         {
             if (id == null)
@@ -157,7 +157,7 @@ namespace FarmaciaSolidariaCristiana.Controllers
 
         // POST: Medicines/Delete/5
         [HttpPost, ActionName("Delete")]
-        [Authorize(Roles = "Farmaceutico")]
+        [Authorize(Roles = "Admin,Farmaceutico")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
@@ -175,7 +175,7 @@ namespace FarmaciaSolidariaCristiana.Controllers
 
         // GET: Medicines/SearchCIMA?cn=12345
         [HttpGet]
-        [Authorize(Roles = "Farmaceutico")]
+        [Authorize(Roles = "Admin,Farmaceutico")]
         public async Task<IActionResult> SearchCIMA(string cn)
         {
             if (string.IsNullOrEmpty(cn))

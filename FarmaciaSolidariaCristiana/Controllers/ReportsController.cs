@@ -12,7 +12,7 @@ using iText.IO.Font.Constants;
 
 namespace FarmaciaSolidariaCristiana.Controllers
 {
-    [Authorize(Roles = "Farmaceutico,Viewer")]
+    [Authorize(Roles = "Admin,Farmaceutico,Viewer")]
     public class ReportsController : Controller
     {
         private readonly ApplicationDbContext _context;
