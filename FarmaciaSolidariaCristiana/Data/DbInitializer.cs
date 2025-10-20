@@ -38,11 +38,17 @@ namespace FarmaciaSolidariaCristiana.Data
                     EmailConfirmed = true
                 };
 
-                var result = await userManager.CreateAsync(newAdmin, "Admin123!");
+                var result = await userManager.CreateAsync(newAdmin, "doqkox-gadqud-niJho0");
                 if (result.Succeeded)
                 {
                     await userManager.AddToRoleAsync(newAdmin, "Admin");
                 }
+            }
+            else
+            {
+                // Update existing admin password
+                var token = await userManager.GeneratePasswordResetTokenAsync(adminUser);
+                await userManager.ResetPasswordAsync(adminUser, token, "doqkox-gadqud-niJho0");
             }
         }
     }
