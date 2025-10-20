@@ -27,8 +27,10 @@ Sistema web para la gestión de medicamentos, entregas y donaciones de la Farmac
 ### 1. Configurar Base de Datos
 Edita `FarmaciaSolidariaCristiana/appsettings.json`:
 ```json
-"DefaultConnection": "Server=192.168.2.113,1433;Database=FarmaciaDb;User Id=farmaceutico;Password=TU_PASSWORD;TrustServerCertificate=True;"
+"DefaultConnection": "Server=TU_SERVIDOR;Database=FarmaciaDb;User Id=TU_USUARIO;Password=TU_PASSWORD;TrustServerCertificate=True;"
 ```
+
+> ⚠️ **IMPORTANTE:** Nunca compartas las credenciales reales. Usa variables de entorno o archivos de configuración no versionados para producción.
 
 ### 2. Aplicar Migraciones
 ```bash
@@ -42,9 +44,10 @@ dotnet run
 ```
 Accede a: http://localhost:5000
 
-### 4. Credenciales
-- **Usuario:** `admin`
-- **Contraseña:** `doqkox-gadqud-niJho0`
+### 4. Credenciales Iniciales
+El sistema crea un usuario administrador por defecto. Las credenciales se configuran en el código.
+
+> 🔒 **Seguridad:** Cambia la contraseña del administrador inmediatamente después del primer acceso.
 
 ### 5. Limpiar Datos de Prueba (Opcional)
 ```bash
@@ -60,11 +63,11 @@ dotnet ef database update
 # 1. Desde tu Mac: Publicar y transferir
 cd FarmaciaSolidariaCristiana
 dotnet publish -c Release -o ./publish
-scp setup-ubuntu.sh usuario@192.168.2.113:~/
-rsync -avz --progress ./publish/ usuario@192.168.2.113:~/farmacia-files/
+scp setup-ubuntu.sh usuario@TU_SERVIDOR_IP:~/
+rsync -avz --progress ./publish/ usuario@TU_SERVIDOR_IP:~/farmacia-files/
 
 # 2. En el servidor Ubuntu: Instalar
-ssh usuario@192.168.2.113
+ssh usuario@TU_SERVIDOR_IP
 bash setup-ubuntu.sh
 ```
 
@@ -77,18 +80,20 @@ Ver **[DEPLOYMENT_UBUNTU.md](./DEPLOYMENT_UBUNTU.md)** para instrucciones detall
 ```bash
 # 1. Desde tu Mac
 dotnet publish -c Release -o ./publish
-scp update-app.sh usuario@192.168.2.113:~/
-rsync -avz --progress ./publish/ usuario@192.168.2.113:~/farmacia-new/
+scp update-app.sh usuario@TU_SERVIDOR_IP:~/
+rsync -avz --progress ./publish/ usuario@TU_SERVIDOR_IP:~/farmacia-new/
 
 # 2. En Ubuntu
-ssh usuario@192.168.2.113
+ssh usuario@TU_SERVIDOR_IP
 bash update-app.sh
 ```
 
 ## 📚 Documentación
 
+- **[SECURITY.md](./SECURITY.md)** - ⚠️ **Guía de seguridad y manejo de credenciales** (LEER PRIMERO)
 - **[DEPLOYMENT_UBUNTU.md](./DEPLOYMENT_UBUNTU.md)** - Guía completa de despliegue en Ubuntu Server
 - **[QUICK_COMMANDS.md](./QUICK_COMMANDS.md)** - Comandos rápidos de referencia
+- **.env.example** - Plantilla de variables de entorno (copiar a .env)
 - **setup-ubuntu.sh** - Script de instalación automática
 - **update-app.sh** - Script de actualización
 
@@ -105,8 +110,8 @@ bash update-app.sh
 ## 🌐 Acceso en Red Local
 
 Una vez desplegado en Ubuntu Server:
-- **Por IP:** http://192.168.2.113
-- **Por nombre:** http://MPMESCRITORIO
+- **Por IP:** http://TU_SERVIDOR_IP
+- **Por nombre:** http://NOMBRE_SERVIDOR
 
 ## 📊 Estructura del Proyecto
 
@@ -138,6 +143,8 @@ FarmaciaSolidariaCristiana/
 - Validación de entrada en todos los formularios
 - Gestión de sesiones con cookies
 - Configuración de lockout para intentos fallidos
+
+> ⚠️ **IMPORTANTE:** Lee [SECURITY.md](./SECURITY.md) antes de configurar el proyecto. Nunca incluyas credenciales reales en el código o repositorio.
 
 ## 📝 Comandos Útiles
 

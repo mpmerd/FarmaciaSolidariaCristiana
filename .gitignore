@@ -3,6 +3,22 @@
 ##
 ## Get latest from https://github.com/github/gitignore/blob/main/VisualStudio.gitignore
 
+##
+## SECURITY: Sensitive files - NEVER commit these!
+##
+.env
+.env.local
+.env.*.local
+*.key
+*.pem
+secrets.json
+appsettings.Production.json
+appsettings.*.json
+!appsettings.json
+!appsettings.Development.json
+credentials.txt
+passwords.txt
+
 # User-specific files
 *.rsuser
 *.suo
