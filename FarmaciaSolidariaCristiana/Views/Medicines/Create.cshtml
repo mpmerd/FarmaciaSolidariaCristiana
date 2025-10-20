@@ -1,0 +1,107 @@
+@model FarmaciaSolidariaCristiana.Models.Medicine
+@{
+    ViewData["Title"] = "Crear Medicamento";
+}
+
+<div class="container mt-4">
+    <div class="card">
+        <div class="card-header bg-success text-white">
+            <h4 class="mb-0">@ViewData["Title"]</h4>
+        </div>
+        <div class="card-body">
+            <form asp-action="Create" id="medicineForm">
+                <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+                
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label asp-for="NationalCode" class="form-label"></label>
+                        <div class="input-group">
+                            <input asp-for="NationalCode" class="form-control" id="nationalCode" placeholder="Ej: 652321" />
+                            <button type="button" class="btn btn-primary" id="searchCIMABtn">
+                                <i class="bi bi-search"></i> Buscar en Internet
+                            </button>
+                        </div>
+                        <span asp-validation-for="NationalCode" class="text-danger"></span>
+                        <small class="form-text text-muted">Introduce el CN del envase y pulsa Buscar</small>
+                    </div>
+                </div>
+                
+                <div class="form-group mb-3">
+                    <label asp-for="Name" class="form-label"></label>
+                    <input asp-for="Name" class="form-control" id="medicineName" />
+                    <span asp-validation-for="Name" class="text-danger"></span>
+                </div>
+                
+                <div class="form-group mb-3">
+                    <label asp-for="Description" class="form-label"></label>
+                    <textarea asp-for="Description" class="form-control" rows="3" id="medicineDescription"></textarea>
+                    <span asp-validation-for="Description" class="text-danger"></span>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group mb-3">
+                            <label asp-for="StockQuantity" class="form-label"></label>
+                            <input asp-for="StockQuantity" class="form-control" type="number" />
+                            <span asp-validation-for="StockQuantity" class="text-danger"></span>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group mb-3">
+                            <label asp-for="Unit" class="form-label"></label>
+                            <select asp-for="Unit" class="form-select">
+                                <option value="comprimidos">Comprimidos</option>
+                                <option value="ml">ml (Mililitros)</option>
+                                <option value="sobres">Sobres</option>
+                                <option value="cápsulas">Cápsulas</option>
+                                <option value="ampollas">Ampollas</option>
+                                <option value="unidades">Unidades</option>
+                            </select>
+                            <span asp-validation-for="Unit" class="text-danger"></span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="d-grid gap-2">
+                    <button type="submit" class="btn btn-success">Crear</button>
+                    <a asp-action="Index" class="btn btn-secondary">Volver a la Lista</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    <script>
+        document.getElementById('searchCIMABtn').addEventListener('click', function() {
+            const cn = document.getElementById('nationalCode').value;
+            if (!cn) {
+                alert('Por favor, introduzca un Código Nacional');
+                return;
+            }
+            
+            this.disabled = true;
+            this.innerHTML = '<span class="spinner-border spinner-border-sm" role="status"></span> Buscando...';
+            
+            fetch(`/Medicines/SearchCIMA?cn=${cn}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        document.getElementById('medicineName').value = data.name || '';
+                        document.getElementById('medicineDescription').value = data.description || '';
+                        alert('Información cargada desde CIMA');
+                    } else {
+                        alert(data.message || 'No se encontró información');
+                    }
+                })
+                .catch(error => {
+                    alert('Error al buscar en CIMA: ' + error);
+                })
+                .finally(() => {
+                    this.disabled = false;
+                    this.innerHTML = '<i class="bi bi-search"></i> Buscar en Internet';
+                });
+        });
+    </script>
+}

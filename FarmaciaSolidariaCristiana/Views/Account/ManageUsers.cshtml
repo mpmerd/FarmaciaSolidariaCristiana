@@ -1,0 +1,37 @@
+@{
+    ViewData["Title"] = "Gestión de Usuarios";
+}
+
+<div class="container mt-4">
+    <div class="card">
+        <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+            <h4 class="mb-0">@ViewData["Title"]</h4>
+            <a asp-action="CreateUser" class="btn btn-light">
+                <i class="bi bi-plus-circle"></i> Crear Nuevo Usuario
+            </a>
+        </div>
+        <div class="card-body">
+            @if (TempData["SuccessMessage"] != null)
+            {
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    @TempData["SuccessMessage"]
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            }
+            
+            <p class="text-muted">
+                Solo los administradores pueden crear y gestionar usuarios. 
+                Los usuarios creados recibirán acceso según el rol asignado.
+            </p>
+            
+            <div class="alert alert-info">
+                <h5>Roles Disponibles:</h5>
+                <ul>
+                    <li><strong>Admin:</strong> Acceso completo al sistema, puede crear usuarios</li>
+                    <li><strong>Farmacéutico:</strong> Puede gestionar medicamentos, entregas, donaciones y búsquedas de CN</li>
+                    <li><strong>Viewer:</strong> Solo puede ver información y generar reportes</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>

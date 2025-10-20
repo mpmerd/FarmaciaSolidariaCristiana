@@ -1,0 +1,110 @@
+@{
+    ViewData["Title"] = "Reportes PDF";
+}
+
+<div class="container mt-4">
+    <h2 class="mb-4"><i class="bi bi-file-pdf text-danger"></i> Generar Reportes PDF</h2>
+    
+    <div class="row">
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">Reporte de Entregas</h5>
+                </div>
+                <div class="card-body">
+                    <form asp-action="DeliveriesPDF" method="post">
+                        <div class="mb-3">
+                            <label class="form-label">Medicamento (Opcional)</label>
+                            <select name="medicineId" class="form-select" asp-items="ViewBag.MedicineId">
+                                <option value="">-- Todos --</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Fecha Inicio</label>
+                            <input type="date" name="startDate" class="form-control" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Fecha Fin</label>
+                            <input type="date" name="endDate" class="form-control" />
+                        </div>
+                        <button type="submit" class="btn btn-success w-100">
+                            <i class="bi bi-download"></i> Descargar PDF
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header bg-warning">
+                    <h5 class="mb-0">Reporte de Donaciones</h5>
+                </div>
+                <div class="card-body">
+                    <form asp-action="DonationsPDF" method="post">
+                        <div class="mb-3">
+                            <label class="form-label">Medicamento (Opcional)</label>
+                            <select name="medicineId" class="form-select" asp-items="ViewBag.MedicineId">
+                                <option value="">-- Todos --</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Fecha Inicio</label>
+                            <input type="date" name="startDate" class="form-control" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Fecha Fin</label>
+                            <input type="date" name="endDate" class="form-control" />
+                        </div>
+                        <button type="submit" class="btn btn-warning w-100">
+                            <i class="bi bi-download"></i> Descargar PDF
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Reporte Mensual Completo</h5>
+                </div>
+                <div class="card-body">
+                    <form asp-action="MonthlyPDF" method="post" class="row">
+                        <div class="col-md-5">
+                            <label class="form-label">Año</label>
+                            <input type="number" name="year" class="form-control" value="@DateTime.Now.Year" min="2020" max="2100" required />
+                        </div>
+                        <div class="col-md-5">
+                            <label class="form-label">Mes</label>
+                            <select name="month" class="form-select" required>
+                                <option value="1">Enero</option>
+                                <option value="2">Febrero</option>
+                                <option value="3">Marzo</option>
+                                <option value="4">Abril</option>
+                                <option value="5">Mayo</option>
+                                <option value="6">Junio</option>
+                                <option value="7">Julio</option>
+                                <option value="8">Agosto</option>
+                                <option value="9">Septiembre</option>
+                                <option value="10">Octubre</option>
+                                <option value="11">Noviembre</option>
+                                <option value="12">Diciembre</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="bi bi-download"></i> Generar
+                            </button>
+                        </div>
+                    </form>
+                    <p class="text-muted mt-3 mb-0">
+                        <small>Este reporte incluye: Total de donaciones, entregas y stock actual del mes seleccionado.</small>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

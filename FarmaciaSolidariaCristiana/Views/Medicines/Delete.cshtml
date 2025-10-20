@@ -1,0 +1,40 @@
+@model FarmaciaSolidariaCristiana.Models.Medicine
+@{
+    ViewData["Title"] = "Eliminar Medicamento";
+}
+
+<div class="container mt-4">
+    <div class="card border-danger">
+        <div class="card-header bg-danger text-white">
+            <h4 class="mb-0">@ViewData["Title"]</h4>
+        </div>
+        <div class="card-body">
+            <div class="alert alert-warning">
+                <h5><i class="bi bi-exclamation-triangle"></i> ¿Está seguro de que desea eliminar este medicamento?</h5>
+                <p>Esta acción no se puede deshacer.</p>
+            </div>
+            
+            <dl class="row">
+                <dt class="col-sm-3">@Html.DisplayNameFor(model => model.Name)</dt>
+                <dd class="col-sm-9">@Html.DisplayFor(model => model.Name)</dd>
+                
+                <dt class="col-sm-3">@Html.DisplayNameFor(model => model.Description)</dt>
+                <dd class="col-sm-9">@Html.DisplayFor(model => model.Description)</dd>
+                
+                <dt class="col-sm-3">@Html.DisplayNameFor(model => model.StockQuantity)</dt>
+                <dd class="col-sm-9">@Html.DisplayFor(model => model.StockQuantity) @Html.DisplayFor(model => model.Unit)</dd>
+                
+                <dt class="col-sm-3">@Html.DisplayNameFor(model => model.NationalCode)</dt>
+                <dd class="col-sm-9">@Html.DisplayFor(model => model.NationalCode)</dd>
+            </dl>
+            
+            <form asp-action="Delete">
+                <input type="hidden" asp-for="Id" />
+                <div class="d-grid gap-2">
+                    <button type="submit" class="btn btn-danger">Confirmar Eliminación</button>
+                    <a asp-action="Index" class="btn btn-secondary">Cancelar</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

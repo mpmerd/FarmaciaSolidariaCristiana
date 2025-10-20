@@ -1,0 +1,70 @@
+@model IEnumerable<FarmaciaSolidariaCristiana.Models.Delivery>
+@{
+    ViewData["Title"] = "Entregas";
+}
+
+<div class="container mt-4">
+    <div class="card">
+        <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+            <h4 class="mb-0">@ViewData["Title"]</h4>
+            @if (User.IsInRole("Farmaceutico"))
+            {
+                <a asp-action="Create" class="btn btn-light">
+                    <i class="bi bi-plus-circle"></i> Nueva Entrega
+                </a>
+            }
+        </div>
+        <div class="card-body">
+            @if (TempData["SuccessMessage"] != null)
+            {
+                <div class="alert alert-success alert-dismissible fade show">
+                    @TempData["SuccessMessage"]
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            }
+            
+            <form asp-action="Index" method="get" class="row mb-3">
+                <div class="col-md-4">
+                    <input type="text" name="searchString" class="form-control" placeholder="Buscar medicamento..." />
+                </div>
+                <div class="col-md-3">
+                    <input type="date" name="startDate" class="form-control" />
+                </div>
+                <div class="col-md-3">
+                    <input type="date" name="endDate" class="form-control" />
+                </div>
+                <div class="col-md-2">
+                    <button class="btn btn-primary w-100" type="submit">Filtrar</button>
+                </div>
+            </form>
+            
+            <div class="alert alert-info">
+                <strong>Total Entregas:</strong> @ViewData["TotalDeliveries"]
+            </div>
+            
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Medicamento</th>
+                            <th>Cantidad</th>
+                            <th>Fecha</th>
+                            <th>Nota Paciente</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model)
+                        {
+                            <tr>
+                                <td>@item.Medicine?.Name</td>
+                                <td>@item.Quantity @item.Medicine?.Unit</td>
+                                <td>@item.DeliveryDate.ToString("dd/MM/yyyy")</td>
+                                <td>@item.PatientNote</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>

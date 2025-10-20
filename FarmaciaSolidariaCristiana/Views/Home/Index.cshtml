@@ -1,0 +1,70 @@
+﻿@{
+    ViewData["Title"] = "Inicio";
+}
+
+<div class="text-center mt-5">
+    <div class="jumbotron bg-light p-5 rounded">
+        <h1 class="display-4 text-primary">
+            <i class="bi bi-heart-pulse-fill"></i>
+            Bienvenido a la Farmacia Solidaria Cristiana
+        </h1>
+        <p class="lead mt-3">Iglesia Metodista de Cárdenas</p>
+        <hr class="my-4" />
+        <p class="text-muted">
+            Sistema de gestión de medicamentos, donaciones y entregas para nuestra farmacia solidaria.
+            Trabajando con transparencia para servir a nuestra comunidad.
+        </p>
+        
+        @if (User.Identity?.IsAuthenticated == true)
+        {
+            <div class="row mt-5">
+                <div class="col-md-3">
+                    <div class="card text-center shadow-sm">
+                        <div class="card-body">
+                            <i class="bi bi-capsule text-primary" style="font-size: 3rem;"></i>
+                            <h5 class="card-title mt-3">Medicamentos</h5>
+                            <p class="card-text">Gestionar inventario</p>
+                            <a asp-controller="Medicines" asp-action="Index" class="btn btn-primary">Ver</a>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card text-center shadow-sm">
+                        <div class="card-body">
+                            <i class="bi bi-box-arrow-right text-success" style="font-size: 3rem;"></i>
+                            <h5 class="card-title mt-3">Entregas</h5>
+                            <p class="card-text">Registrar entregas</p>
+                            <a asp-controller="Deliveries" asp-action="Index" class="btn btn-success">Ver</a>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card text-center shadow-sm">
+                        <div class="card-body">
+                            <i class="bi bi-gift text-warning" style="font-size: 3rem;"></i>
+                            <h5 class="card-title mt-3">Donaciones</h5>
+                            <p class="card-text">Registrar donaciones</p>
+                            <a asp-controller="Donations" asp-action="Index" class="btn btn-warning">Ver</a>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card text-center shadow-sm">
+                        <div class="card-body">
+                            <i class="bi bi-file-pdf text-danger" style="font-size: 3rem;"></i>
+                            <h5 class="card-title mt-3">Reportes</h5>
+                            <p class="card-text">Generar reportes PDF</p>
+                            <a asp-controller="Reports" asp-action="Index" class="btn btn-danger">Ver</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+        else
+        {
+            <a class="btn btn-primary btn-lg mt-4" asp-controller="Account" asp-action="Login">
+                <i class="bi bi-box-arrow-in-right"></i> Iniciar Sesión
+            </a>
+        }
+    </div>
+</div>
