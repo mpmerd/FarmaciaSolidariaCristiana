@@ -185,13 +185,26 @@ namespace FarmaciaSolidariaCristiana.Controllers
 
             try
             {
-                var httpClient = _httpClientFactory.CreateClient();
-                var response = await httpClient.GetAsync($"https://cima.aemps.es/cima/rest/medicamento?cn={cn}");
+                var httpClient = _httpClientFactory.CreateClient("CimaApi");
+                
+                _logger.LogInformation("Calling CIMA API for CN: {CN}", cn);
+                
+                var response = await httpClient.GetAsync($"cima/rest/medicamento?cn={cn}");
+
+                _logger.LogInformation("CIMA API Response Status: {StatusCode} for CN: {CN}", 
+                    response.StatusCode, cn);
 
                 if (response.IsSuccessStatusCode)
                 {
                     var jsonString = await response.Content.ReadAsStringAsync();
-                    _logger.LogInformation("CIMA API call successful for CN: {CN}", cn);
+                    _logger.LogInformation("CIMA API call successful for CN: {CN}, Response length: {Length}", 
+                        cn, jsonString?.Length ?? 0);
+
+                    if (string.IsNullOrEmpty(jsonString))
+                    {
+                        _logger.LogWarning("CIMA API returned empty response for CN: {CN}", cn);
+                        return Json(new { success = false, message = "La API no devolvió datos" });
+                    }
 
                     using (JsonDocument doc = JsonDocument.Parse(jsonString))
                     {
@@ -236,10 +249,21 @@ namespace FarmaciaSolidariaCristiana.Controllers
                 _logger.LogWarning("CIMA API returned no results for CN: {CN}", cn);
                 return Json(new { success = false, message = "No se encontró información para este Código Nacional" });
             }
+            catch (HttpRequestException httpEx)
+            {
+                _logger.LogError(httpEx, "HTTP error calling CIMA API for CN: {CN}. Message: {Message}", cn, httpEx.Message);
+                return Json(new { success = false, message = $"Error de conexión con CIMA API: {httpEx.Message}" });
+            }
+            catch (TaskCanceledException timeoutEx)
+            {
+                _logger.LogError(timeoutEx, "Timeout calling CIMA API for CN: {CN}", cn);
+                return Json(new { success = false, message = "Timeout al conectar con CIMA API (>30s)" });
+            }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error calling CIMA API for CN: {CN}", cn);
-                return Json(new { success = false, message = "Error al conectar con CIMA API" });
+                _logger.LogError(ex, "Error calling CIMA API for CN: {CN}. Type: {Type}, Message: {Message}", 
+                    cn, ex.GetType().Name, ex.Message);
+                return Json(new { success = false, message = $"Error al conectar con CIMA API: {ex.Message}" });
             }
         }
 

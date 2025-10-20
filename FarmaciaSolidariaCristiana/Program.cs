@@ -41,7 +41,19 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.SlidingExpiration = true;
 });
 
-// Add HttpClient for CIMA API calls
+// Add HttpClient for CIMA API calls with configuration
+builder.Services.AddHttpClient("CimaApi", client =>
+{
+    client.BaseAddress = new Uri("https://cima.aemps.es/");
+    client.Timeout = TimeSpan.FromSeconds(30);
+    client.DefaultRequestHeaders.Add("User-Agent", "FarmaciaSolidariaCristiana/1.0");
+    client.DefaultRequestHeaders.Add("Accept", "application/json");
+}).ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+{
+    ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
+});
+
+// Also add default HttpClient
 builder.Services.AddHttpClient();
 
 var app = builder.Build();
