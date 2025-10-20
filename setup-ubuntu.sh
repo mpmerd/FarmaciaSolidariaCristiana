@@ -53,11 +53,27 @@ print_message "Paso 2: Instalando dependencias..."
 sudo apt install -y wget curl apt-transport-https software-properties-common
 
 echo ""
-print_message "Paso 3: Instalando .NET 9..."
+print_message "Paso 3: Verificando/Instalando .NET 8..."
 
-# Detectar versión de Ubuntu
-UBUNTU_VERSION=$(lsb_release -rs)
-print_message "Ubuntu ${UBUNTU_VERSION} detectado"
+# Verificar si .NET ya está instalado
+if command -v dotnet &> /dev/null; then
+    DOTNET_VERSION=$(dotnet --version)
+    print_message ".NET ${DOTNET_VERSION} ya está instalado"
+    
+    if [[ $DOTNET_VERSION == 8.* ]]; then
+        print_message "Versión de .NET compatible detectada"
+    else
+        print_warning ".NET ${DOTNET_VERSION} detectado, pero se requiere .NET 8.x"
+        read -p "¿Deseas instalar .NET 8 SDK también? (y/n): " INSTALL_NET8
+        if [ "$INSTALL_NET8" != "y" ] && [ "$INSTALL_NET8" != "Y" ]; then
+            print_warning "Continuando con la versión actual..."
+        fi
+    fi
+else
+    print_message "Instalando .NET 8..."
+    # Detectar versión de Ubuntu
+    UBUNTU_VERSION=$(lsb_release -rs)
+    print_message "Ubuntu ${UBUNTU_VERSION} detectado"
 
 # Instalar repositorio de Microsoft
 wget https://packages.microsoft.com/config/ubuntu/${UBUNTU_VERSION}/packages-microsoft-prod.deb -O packages-microsoft-prod.deb
@@ -65,21 +81,27 @@ sudo dpkg -i packages-microsoft-prod.deb
 rm packages-microsoft-prod.deb
 
 sudo apt update
-sudo apt install -y dotnet-sdk-9.0 aspnetcore-runtime-9.0
+sudo apt install -y dotnet-sdk-8.0 aspnetcore-runtime-8.0
+fi
 
 # Verificar instalación
 if command -v dotnet &> /dev/null; then
-    print_message ".NET $(dotnet --version) instalado correctamente"
+    print_message ".NET $(dotnet --version) disponible"
 else
-    print_error "Error al instalar .NET"
+    print_error "Error al verificar .NET"
     exit 1
 fi
 
 echo ""
-print_message "Paso 4: Instalando Nginx..."
-sudo apt install -y nginx
-sudo systemctl start nginx
-sudo systemctl enable nginx
+print_message "Paso 4: Verificando/Instalando Nginx..."
+if command -v nginx &> /dev/null; then
+    print_message "Nginx ya está instalado"
+else
+    print_message "Instalando Nginx..."
+    sudo apt install -y nginx
+    sudo systemctl start nginx
+    sudo systemctl enable nginx
+fi
 
 echo ""
 print_message "Paso 5: Instalando herramientas de SQL Server..."
