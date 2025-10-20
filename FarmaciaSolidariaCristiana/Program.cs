@@ -53,6 +53,10 @@ using (var scope = app.Services.CreateScope())
     try
     {
         await DbInitializer.Initialize(services);
+        
+        // Seed test data (only if database is empty)
+        var context = services.GetRequiredService<ApplicationDbContext>();
+        await DataSeeder.SeedTestData(context);
     }
     catch (Exception ex)
     {

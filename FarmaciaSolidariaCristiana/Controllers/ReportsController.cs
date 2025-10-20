@@ -9,6 +9,7 @@ using iText.Layout.Element;
 using iText.Layout.Properties;
 using iText.Kernel.Font;
 using iText.IO.Font.Constants;
+using iText.IO.Image;
 
 namespace FarmaciaSolidariaCristiana.Controllers
 {
@@ -17,11 +18,81 @@ namespace FarmaciaSolidariaCristiana.Controllers
     {
         private readonly ApplicationDbContext _context;
         private readonly ILogger<ReportsController> _logger;
+        private readonly IWebHostEnvironment _environment;
 
-        public ReportsController(ApplicationDbContext context, ILogger<ReportsController> logger)
+        public ReportsController(ApplicationDbContext context, ILogger<ReportsController> logger, IWebHostEnvironment environment)
         {
             _context = context;
             _logger = logger;
+            _environment = environment;
+        }
+
+        private void AddPdfHeader(Document document, string title)
+        {
+            var boldFont = PdfFontFactory.CreateFont(StandardFonts.HELVETICA_BOLD);
+
+            // Crear tabla para logos
+            var logoTable = new Table(UnitValue.CreatePercentArray(new float[] { 1, 1 }))
+                .UseAllAvailableWidth()
+                .SetTextAlignment(TextAlignment.CENTER);
+
+            // Agregar logos
+            try
+            {
+                var logoIglesiaPath = Path.Combine(_environment.WebRootPath, "images", "logo-iglesia.png");
+                var logoAdrianoPath = Path.Combine(_environment.WebRootPath, "images", "logo-adriano.png");
+
+                if (System.IO.File.Exists(logoIglesiaPath))
+                {
+                    var logoIglesia = new Image(ImageDataFactory.Create(logoIglesiaPath))
+                        .SetHeight(50)
+                        .SetHorizontalAlignment(HorizontalAlignment.RIGHT);
+                    logoTable.AddCell(new Cell().Add(logoIglesia).SetBorder(iText.Layout.Borders.Border.NO_BORDER));
+                }
+                else
+                {
+                    logoTable.AddCell(new Cell().SetBorder(iText.Layout.Borders.Border.NO_BORDER));
+                }
+
+                if (System.IO.File.Exists(logoAdrianoPath))
+                {
+                    var logoAdriano = new Image(ImageDataFactory.Create(logoAdrianoPath))
+                        .SetHeight(50)
+                        .SetHorizontalAlignment(HorizontalAlignment.LEFT);
+                    logoTable.AddCell(new Cell().Add(logoAdriano).SetBorder(iText.Layout.Borders.Border.NO_BORDER));
+                }
+                else
+                {
+                    logoTable.AddCell(new Cell().SetBorder(iText.Layout.Borders.Border.NO_BORDER));
+                }
+            }
+            catch
+            {
+                // Si hay error cargando logos, continuar sin ellos
+                logoTable.AddCell(new Cell().SetBorder(iText.Layout.Borders.Border.NO_BORDER));
+                logoTable.AddCell(new Cell().SetBorder(iText.Layout.Borders.Border.NO_BORDER));
+            }
+
+            document.Add(logoTable);
+
+            // Título
+            var titleParagraph = new Paragraph(title)
+                .SetFont(boldFont)
+                .SetFontSize(20)
+                .SetTextAlignment(TextAlignment.CENTER);
+            document.Add(titleParagraph);
+
+            // Subtítulo
+            document.Add(new Paragraph("Farmacia Solidaria Cristiana - Iglesia Metodista de Cárdenas y Adriano Solidario")
+                .SetFontSize(12)
+                .SetTextAlignment(TextAlignment.CENTER));
+
+            // Fecha
+            document.Add(new Paragraph($"Fecha: {DateTime.Now:dd/MM/yyyy HH:mm}")
+                .SetFontSize(10)
+                .SetTextAlignment(TextAlignment.RIGHT));
+
+            document.Add(new Paragraph("\n"));
         }
 
         public IActionResult Index()
@@ -57,23 +128,8 @@ namespace FarmaciaSolidariaCristiana.Controllers
                 var writer = new PdfWriter(ms);
                 var pdf = new PdfDocument(writer);
                 var document = new Document(pdf);
-                var boldFont = PdfFontFactory.CreateFont(StandardFonts.HELVETICA_BOLD);
 
-                var title = new Paragraph("Reporte de Entregas")
-                    .SetFont(boldFont)
-                    .SetFontSize(20)
-                    .SetTextAlignment(TextAlignment.CENTER);
-                document.Add(title);
-                
-                document.Add(new Paragraph("Farmacia Solidaria Cristiana - Iglesia Metodista de Cárdenas")
-                    .SetFontSize(12)
-                    .SetTextAlignment(TextAlignment.CENTER));
-
-                document.Add(new Paragraph($"Fecha: {DateTime.Now:dd/MM/yyyy HH:mm}")
-                    .SetFontSize(10)
-                    .SetTextAlignment(TextAlignment.RIGHT));
-
-                document.Add(new Paragraph("\n"));
+                AddPdfHeader(document, "Reporte de Entregas");
 
                 var table = new Table(UnitValue.CreatePercentArray(new float[] { 3, 2, 2, 4 }))
                     .UseAllAvailableWidth();
@@ -128,23 +184,8 @@ namespace FarmaciaSolidariaCristiana.Controllers
                 var writer = new PdfWriter(ms);
                 var pdf = new PdfDocument(writer);
                 var document = new Document(pdf);
-                var boldFont = PdfFontFactory.CreateFont(StandardFonts.HELVETICA_BOLD);
 
-                var title = new Paragraph("Reporte de Donaciones")
-                    .SetFont(boldFont)
-                    .SetFontSize(20)
-                    .SetTextAlignment(TextAlignment.CENTER);
-                document.Add(title);
-                
-                document.Add(new Paragraph("Farmacia Solidaria Cristiana - Iglesia Metodista de Cárdenas")
-                    .SetFontSize(12)
-                    .SetTextAlignment(TextAlignment.CENTER));
-
-                document.Add(new Paragraph($"Fecha: {DateTime.Now:dd/MM/yyyy HH:mm}")
-                    .SetFontSize(10)
-                    .SetTextAlignment(TextAlignment.RIGHT));
-
-                document.Add(new Paragraph("\n"));
+                AddPdfHeader(document, "Reporte de Donaciones");
 
                 var table = new Table(UnitValue.CreatePercentArray(new float[] { 3, 2, 2, 4 }))
                     .UseAllAvailableWidth();
@@ -197,17 +238,7 @@ namespace FarmaciaSolidariaCristiana.Controllers
                 var document = new Document(pdf);
                 var boldFont = PdfFontFactory.CreateFont(StandardFonts.HELVETICA_BOLD);
 
-                var title = new Paragraph("Reporte Mensual")
-                    .SetFont(boldFont)
-                    .SetFontSize(20)
-                    .SetTextAlignment(TextAlignment.CENTER);
-                document.Add(title);
-                
-                var subtitle = new Paragraph("Farmacia Solidaria Cristiana, Iglesia Metodista de Cárdenas")
-                    .SetFont(boldFont)
-                    .SetFontSize(14)
-                    .SetTextAlignment(TextAlignment.CENTER);
-                document.Add(subtitle);
+                AddPdfHeader(document, "Reporte Mensual");
 
                 document.Add(new Paragraph($"{startDate:MMMM yyyy}")
                     .SetFontSize(12)
