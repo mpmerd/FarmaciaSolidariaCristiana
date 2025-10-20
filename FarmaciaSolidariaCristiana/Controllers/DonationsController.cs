@@ -42,7 +42,7 @@ namespace FarmaciaSolidariaCristiana.Controllers
             return View(await donations.OrderByDescending(d => d.DonationDate).ToListAsync());
         }
 
-        [Authorize(Roles = "Farmaceutico")]
+        [Authorize(Roles = "Admin,Farmaceutico")]
         public IActionResult Create()
         {
             ViewData["MedicineId"] = new SelectList(_context.Medicines, "Id", "Name");
@@ -50,7 +50,7 @@ namespace FarmaciaSolidariaCristiana.Controllers
         }
 
         [HttpPost]
-        [Authorize(Roles = "Farmaceutico")]
+        [Authorize(Roles = "Admin,Farmaceutico")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create([Bind("MedicineId,Quantity,DonationDate,DonorNote,Comments")] Donation donation)
         {

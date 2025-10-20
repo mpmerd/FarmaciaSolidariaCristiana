@@ -1,32 +1,38 @@
 # Farmacia Solidaria Cristiana - Sistema de Gestión
 
-## 🏥 Proyecto ASP.NET Core 8 MVC Completado
+## 🏥 Proyecto ASP.NET Core 8 MVC
 
-Sistema web para la gestión de medicamentos, entregas y donaciones de la Farmacia Solidaria Cristiana de la Iglesia Metodista de Cárdenas.
+Sistema web para la gestión de medicamentos, entregas y donaciones de la Farmacia Solidaria Cristiana de la **Iglesia Metodista de Cárdenas y Adriano Solidario**.
 
 ## ✅ Características Implementadas
 
-- ✅ Autenticación con ASP.NET Core Identity
-- ✅ Tres roles: Admin, Farmaceutico, Viewer
-- ✅ CRUD Medicamentos con búsqueda CIMA API (CN)
+### Funcionalidades
+- ✅ Autenticación con ASP.NET Core Identity (3 roles: Admin, Farmaceutico, Viewer)
+- ✅ CRUD Medicamentos con búsqueda CIMA API (código nacional español)
 - ✅ Registro de Entregas y Donaciones con gestión automática de stock
-- ✅ Generación de reportes PDF con iText7
-- ✅ Interfaz en español con Bootstrap 5
+- ✅ Generación de reportes PDF con logos institucionales (iText7)
+- ✅ Datos de prueba precargados (12 medicamentos, 8 donaciones, 14 entregas)
+- ✅ Interfaz en español con Bootstrap 5 y logos institucionales
 - ✅ HTTP solo (sin HTTPS) para red local
 - ✅ Compatible con SQL Server en Linux
 
-## 🚀 Inicio Rápido
+### Reportes
+- � Reporte de Entregas (con filtros por medicamento y fechas)
+- 📊 Reporte de Donaciones (con filtros)
+- 📊 Reporte Mensual (resumen de movimientos e inventario)
+- 🖼️ Todos los reportes incluyen logos institucionales
+
+## 🚀 Desarrollo Local
 
 ### 1. Configurar Base de Datos
 Edita `FarmaciaSolidariaCristiana/appsettings.json`:
 ```json
-"DefaultConnection": "Server=TU_SERVIDOR;Database=FarmaciaDb;User Id=usuario;Password=contraseña;TrustServerCertificate=True;"
+"DefaultConnection": "Server=192.168.2.113,1433;Database=FarmaciaDb;User Id=farmaceutico;Password=TU_PASSWORD;TrustServerCertificate=True;"
 ```
 
-### 2. Crear Base de Datos
+### 2. Aplicar Migraciones
 ```bash
 cd FarmaciaSolidariaCristiana
-dotnet ef migrations add InitialCreate
 dotnet ef database update
 ```
 
@@ -36,12 +42,135 @@ dotnet run
 ```
 Accede a: http://localhost:5000
 
-### 4. Login
-- Usuario: `admin`
-- Contraseña: `Admin123!`
+### 4. Credenciales
+- **Usuario:** `admin`
+- **Contraseña:** `doqkox-gadqud-niJho0`
 
-## 📖 Documentación Completa
-Ver **IMPLEMENTATION_GUIDE.md** para guía completa de implementación y vistas adicionales.
+### 5. Limpiar Datos de Prueba (Opcional)
+```bash
+dotnet ef database drop --force
+dotnet ef database update
+```
+
+## �️ Despliegue en Ubuntu Server
+
+### Opción 1: Script Automático (Recomendado)
+
+```bash
+# 1. Desde tu Mac: Publicar y transferir
+cd FarmaciaSolidariaCristiana
+dotnet publish -c Release -o ./publish
+scp setup-ubuntu.sh usuario@192.168.2.113:~/
+rsync -avz --progress ./publish/ usuario@192.168.2.113:~/farmacia-files/
+
+# 2. En el servidor Ubuntu: Instalar
+ssh usuario@192.168.2.113
+bash setup-ubuntu.sh
+```
+
+### Opción 2: Instalación Manual
+
+Ver **[DEPLOYMENT_UBUNTU.md](./DEPLOYMENT_UBUNTU.md)** para instrucciones detalladas paso a paso.
+
+### Actualizar Aplicación
+
+```bash
+# 1. Desde tu Mac
+dotnet publish -c Release -o ./publish
+scp update-app.sh usuario@192.168.2.113:~/
+rsync -avz --progress ./publish/ usuario@192.168.2.113:~/farmacia-new/
+
+# 2. En Ubuntu
+ssh usuario@192.168.2.113
+bash update-app.sh
+```
+
+## 📚 Documentación
+
+- **[DEPLOYMENT_UBUNTU.md](./DEPLOYMENT_UBUNTU.md)** - Guía completa de despliegue en Ubuntu Server
+- **[QUICK_COMMANDS.md](./QUICK_COMMANDS.md)** - Comandos rápidos de referencia
+- **setup-ubuntu.sh** - Script de instalación automática
+- **update-app.sh** - Script de actualización
+
+## 🔧 Tecnologías
+
+- **Framework:** ASP.NET Core 9 MVC
+- **ORM:** Entity Framework Core 9.0.10
+- **Base de Datos:** SQL Server (compatible con Linux)
+- **Autenticación:** ASP.NET Core Identity 9.0.10
+- **PDF:** iText7 9.3.0 + BouncyCastle adapter
+- **UI:** Bootstrap 5 + Bootstrap Icons
+- **API Externa:** CIMA (Agencia Española de Medicamentos)
+
+## 🌐 Acceso en Red Local
+
+Una vez desplegado en Ubuntu Server:
+- **Por IP:** http://192.168.2.113
+- **Por nombre:** http://MPMESCRITORIO
+
+## 📊 Estructura del Proyecto
+
+```
+FarmaciaSolidariaCristiana/
+├── Controllers/         # Controladores MVC
+├── Models/             # Modelos de datos
+├── Views/              # Vistas Razor
+├── Data/               # Contexto EF Core y migraciones
+├── ViewModels/         # ViewModels para vistas
+├── wwwroot/            # Archivos estáticos (CSS, JS, imágenes)
+│   └── images/         # Logos institucionales
+├── appsettings.json    # Configuración
+└── Program.cs          # Punto de entrada
+```
+
+## 🤝 Roles y Permisos
+
+| Rol | Permisos |
+|-----|----------|
+| **Admin** | Acceso completo (CRUD + Reportes + Gestión usuarios) |
+| **Farmaceutico** | CRUD Medicamentos, Entregas, Donaciones, Reportes |
+| **Viewer** | Solo lectura (ver medicamentos e inventario) |
+
+## 🔒 Seguridad
+
+- Autenticación obligatoria para todas las páginas (excepto login)
+- Autorización basada en roles
+- Validación de entrada en todos los formularios
+- Gestión de sesiones con cookies
+- Configuración de lockout para intentos fallidos
+
+## 📝 Comandos Útiles
+
+```bash
+# Build
+dotnet build
+
+# Run
+dotnet run
+
+# Migraciones
+dotnet ef migrations add MigracionNombre
+dotnet ef database update
+dotnet ef database drop --force
+
+# Publicar
+dotnet publish -c Release -o ./publish
+
+# Ver logs (en Ubuntu)
+sudo journalctl -u farmacia.service -f
+```
+
+## 🐛 Solución de Problemas
+
+Ver **[DEPLOYMENT_UBUNTU.md](./DEPLOYMENT_UBUNTU.md)** sección "Solución de Problemas"
 
 ---
-**Iglesia Metodista de Cárdenas** - Sistema para servir a la comunidad 🙏
+
+## 🙏 Créditos
+
+Desarrollado para la **Iglesia Metodista de Cárdenas y Adriano Solidario**  
+Sistema para servir a la comunidad con amor y dedicación.
+
+## � Licencia
+
+Este proyecto es de uso interno para la organización.
