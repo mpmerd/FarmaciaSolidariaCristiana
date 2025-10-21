@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using FarmaciaSolidariaCristiana.Models.ViewModels;
+using FarmaciaSolidariaCristiana.Services;
 
 namespace FarmaciaSolidariaCristiana.Controllers
 {
@@ -10,17 +11,23 @@ namespace FarmaciaSolidariaCristiana.Controllers
         private readonly SignInManager<IdentityUser> _signInManager;
         private readonly UserManager<IdentityUser> _userManager;
         private readonly RoleManager<IdentityRole> _roleManager;
+        private readonly IEmailService _emailService;
+        private readonly IConfiguration _configuration;
         private readonly ILogger<AccountController> _logger;
 
         public AccountController(
             SignInManager<IdentityUser> signInManager,
             UserManager<IdentityUser> userManager,
             RoleManager<IdentityRole> roleManager,
+            IEmailService emailService,
+            IConfiguration configuration,
             ILogger<AccountController> logger)
         {
             _signInManager = signInManager;
             _userManager = userManager;
             _roleManager = roleManager;
+            _emailService = emailService;
+            _configuration = configuration;
             _logger = logger;
         }
 
@@ -249,6 +256,184 @@ namespace FarmaciaSolidariaCristiana.Controllers
         [HttpGet]
         [AllowAnonymous]
         public IActionResult AccessDenied()
+        {
+            return View();
+        }
+
+        // Public Registration
+        [HttpGet]
+        [AllowAnonymous]
+        public IActionResult Register()
+        {
+            var registrationEnabled = _configuration.GetValue<bool>("AppSettings:EnablePublicRegistration");
+            if (!registrationEnabled)
+            {
+                TempData["ErrorMessage"] = "El registro público está actualmente deshabilitado.";
+                return RedirectToAction("Login");
+            }
+
+            return View();
+        }
+
+        [HttpPost]
+        [AllowAnonymous]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Register(RegisterViewModel model)
+        {
+            var registrationEnabled = _configuration.GetValue<bool>("AppSettings:EnablePublicRegistration");
+            if (!registrationEnabled)
+            {
+                TempData["ErrorMessage"] = "El registro público está actualmente deshabilitado.";
+                return RedirectToAction("Login");
+            }
+
+            if (ModelState.IsValid)
+            {
+                var user = new IdentityUser
+                {
+                    UserName = model.UserName,
+                    Email = model.Email,
+                    EmailConfirmed = false
+                };
+
+                var result = await _userManager.CreateAsync(user, model.Password);
+
+                if (result.Succeeded)
+                {
+                    // Add user to Viewer role
+                    await _userManager.AddToRoleAsync(user, "Viewer");
+
+                    _logger.LogInformation("New user registered: {Username} with Viewer role", model.UserName);
+
+                    // Send welcome email
+                    try
+                    {
+                        await _emailService.SendWelcomeEmailAsync(model.Email, model.UserName);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Error sending welcome email to {Email}", model.Email);
+                    }
+
+                    TempData["SuccessMessage"] = "¡Registro exitoso! Ya puedes iniciar sesión.";
+                    return RedirectToAction("Login");
+                }
+
+                foreach (var error in result.Errors)
+                {
+                    ModelState.AddModelError(string.Empty, error.Description);
+                }
+            }
+
+            return View(model);
+        }
+
+        // Forgot Password
+        [HttpGet]
+        [AllowAnonymous]
+        public IActionResult ForgotPassword()
+        {
+            return View();
+        }
+
+        [HttpPost]
+        [AllowAnonymous]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ForgotPassword(ForgotPasswordViewModel model)
+        {
+            if (ModelState.IsValid)
+            {
+                var user = await _userManager.FindByEmailAsync(model.Email);
+                if (user == null)
+                {
+                    // Don't reveal that the user does not exist
+                    return RedirectToAction("ForgotPasswordConfirmation");
+                }
+
+                var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+                var siteUrl = _configuration["AppSettings:SiteUrl"] ?? Request.Scheme + "://" + Request.Host;
+                var callbackUrl = Url.Action("ResetPassword", "Account",
+                    new { userId = user.Id, token = token }, protocol: Request.Scheme);
+
+                var resetLink = $"{siteUrl}{callbackUrl}";
+
+                try
+                {
+                    await _emailService.SendPasswordResetEmailAsync(model.Email, resetLink);
+                    _logger.LogInformation("Password reset email sent to {Email}", model.Email);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error sending password reset email to {Email}", model.Email);
+                    ModelState.AddModelError(string.Empty, "Error al enviar el correo. Por favor, intenta nuevamente.");
+                    return View(model);
+                }
+
+                return RedirectToAction("ForgotPasswordConfirmation");
+            }
+
+            return View(model);
+        }
+
+        [HttpGet]
+        [AllowAnonymous]
+        public IActionResult ForgotPasswordConfirmation()
+        {
+            return View();
+        }
+
+        [HttpGet]
+        [AllowAnonymous]
+        public IActionResult ResetPassword(string userId, string token)
+        {
+            if (string.IsNullOrEmpty(userId) || string.IsNullOrEmpty(token))
+            {
+                return RedirectToAction("Index", "Home");
+            }
+
+            var model = new ResetPasswordViewModel
+            {
+                UserId = userId,
+                Token = token
+            };
+
+            return View(model);
+        }
+
+        [HttpPost]
+        [AllowAnonymous]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ResetPassword(ResetPasswordViewModel model)
+        {
+            if (!ModelState.IsValid)
+            {
+                return View(model);
+            }
+
+            var user = await _userManager.FindByIdAsync(model.UserId);
+            if (user == null)
+            {
+                return RedirectToAction("ResetPasswordConfirmation");
+            }
+
+            var result = await _userManager.ResetPasswordAsync(user, model.Token, model.Password);
+            if (result.Succeeded)
+            {
+                _logger.LogInformation("Password reset successful for user {UserId}", model.UserId);
+                return RedirectToAction("ResetPasswordConfirmation");
+            }
+
+            foreach (var error in result.Errors)
+            {
+                ModelState.AddModelError(string.Empty, error.Description);
+            }
+
+            return View(model);
+        }
+
+        [HttpGet]
+        [AllowAnonymous]
+        public IActionResult ResetPasswordConfirmation()
         {
             return View();
         }

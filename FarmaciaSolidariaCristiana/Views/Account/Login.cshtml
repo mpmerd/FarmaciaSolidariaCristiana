@@ -1,11 +1,13 @@
 @model FarmaciaSolidariaCristiana.Models.ViewModels.LoginViewModel
+@inject Microsoft.Extensions.Configuration.IConfiguration Configuration
 @{
     ViewData["Title"] = "Iniciar Sesión";
+    var registrationEnabled = Configuration.GetValue<bool>("AppSettings:EnablePublicRegistration");
 }
 
 <div class="row justify-content-center">
     <div class="col-md-6">
-        <div class="card mt-5">
+        <div class="card mt-5 shadow">
             <div class="card-header bg-primary text-white text-center">
                 <div class="d-flex justify-content-center align-items-center gap-3 mb-2">
                     <img src="~/images/logo-iglesia.png" alt="Logo Iglesia" style="height: 60px; object-fit: contain;">
@@ -14,29 +16,72 @@
                 <h4 class="mb-0">@ViewData["Title"]</h4>
                 <small>Iglesia Metodista de Cárdenas y Adriano Solidario</small>
             </div>
-            <div class="card-body">
+            <div class="card-body p-4">
+                @if (TempData["SuccessMessage"] != null)
+                {
+                    <div class="alert alert-success alert-dismissible fade show" role="alert">
+                        <i class="bi bi-check-circle"></i> @TempData["SuccessMessage"]
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                }
+                
+                @if (TempData["ErrorMessage"] != null)
+                {
+                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                        <i class="bi bi-exclamation-triangle"></i> @TempData["ErrorMessage"]
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                }
+                
                 <form asp-action="Login" method="post">
-                    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+                    <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
                     
                     <div class="form-group mb-3">
-                        <label asp-for="Username" class="form-label"></label>
-                        <input asp-for="Username" class="form-control" />
+                        <label asp-for="Username" class="form-label">
+                            <i class="bi bi-person"></i> @Html.DisplayNameFor(m => m.Username)
+                        </label>
+                        <input asp-for="Username" class="form-control" autofocus />
                         <span asp-validation-for="Username" class="text-danger"></span>
                     </div>
                     
                     <div class="form-group mb-3">
-                        <label asp-for="Password" class="form-label"></label>
+                        <label asp-for="Password" class="form-label">
+                            <i class="bi bi-lock"></i> @Html.DisplayNameFor(m => m.Password)
+                        </label>
                         <input asp-for="Password" class="form-control" />
                         <span asp-validation-for="Password" class="text-danger"></span>
                     </div>
                     
                     <div class="form-group form-check mb-3">
                         <input asp-for="RememberMe" class="form-check-input" />
-                        <label asp-for="RememberMe" class="form-check-label"></label>
+                        <label asp-for="RememberMe" class="form-check-label">
+                            @Html.DisplayNameFor(m => m.RememberMe)
+                        </label>
                     </div>
                     
-                    <button type="submit" class="btn btn-primary w-100">Iniciar Sesión</button>
+                    <div class="d-grid gap-2 mb-3">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="bi bi-box-arrow-in-right"></i> Iniciar Sesión
+                        </button>
+                    </div>
+
+                    <div class="text-center">
+                        <a asp-action="ForgotPassword" class="text-decoration-none">
+                            <i class="bi bi-key"></i> ¿Olvidaste tu contraseña?
+                        </a>
+                    </div>
                 </form>
+
+                @if (registrationEnabled)
+                {
+                    <hr class="my-4">
+                    <div class="text-center">
+                        <p class="text-muted mb-2">¿No tienes una cuenta?</p>
+                        <a asp-action="Register" class="btn btn-outline-success">
+                            <i class="bi bi-person-plus"></i> Registrarse
+                        </a>
+                    </div>
+                }
             </div>
         </div>
     </div>

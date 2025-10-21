@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
 using FarmaciaSolidariaCristiana.Data;
+using FarmaciaSolidariaCristiana.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -10,6 +11,9 @@ builder.Services.AddControllersWithViews();
 // Configure DbContext with SQL Server
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+// Register Email Service
+builder.Services.AddScoped<IEmailService, EmailService>();
 
 // Configure Identity
 builder.Services.AddIdentity<IdentityUser, IdentityRole>(options =>
@@ -27,9 +31,18 @@ builder.Services.AddIdentity<IdentityUser, IdentityRole>(options =>
     
     // User settings
     options.User.RequireUniqueEmail = true;
+    
+    // Token lifespan for password reset (24 hours)
+    options.Tokens.PasswordResetTokenProvider = TokenOptions.DefaultProvider;
 })
 .AddEntityFrameworkStores<ApplicationDbContext>()
 .AddDefaultTokenProviders();
+
+// Configure token lifespan
+builder.Services.Configure<DataProtectionTokenProviderOptions>(options =>
+{
+    options.TokenLifespan = TimeSpan.FromHours(24);
+});
 
 // Configure cookie settings for login
 builder.Services.ConfigureApplicationCookie(options =>
