@@ -1,0 +1,148 @@
+@model IEnumerable<FarmaciaSolidariaCristiana.Models.Patient>
+
+@{
+    ViewData["Title"] = "Pacientes";
+}
+
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <h2>
+                <i class="bi bi-people-fill"></i> Pacientes
+            </h2>
+        </div>
+        <div class="col-md-6 text-end">
+            <a asp-action="Create" class="btn btn-primary">
+                <i class="bi bi-person-plus-fill"></i> Nuevo Paciente
+            </a>
+        </div>
+    </div>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle-fill"></i> @TempData["SuccessMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Nombre Completo</th>
+                            <th>Edad</th>
+                            <th>Género</th>
+                            <th>Teléfono</th>
+                            <th>Municipio</th>
+                            <th>Fecha de Registro</th>
+                            <th style="width: 200px;">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.Any())
+                        {
+                            @foreach (var patient in Model)
+                            {
+                                <tr>
+                                    <td>
+                                        <i class="bi bi-person-circle"></i>
+                                        @patient.FullName
+                                    </td>
+                                    <td>@patient.Age años</td>
+                                    <td>
+                                        @if (patient.Gender == "M")
+                                        {
+                                            <span class="badge bg-info">
+                                                <i class="bi bi-gender-male"></i> Masculino
+                                            </span>
+                                        }
+                                        else if (patient.Gender == "F")
+                                        {
+                                            <span class="badge bg-warning">
+                                                <i class="bi bi-gender-female"></i> Femenino
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-secondary">Otro</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        @if (!string.IsNullOrEmpty(patient.Phone))
+                                        {
+                                            <i class="bi bi-telephone-fill"></i>
+                                            @patient.Phone
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">-</span>
+                                        }
+                                    </td>
+                                    <td>@(patient.Municipality ?? "-")</td>
+                                    <td>@patient.RegistrationDate.ToString("dd/MM/yyyy")</td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            <a asp-action="Details" asp-route-id="@patient.Id" class="btn btn-sm btn-info" title="Ver Detalles">
+                                                <i class="bi bi-eye-fill"></i>
+                                            </a>
+                                            <a asp-action="Edit" asp-route-id="@patient.Id" class="btn btn-sm btn-warning" title="Editar">
+                                                <i class="bi bi-pencil-fill"></i>
+                                            </a>
+                                            @if (User.IsInRole("Admin"))
+                                            {
+                                                <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal-@patient.Id" title="Eliminar">
+                                                    <i class="bi bi-trash-fill"></i>
+                                                </button>
+                                            }
+                                        </div>
+                                    </td>
+                                </tr>
+
+                                <!-- Delete Modal -->
+                                <div class="modal fade" id="deleteModal-@patient.Id" tabindex="-1" aria-labelledby="deleteModalLabel-@patient.Id" aria-hidden="true">
+                                    <div class="modal-dialog">
+                                        <div class="modal-content">
+                                            <div class="modal-header bg-danger text-white">
+                                                <h5 class="modal-title" id="deleteModalLabel-@patient.Id">
+                                                    <i class="bi bi-exclamation-triangle-fill"></i> Confirmar Eliminación
+                                                </h5>
+                                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                                            </div>
+                                            <div class="modal-body">
+                                                <p>¿Está seguro que desea eliminar al paciente <strong>@patient.FullName</strong>?</p>
+                                                <p class="text-muted">Esta acción marcará al paciente como inactivo, pero no eliminará su historial.</p>
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                                    <i class="bi bi-x-circle"></i> Cancelar
+                                                </button>
+                                                <form asp-action="Delete" asp-route-id="@patient.Id" method="post" class="d-inline">
+                                                    @Html.AntiForgeryToken()
+                                                    <button type="submit" class="btn btn-danger">
+                                                        <i class="bi bi-trash-fill"></i> Eliminar
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="7" class="text-center text-muted py-4">
+                                    <i class="bi bi-inbox" style="font-size: 3rem;"></i>
+                                    <p class="mt-2">No hay pacientes registrados</p>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
