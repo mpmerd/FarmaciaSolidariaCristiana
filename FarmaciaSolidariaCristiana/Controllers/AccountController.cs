@@ -343,28 +343,27 @@ namespace FarmaciaSolidariaCristiana.Controllers
         {
             if (ModelState.IsValid)
             {
-                var user = await _userManager.FindByEmailAsync(model.Email);
-                if (user == null)
+                var user = await _userManager.FindByNameAsync(model.UserName);
+                if (user == null || string.IsNullOrEmpty(user.Email))
                 {
                     // Don't reveal that the user does not exist
                     return RedirectToAction("ForgotPasswordConfirmation");
                 }
 
                 var token = await _userManager.GeneratePasswordResetTokenAsync(user);
-                var siteUrl = _configuration["AppSettings:SiteUrl"] ?? Request.Scheme + "://" + Request.Host;
                 var callbackUrl = Url.Action("ResetPassword", "Account",
                     new { userId = user.Id, token = token }, protocol: Request.Scheme);
 
-                var resetLink = $"{siteUrl}{callbackUrl}";
+                var resetLink = $"{Request.Scheme}://{Request.Host}{callbackUrl}";
 
                 try
                 {
-                    await _emailService.SendPasswordResetEmailAsync(model.Email, resetLink);
-                    _logger.LogInformation("Password reset email sent to {Email}", model.Email);
+                    await _emailService.SendPasswordResetEmailAsync(user.Email, resetLink);
+                    _logger.LogInformation("Password reset email sent to user {UserName} at {Email}", model.UserName, user.Email);
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Error sending password reset email to {Email}", model.Email);
+                    _logger.LogError(ex, "Error sending password reset email to user {UserName}", model.UserName);
                     ModelState.AddModelError(string.Empty, "Error al enviar el correo. Por favor, intenta nuevamente.");
                     return View(model);
                 }

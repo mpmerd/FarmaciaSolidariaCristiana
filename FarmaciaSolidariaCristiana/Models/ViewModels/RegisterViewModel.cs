@@ -29,10 +29,9 @@ namespace FarmaciaSolidariaCristiana.Models.ViewModels
 
     public class ForgotPasswordViewModel
     {
-        [Required(ErrorMessage = "El correo electrónico es requerido")]
-        [EmailAddress(ErrorMessage = "Ingrese un correo electrónico válido")]
-        [Display(Name = "Correo electrónico")]
-        public string Email { get; set; } = string.Empty;
+        [Required(ErrorMessage = "El nombre de usuario es requerido")]
+        [Display(Name = "Nombre de usuario")]
+        public string UserName { get; set; } = string.Empty;
     }
 
     public class ResetPasswordViewModel
