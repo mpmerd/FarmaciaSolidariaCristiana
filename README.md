@@ -99,10 +99,10 @@ bash update-app.sh
 
 ## 🔧 Tecnologías
 
-- **Framework:** ASP.NET Core 9 MVC
-- **ORM:** Entity Framework Core 9.0.10
+- **Framework:** ASP.NET Core 8 MVC
+- **ORM:** Entity Framework Core 8.0.11
 - **Base de Datos:** SQL Server (compatible con Linux)
-- **Autenticación:** ASP.NET Core Identity 9.0.10
+- **Autenticación:** ASP.NET Core Identity 8.0.11
 - **PDF:** iText7 9.3.0 + BouncyCastle adapter
 - **UI:** Bootstrap 5 + Bootstrap Icons
 - **API Externa:** CIMA (Agencia Española de Medicamentos)
