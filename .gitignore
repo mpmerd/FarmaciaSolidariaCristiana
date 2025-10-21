@@ -461,6 +461,10 @@ appsettings.Production.json
 wwwroot/lib/
 staticwebassets/
 
+# Uploaded files (patient documents, etc.)
+wwwroot/uploads/**/*
+!wwwroot/uploads/**/.gitkeep
+
 # Compiled static files
 *.min.css
 *.min.js
