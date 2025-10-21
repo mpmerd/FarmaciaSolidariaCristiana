@@ -6,7 +6,7 @@ using FarmaciaSolidariaCristiana.Models;
 
 namespace FarmaciaSolidariaCristiana.Controllers
 {
-    [Authorize]
+    [Authorize(Roles = "Admin,Farmaceutico,Viewer")] // ViewerPublic NO tiene acceso
     public class PatientsController : Controller
     {
         private readonly ApplicationDbContext _context;

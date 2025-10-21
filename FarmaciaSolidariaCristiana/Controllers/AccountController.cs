@@ -300,10 +300,10 @@ namespace FarmaciaSolidariaCristiana.Controllers
 
                 if (result.Succeeded)
                 {
-                    // Add user to Viewer role
-                    await _userManager.AddToRoleAsync(user, "Viewer");
+                    // Add user to ViewerPublic role (restricted public registration)
+                    await _userManager.AddToRoleAsync(user, "ViewerPublic");
 
-                    _logger.LogInformation("New user registered: {Username} with Viewer role", model.UserName);
+                    _logger.LogInformation("New user registered: {Username} with ViewerPublic role", model.UserName);
 
                     // Send welcome email
                     try
@@ -351,14 +351,14 @@ namespace FarmaciaSolidariaCristiana.Controllers
                 }
 
                 var token = await _userManager.GeneratePasswordResetTokenAsync(user);
-                var callbackUrl = Url.Action("ResetPassword", "Account",
-                    new { userId = user.Id, token = token }, protocol: Request.Scheme);
-
-                var resetLink = $"{Request.Scheme}://{Request.Host}{callbackUrl}";
+                
+                // Generate callback URL - use configured SiteUrl for production
+                var siteUrl = _configuration.GetValue<string>("AppSettings:SiteUrl") ?? $"{Request.Scheme}://{Request.Host}";
+                var callbackUrl = $"{siteUrl}/Account/ResetPassword?userId={user.Id}&token={Uri.EscapeDataString(token)}";
 
                 try
                 {
-                    await _emailService.SendPasswordResetEmailAsync(user.Email, resetLink);
+                    await _emailService.SendPasswordResetEmailAsync(user.Email, callbackUrl!);
                     _logger.LogInformation("Password reset email sent to user {UserName} at {Email}", model.UserName, user.Email);
                 }
                 catch (Exception ex)

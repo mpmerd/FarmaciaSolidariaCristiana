@@ -15,7 +15,7 @@ namespace FarmaciaSolidariaCristiana.Data
             await context.Database.MigrateAsync();
 
             // Create roles
-            string[] roleNames = { "Admin", "Farmaceutico", "Viewer" };
+            string[] roleNames = { "Admin", "Farmaceutico", "Viewer", "ViewerPublic" };
             foreach (var roleName in roleNames)
             {
                 var roleExist = await roleManager.RoleExistsAsync(roleName);
