@@ -1,0 +1,107 @@
+@model FarmaciaSolidariaCristiana.Models.ViewModels.EditUserViewModel
+
+@{
+    ViewData["Title"] = "Editar Usuario";
+}
+
+<div class="container mt-4">
+    <div class="card">
+        <div class="card-header bg-warning text-dark">
+            <h4 class="mb-0"><i class="bi bi-pencil-fill"></i> @ViewData["Title"]</h4>
+        </div>
+        <div class="card-body">
+            <form asp-action="EditUser" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" asp-for="Id" />
+                <input type="hidden" asp-for="CurrentRole" />
+                
+                <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label asp-for="Username" class="form-label"></label>
+                        <input asp-for="Username" class="form-control" />
+                        <span asp-validation-for="Username" class="text-danger"></span>
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label asp-for="Email" class="form-label"></label>
+                        <input asp-for="Email" class="form-control" type="email" />
+                        <span asp-validation-for="Email" class="text-danger"></span>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Rol Actual</label>
+                    <div class="form-control-plaintext">
+                        @if (Model.CurrentRole == "Admin")
+                        {
+                            <span class="badge bg-danger fs-6">@Model.CurrentRole</span>
+                        }
+                        else if (Model.CurrentRole == "Farmaceutico")
+                        {
+                            <span class="badge bg-success fs-6">@Model.CurrentRole</span>
+                        }
+                        else if (Model.CurrentRole == "Viewer")
+                        {
+                            <span class="badge bg-info fs-6">@Model.CurrentRole</span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-secondary fs-6">Sin rol asignado</span>
+                        }
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="NewRole" class="form-label"></label>
+                    <select asp-for="NewRole" class="form-select">
+                        <option value="">-- Seleccionar Rol --</option>
+                        <option value="Admin">Admin (Acceso completo)</option>
+                        <option value="Farmaceutico">Farmaceutico (Gestión de medicamentos)</option>
+                        <option value="Viewer">Viewer (Solo lectura)</option>
+                    </select>
+                    <span asp-validation-for="NewRole" class="text-danger"></span>
+                    <div class="form-text">
+                        <i class="bi bi-info-circle"></i> Dejar vacío para mantener el rol actual
+                    </div>
+                </div>
+
+                <hr class="my-4">
+
+                <h5 class="mb-3"><i class="bi bi-key-fill"></i> Cambiar Contraseña (Opcional)</h5>
+                
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle"></i> Deja estos campos vacíos si no deseas cambiar la contraseña
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label asp-for="NewPassword" class="form-label"></label>
+                        <input asp-for="NewPassword" class="form-control" type="password" autocomplete="new-password" />
+                        <span asp-validation-for="NewPassword" class="text-danger"></span>
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label asp-for="ConfirmPassword" class="form-label"></label>
+                        <input asp-for="ConfirmPassword" class="form-control" type="password" autocomplete="new-password" />
+                        <span asp-validation-for="ConfirmPassword" class="text-danger"></span>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-between mt-4">
+                    <a asp-action="ManageUsers" class="btn btn-secondary">
+                        <i class="bi bi-arrow-left-circle"></i> Cancelar
+                    </a>
+                    <button type="submit" class="btn btn-warning">
+                        <i class="bi bi-save-fill"></i> Guardar Cambios
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

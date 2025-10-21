@@ -120,6 +120,133 @@ namespace FarmaciaSolidariaCristiana.Controllers
         }
 
         [HttpGet]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> EditUser(string id)
+        {
+            if (string.IsNullOrEmpty(id))
+            {
+                return NotFound();
+            }
+
+            var user = await _userManager.FindByIdAsync(id);
+            if (user == null)
+            {
+                return NotFound();
+            }
+
+            var userRoles = await _userManager.GetRolesAsync(user);
+            var model = new EditUserViewModel
+            {
+                Id = user.Id,
+                Username = user.UserName!,
+                Email = user.Email!,
+                CurrentRole = userRoles.FirstOrDefault() ?? ""
+            };
+
+            return View(model);
+        }
+
+        [HttpPost]
+        [Authorize(Roles = "Admin")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> EditUser(EditUserViewModel model)
+        {
+            if (ModelState.IsValid)
+            {
+                var user = await _userManager.FindByIdAsync(model.Id);
+                if (user == null)
+                {
+                    return NotFound();
+                }
+
+                // Update basic info
+                user.UserName = model.Username;
+                user.Email = model.Email;
+
+                var updateResult = await _userManager.UpdateAsync(user);
+                if (!updateResult.Succeeded)
+                {
+                    foreach (var error in updateResult.Errors)
+                    {
+                        ModelState.AddModelError(string.Empty, error.Description);
+                    }
+                    return View(model);
+                }
+
+                // Update password if provided
+                if (!string.IsNullOrEmpty(model.NewPassword))
+                {
+                    var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+                    var passwordResult = await _userManager.ResetPasswordAsync(user, token, model.NewPassword);
+                    if (!passwordResult.Succeeded)
+                    {
+                        foreach (var error in passwordResult.Errors)
+                        {
+                            ModelState.AddModelError(string.Empty, error.Description);
+                        }
+                        return View(model);
+                    }
+                }
+
+                // Update role
+                var currentRoles = await _userManager.GetRolesAsync(user);
+                if (currentRoles.Any())
+                {
+                    await _userManager.RemoveFromRolesAsync(user, currentRoles);
+                }
+                
+                if (!string.IsNullOrEmpty(model.NewRole))
+                {
+                    await _userManager.AddToRoleAsync(user, model.NewRole);
+                }
+
+                _logger.LogInformation("Admin edited user: {Username}", model.Username);
+                TempData["SuccessMessage"] = $"Usuario {model.Username} actualizado exitosamente.";
+                return RedirectToAction(nameof(ManageUsers));
+            }
+
+            return View(model);
+        }
+
+        [HttpPost]
+        [Authorize(Roles = "Admin")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeleteUser(string id)
+        {
+            if (string.IsNullOrEmpty(id))
+            {
+                return NotFound();
+            }
+
+            var user = await _userManager.FindByIdAsync(id);
+            if (user == null)
+            {
+                return NotFound();
+            }
+
+            // Prevent admin from deleting themselves
+            var currentUser = await _userManager.GetUserAsync(User);
+            if (currentUser?.Id == user.Id)
+            {
+                TempData["ErrorMessage"] = "No puedes eliminar tu propia cuenta.";
+                return RedirectToAction(nameof(ManageUsers));
+            }
+
+            var result = await _userManager.DeleteAsync(user);
+            if (result.Succeeded)
+            {
+                _logger.LogInformation("Admin deleted user: {Username}", user.UserName);
+                TempData["SuccessMessage"] = $"Usuario {user.UserName} eliminado exitosamente.";
+            }
+            else
+            {
+                TempData["ErrorMessage"] = "Error al eliminar el usuario.";
+            }
+
+            return RedirectToAction(nameof(ManageUsers));
+        }
+
+        [HttpGet]
         [AllowAnonymous]
         public IActionResult AccessDenied()
         {
