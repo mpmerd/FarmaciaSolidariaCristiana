@@ -16,6 +16,7 @@ namespace FarmaciaSolidariaCristiana.Data
         public DbSet<Donation> Donations { get; set; }
         public DbSet<Patient> Patients { get; set; }
         public DbSet<PatientDocument> PatientDocuments { get; set; }
+        public DbSet<Sponsor> Sponsors { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
