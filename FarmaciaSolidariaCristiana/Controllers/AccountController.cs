@@ -451,6 +451,70 @@ namespace FarmaciaSolidariaCristiana.Controllers
             }
         }
 
+        // ENDPOINT TEMPORAL PARA DIAGNOSTICAR USUARIOS Y ROLES
+        // Eliminar después de usar
+        [HttpGet]
+        [AllowAnonymous]
+        public async Task<IActionResult> DiagnoseUsers(string secret)
+        {
+            if (secret != "fixadmin2025")
+            {
+                return NotFound();
+            }
+
+            try
+            {
+                var result = new System.Text.StringBuilder();
+                result.AppendLine("=== DIAGNÓSTICO DE USUARIOS Y ROLES ===\n");
+
+                // Listar todos los roles
+                result.AppendLine("ROLES EXISTENTES:");
+                var allRoles = _roleManager.Roles.ToList();
+                foreach (var role in allRoles)
+                {
+                    result.AppendLine($"  - {role.Name} (ID: {role.Id})");
+                }
+                result.AppendLine();
+
+                // Listar todos los usuarios y sus roles
+                result.AppendLine("USUARIOS Y SUS ROLES:");
+                var allUsers = _userManager.Users.ToList();
+                foreach (var user in allUsers)
+                {
+                    var userRoles = await _userManager.GetRolesAsync(user);
+                    var rolesStr = userRoles.Any() ? string.Join(", ", userRoles) : "NINGUNO";
+                    result.AppendLine($"  Usuario: {user.UserName}");
+                    result.AppendLine($"    Email: {user.Email}");
+                    result.AppendLine($"    ID: {user.Id}");
+                    result.AppendLine($"    Roles: {rolesStr}");
+                    result.AppendLine();
+                }
+
+                // Usuario actual (si está logueado)
+                if (User.Identity?.IsAuthenticated == true)
+                {
+                    result.AppendLine("USUARIO ACTUAL EN SESIÓN:");
+                    result.AppendLine($"  Username: {User.Identity.Name}");
+                    result.AppendLine($"  Autenticado: Sí");
+                    result.AppendLine($"  Claims:");
+                    foreach (var claim in User.Claims)
+                    {
+                        result.AppendLine($"    - {claim.Type}: {claim.Value}");
+                    }
+                }
+                else
+                {
+                    result.AppendLine("USUARIO ACTUAL: No hay sesión activa");
+                }
+
+                return Content(result.ToString(), "text/plain");
+            }
+            catch (Exception ex)
+            {
+                return Content($"ERROR: {ex.Message}\n\n{ex.StackTrace}", "text/plain");
+            }
+        }
+
         // ENDPOINT TEMPORAL PARA CORREGIR ROL DE ADMIN
         // Eliminar después de usar
         [HttpGet]
