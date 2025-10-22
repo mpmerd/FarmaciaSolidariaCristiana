@@ -13,7 +13,7 @@ Sistema web para la gestión de medicamentos, entregas y donaciones de la Farmac
 - ✅ Generación de reportes PDF con logos institucionales (iText7)
 - ✅ Datos de prueba precargados (12 medicamentos, 8 donaciones, 14 entregas)
 - ✅ Interfaz en español con Bootstrap 5 y logos institucionales
-- ✅ HTTP solo (sin HTTPS) se opto para pruebas en red local segura, en producción se recomienda HTTPS
+- ✅ HTTP solo (sin HTTPS) solo para pruebas en red local segura, en producción se recomienda HTTPS
 - ✅ Compatible con SQL Server en Linux
 
 ### Reportes
