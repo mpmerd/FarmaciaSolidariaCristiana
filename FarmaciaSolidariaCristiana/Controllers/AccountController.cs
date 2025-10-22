@@ -450,5 +450,74 @@ namespace FarmaciaSolidariaCristiana.Controllers
                 return RedirectToAction("Index", "Home");
             }
         }
+
+        // ENDPOINT TEMPORAL PARA CORREGIR ROL DE ADMIN
+        // Eliminar después de usar
+        [HttpGet]
+        [AllowAnonymous]
+        public async Task<IActionResult> FixAdminRole(string secret)
+        {
+            // Verificar secreto de seguridad
+            if (secret != "fixadmin2025")
+            {
+                return NotFound();
+            }
+
+            try
+            {
+                // Buscar usuario admin
+                var adminUser = await _userManager.FindByNameAsync("admin");
+                if (adminUser == null)
+                {
+                    return Content("ERROR: Usuario 'admin' no encontrado en la base de datos.");
+                }
+
+                // Obtener roles actuales
+                var currentRoles = await _userManager.GetRolesAsync(adminUser);
+                var rolesText = currentRoles.Any() ? string.Join(", ", currentRoles) : "NINGUNO";
+
+                // Verificar si Admin role existe
+                var adminRoleExists = await _roleManager.RoleExistsAsync("Admin");
+                if (!adminRoleExists)
+                {
+                    return Content("ERROR: El rol 'Admin' no existe en la base de datos.");
+                }
+
+                // Eliminar todos los roles actuales
+                if (currentRoles.Any())
+                {
+                    var removeResult = await _userManager.RemoveFromRolesAsync(adminUser, currentRoles);
+                    if (!removeResult.Succeeded)
+                    {
+                        return Content($"ERROR al remover roles: {string.Join(", ", removeResult.Errors.Select(e => e.Description))}");
+                    }
+                }
+
+                // Asignar rol Admin
+                var addResult = await _userManager.AddToRoleAsync(adminUser, "Admin");
+                if (!addResult.Succeeded)
+                {
+                    return Content($"ERROR al asignar rol Admin: {string.Join(", ", addResult.Errors.Select(e => e.Description))}");
+                }
+
+                // Verificar el resultado
+                var newRoles = await _userManager.GetRolesAsync(adminUser);
+                
+                _logger.LogWarning("Rol de admin corregido mediante endpoint temporal");
+
+                return Content($"✓ ÉXITO: Rol del usuario 'admin' corregido.\n\n" +
+                              $"Username: {adminUser.UserName}\n" +
+                              $"Email: {adminUser.Email}\n" +
+                              $"Roles anteriores: {rolesText}\n" +
+                              $"Roles actuales: {string.Join(", ", newRoles)}\n\n" +
+                              $"Ahora puedes cerrar sesión y volver a iniciar sesión como admin.\n" +
+                              $"IMPORTANTE: Elimina este endpoint después de usarlo.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al corregir rol de admin");
+                return Content($"ERROR INESPERADO: {ex.Message}\n\n{ex.StackTrace}");
+            }
+        }
     }
 }
