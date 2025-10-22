@@ -145,7 +145,7 @@ La API CIMA (https://cima.aemps.es) puede ser **muy lenta** desde Cuba debido a:
 - Mensajes de error más descriptivos
 - Logging detallado para diagnóstico
 
-**Recomendación:** Si la API CIMA no funciona desde Cuba, considera:
+**Recomendación:** Si la API CIMA no funciona desde Cuba, consideraré:
 1. Usar entrada manual de datos
 2. Implementar caché local de medicamentos comunes
 3. Crear base de datos de medicamentos precargada
@@ -172,7 +172,7 @@ La API CIMA (https://cima.aemps.es) puede ser **muy lenta** desde Cuba debido a:
 
 - **URL:** http://192.168.2.113 o http://MPMESCRITORIO
 - **Usuario:** admin
-- **Contraseña:** doqkox-gadqud-niJho0
+- **Contraseña:***
 
 ---
 

@@ -180,4 +180,4 @@ Sistema para servir a la comunidad con amor y dedicación.
 
 ## � Licencia
 
-Este proyecto es de uso interno para la organización.
+MIT License.

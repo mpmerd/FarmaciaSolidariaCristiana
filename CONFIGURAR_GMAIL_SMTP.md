@@ -2,9 +2,9 @@
 
 ## 📧 Pasos para Configurar Gmail
 
-### 1. Preparar tu cuenta de Gmail
+### 1. Preparar cuenta de Gmail
 
-1. Ve a tu cuenta de Gmail (puede ser una cuenta personal o crear una nueva específica para el proyecto)
+1. Ir a la cuenta de Gmail (puede ser una cuenta personal o crear una nueva específica para el proyecto)
 
 ### 2. Activar la Verificación en 2 Pasos
 
@@ -14,7 +14,7 @@
 
 ### 3. Generar una Contraseña de Aplicación
 
-1. Una vez activada la verificación en 2 pasos, regresa a: https://myaccount.google.com/security
+1. Una vez activada la verificación en 2 pasos, regresar a: https://myaccount.google.com/security
 2. Busca "Contraseñas de aplicaciones" (aparece después de activar 2 pasos)
 3. Haz clic en "Contraseñas de aplicaciones"
 4. Selecciona:
