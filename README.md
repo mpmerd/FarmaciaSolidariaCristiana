@@ -144,6 +144,16 @@ FarmaciaSolidariaCristiana/
 - Gestión de sesiones con cookies
 - Configuración de lockout para intentos fallidos
 
+
+## Uso de https
+
+En producción (ej. somee.com), se habilita HTTPS para cifrar datos en tránsito. (logins, entregas, donaciones).
+
+# Ejemplo en somee.com
+- Sube el proyecto publicado via FTP o Git deploy.
+- En el panel de somee.com, activa SSL (gratuito con Let's Encrypt o similar).
+- Accede via: https://tudominio.somee.com
+
 > ⚠️ **IMPORTANTE:** Lee [SECURITY.md](./SECURITY.md) antes de configurar el proyecto. Nunca incluyas credenciales reales en el código o repositorio.
 
 ## 📝 Comandos Útiles
