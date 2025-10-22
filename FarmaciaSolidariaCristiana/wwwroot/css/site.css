@@ -21,6 +21,17 @@ body {
   margin-bottom: 60px;
 }
 
+/* Ajuste para móviles - más espacio para el footer */
+@media (max-width: 767.98px) {
+  body {
+    margin-bottom: 350px;
+  }
+  
+  .container {
+    padding-bottom: 50px;
+  }
+}
+
 .form-floating > .form-control-plaintext::placeholder, .form-floating > .form-control::placeholder {
   color: var(--bs-secondary-color);
   text-align: end;
