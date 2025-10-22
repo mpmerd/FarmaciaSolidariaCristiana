@@ -94,14 +94,30 @@
         </nav>
     </header>
     <div class="container">
-        <main role="main" class="pb-3">
+        <main role="main" class="pb-5 mb-4">
             @RenderBody()
         </main>
     </div>
 
-    <footer class="border-top footer text-muted mt-5 py-3">
-        <div class="container text-center">
-            <p class="mb-0">&copy; 2025 - Farmacia Solidaria Cristiana - Iglesia Metodista de Cárdenas</p>
+    <footer class="border-top footer text-muted py-4" style="margin-top: 4rem;">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-6 text-center text-md-start mb-2 mb-md-0">
+                    <p class="mb-1">
+                        <strong>&copy; 2024-2025 Farmacia Solidaria Cristiana</strong>
+                    </p>
+                    <p class="mb-0 small">Iglesia Metodista de Cárdenas</p>
+                </div>
+                <div class="col-md-6 text-center text-md-end">
+                    <p class="mb-1">
+                        <i class="bi bi-code-slash"></i> Desarrollado por <strong>Rev. Maikel Eduardo Peláez Martínez</strong>
+                    </p>
+                    <p class="mb-0 small">
+                        <i class="bi bi-envelope"></i> 
+                        <a href="mailto:mpmerd@gmail.com" class="text-muted text-decoration-none">mpmerd@gmail.com</a>
+                    </p>
+                </div>
+            </div>
         </div>
     </footer>
     <script src="~/lib/jquery/dist/jquery.min.js"></script>

@@ -168,7 +168,9 @@ namespace FarmaciaSolidariaCristiana.Controllers
 
                 // Update basic info
                 user.UserName = model.Username;
+                user.NormalizedUserName = model.Username.ToUpper();
                 user.Email = model.Email;
+                user.NormalizedEmail = model.Email.ToUpper();
 
                 var updateResult = await _userManager.UpdateAsync(user);
                 if (!updateResult.Succeeded)

@@ -45,22 +45,18 @@
                     <p><strong>Nombre Completo:</strong> @Model.FullName</p>
                     <p><strong>Edad:</strong> @Model.Age años</p>
                     <p>
-                        <strong>Género:</strong>
+                    <p><strong>Sexo:</strong>
                         @if (Model.Gender == "M")
                         {
                             <span class="badge bg-info">
                                 <i class="bi bi-gender-male"></i> Masculino
                             </span>
                         }
-                        else if (Model.Gender == "F")
+                        else
                         {
                             <span class="badge bg-warning">
                                 <i class="bi bi-gender-female"></i> Femenino
                             </span>
-                        }
-                        else
-                        {
-                            <span class="badge bg-secondary">Otro</span>
                         }
                     </p>
                 </div>

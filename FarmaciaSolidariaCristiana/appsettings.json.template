@@ -1,0 +1,39 @@
+{
+  "ConnectionStrings": {
+    "DefaultConnection": "Server=tu_servidor;Database=FarmaciaDb;User Id=tu_usuario;Password=TU_PASSWORD_AQUI;TrustServerCertificate=True"
+  },
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft.AspNetCore": "Warning",
+      "Microsoft.EntityFrameworkCore.Database.Command": "Information"
+    }
+  },
+  "AllowedHosts": "*",
+  "FtpSettings": {
+    "DatabaseBackup": {
+      "Host": "tu_servidor_backup",
+      "Username": "tu_usuario_ftp",
+      "Password": "TU_PASSWORD_FTP"
+    },
+    "WebSite": {
+      "Host": "tu_sitio.com",
+      "HostIp": "0.0.0.0",
+      "Path": "www.tu_sitio.com"
+    }
+  },
+  "SmtpSettings": {
+    "Host": "smtp.tu_proveedor.com",
+    "Port": "587",
+    "Username": "tu_email@ejemplo.com",
+    "Password": "TU_APP_PASSWORD_SMTP",
+    "FromEmail": "noreply@tu_sitio.com",
+    "FromName": "Farmacia Solidaria Cristiana",
+    "EnableSsl": "true"
+  },
+  "AppSettings": {
+    "EnablePublicRegistration": false,
+    "SiteName": "Farmacia Solidaria Cristiana",
+    "SiteUrl": "https://tu_sitio.com"
+  }
+}

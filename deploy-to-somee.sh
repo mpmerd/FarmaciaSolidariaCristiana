@@ -20,7 +20,7 @@ echo ""
 # Configuración de Somee
 FTP_HOST="farmaciasolidaria.somee.com"
 FTP_USER="maikelpelaez"
-FTP_REMOTE_PATH="www.farmaciasolidaria.somee.com"
+FTP_REMOTE_PATH="/www.farmaciasolidaria.somee.com"
 PUBLISH_DIR="/Users/maikelpelaez/Documents/Proyectos/FarmaciaSolidariaCristiana/publish"
 
 echo -e "${YELLOW}Verificando archivos publicados...${NC}"
@@ -56,9 +56,8 @@ set ssl:verify-certificate no;
 set ftp:use-feat no;
 set ftp:use-site-chmod no;
 open -u $FTP_USER,$FTP_PASS ftp://$FTP_HOST;
-cd $FTP_REMOTE_PATH || mkdir -p $FTP_REMOTE_PATH;
 cd $FTP_REMOTE_PATH;
-mirror --reverse --verbose --parallel=3 --ignore-time --newer-than=now-1day $PUBLISH_DIR .
+mirror --reverse --verbose --parallel=3 --ignore-time $PUBLISH_DIR .
 "
 
 LFTP_EXIT_CODE=$?
