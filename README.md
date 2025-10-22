@@ -178,6 +178,10 @@ Ver **[DEPLOYMENT_UBUNTU.md](./DEPLOYMENT_UBUNTU.md)** sección "Solución de Pr
 Desarrollado para la **Iglesia Metodista de Cárdenas y Adriano Solidario**  
 Sistema para servir a la comunidad con amor y dedicación.
 
+Desarrollado por Rev. Maikel Eduardo Peláez Martínez
+
+Contacto: mpmerd@gmail.com
+
 ## � Licencia
 
 MIT License.
