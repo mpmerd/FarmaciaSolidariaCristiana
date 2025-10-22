@@ -1,0 +1,55 @@
+@model FarmaciaSolidariaCristiana.Models.Sponsor
+
+@{
+    ViewData["Title"] = "Eliminar Patrocinador";
+}
+
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card shadow">
+                <div class="card-header bg-danger text-white">
+                    <h4 class="mb-0"><i class="bi bi-exclamation-triangle"></i> Eliminar Patrocinador</h4>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-warning">
+                        <i class="bi bi-exclamation-triangle"></i>
+                        <strong>¿Está seguro que desea eliminar este patrocinador?</strong>
+                        <br>Esta acción no se puede deshacer.
+                    </div>
+
+                    <div class="mb-3">
+                        <strong>Nombre:</strong> @Model.Name
+                    </div>
+
+                    @if (!string.IsNullOrEmpty(Model.Description))
+                    {
+                        <div class="mb-3">
+                            <strong>Descripción:</strong> @Model.Description
+                        </div>
+                    }
+
+                    @if (!string.IsNullOrEmpty(Model.LogoPath))
+                    {
+                        <div class="mb-3">
+                            <strong>Logo:</strong><br>
+                            <img src="@Model.LogoPath" alt="@Model.Name" class="img-thumbnail mt-2" style="max-height: 150px;">
+                        </div>
+                    }
+
+                    <form asp-action="Delete" method="post">
+                        <input type="hidden" asp-for="Id" />
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <a asp-action="Manage" class="btn btn-secondary">
+                                <i class="bi bi-x-circle"></i> Cancelar
+                            </a>
+                            <button type="submit" class="btn btn-danger">
+                                <i class="bi bi-trash"></i> Confirmar Eliminación
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

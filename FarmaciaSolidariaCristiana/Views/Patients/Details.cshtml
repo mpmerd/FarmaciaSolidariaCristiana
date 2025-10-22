@@ -1,0 +1,272 @@
+@model FarmaciaSolidariaCristiana.Models.Patient
+
+@{
+    ViewData["Title"] = "Detalles del Paciente";
+}
+
+<div class="container mt-4">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h2>
+                <i class="bi bi-person-circle"></i> @Model.FullName
+            </h2>
+            <p class="text-muted">
+                <i class="bi bi-calendar-check"></i> Registrado: @Model.RegistrationDate.ToString("dd/MM/yyyy HH:mm")
+            </p>
+        </div>
+        <div class="col-md-4 text-end">
+            <div class="btn-group" role="group">
+                <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-warning">
+                    <i class="bi bi-pencil-fill"></i> Editar
+                </a>
+                <a asp-action="Index" class="btn btn-secondary">
+                    <i class="bi bi-arrow-left"></i> Volver
+                </a>
+            </div>
+        </div>
+    </div>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle-fill"></i> @TempData["SuccessMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    <!-- 1. DATOS DEL PACIENTE -->
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">1. Datos del Paciente</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <p><strong>Nombre Completo:</strong> @Model.FullName</p>
+                    <p><strong>Edad:</strong> @Model.Age años</p>
+                    <p>
+                        <strong>Género:</strong>
+                        @if (Model.Gender == "M")
+                        {
+                            <span class="badge bg-info">
+                                <i class="bi bi-gender-male"></i> Masculino
+                            </span>
+                        }
+                        else if (Model.Gender == "F")
+                        {
+                            <span class="badge bg-warning">
+                                <i class="bi bi-gender-female"></i> Femenino
+                            </span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-secondary">Otro</span>
+                        }
+                    </p>
+                </div>
+                <div class="col-md-6">
+                    <p><strong>Dirección:</strong> @(Model.Address ?? "-")</p>
+                    <p><strong>Teléfono:</strong> @(Model.Phone ?? "-")</p>
+                    <p><strong>DNI/Documento:</strong> @(Model.IdentificationDocument ?? "-")</p>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-6">
+                    <p><strong>Municipio:</strong> @(Model.Municipality ?? "-")</p>
+                </div>
+                <div class="col-md-6">
+                    <p><strong>Provincia:</strong> @(Model.Province ?? "-")</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. DATOS CLÍNICOS -->
+    <div class="card mb-4">
+        <div class="card-header bg-success text-white">
+            <h5 class="mb-0">2. Datos Clínicos</h5>
+        </div>
+        <div class="card-body">
+            <p><strong>Diagnóstico Principal:</strong></p>
+            <p>@(Model.MainDiagnosis ?? "-")</p>
+
+            <p><strong>Patologías Asociadas:</strong></p>
+            <p>@(Model.AssociatedPathologies ?? "-")</p>
+
+            <p><strong>Alergias Conocidas:</strong></p>
+            <p>@(Model.KnownAllergies ?? "-")</p>
+
+            <p><strong>Tratamientos Actuales:</strong></p>
+            <p>@(Model.CurrentTreatments ?? "-")</p>
+        </div>
+    </div>
+
+    <!-- 3. DATOS VITALES -->
+    <div class="card mb-4">
+        <div class="card-header bg-info text-white">
+            <h5 class="mb-0">3. Datos Vitales</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-4">
+                    <p>
+                        <strong>Presión Arterial:</strong>
+                        @if (Model.BloodPressureSystolic.HasValue && Model.BloodPressureDiastolic.HasValue)
+                        {
+                            <span class="badge bg-light text-dark">@Model.BloodPressureSystolic/@Model.BloodPressureDiastolic mmHg</span>
+                        }
+                        else
+                        {
+                            <span>-</span>
+                        }
+                    </p>
+                </div>
+                <div class="col-md-4">
+                    <p>
+                        <strong>Peso:</strong>
+                        @if (Model.Weight.HasValue)
+                        {
+                            <span class="badge bg-light text-dark">@Model.Weight.Value.ToString("0.00") kg</span>
+                        }
+                        else
+                        {
+                            <span>-</span>
+                        }
+                    </p>
+                </div>
+                <div class="col-md-4">
+                    <p>
+                        <strong>Altura:</strong>
+                        @if (Model.Height.HasValue)
+                        {
+                            <span class="badge bg-light text-dark">@Model.Height.Value.ToString("0.00") cm</span>
+                        }
+                        else
+                        {
+                            <span>-</span>
+                        }
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 4. DOCUMENTOS -->
+    @if (Model.Documents != null && Model.Documents.Any())
+    {
+        <div class="card mb-4">
+            <div class="card-header bg-warning">
+                <h5 class="mb-0">4. Documentos</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    @foreach (var doc in Model.Documents)
+                    {
+                        <div class="col-md-3 mb-3">
+                            <div class="card h-100">
+                                @if (doc.ContentType?.StartsWith("image/") == true)
+                                {
+                                    <img src="@doc.FilePath" class="card-img-top" alt="@doc.DocumentType" style="height: 200px; object-fit: cover;">
+                                }
+                                else
+                                {
+                                    <div class="card-img-top bg-light d-flex align-items-center justify-content-center" style="height: 200px;">
+                                        <i class="bi bi-file-earmark-pdf" style="font-size: 4rem; color: #dc3545;"></i>
+                                    </div>
+                                }
+                                <div class="card-body">
+                                    <h6 class="card-title">@doc.DocumentType</h6>
+                                    <p class="card-text small text-muted">
+                                        @doc.FileName<br />
+                                        @((doc.FileSize / 1024).ToString("N0")) KB<br />
+                                        @doc.UploadDate.ToString("dd/MM/yyyy HH:mm")
+                                    </p>
+                                    @if (!string.IsNullOrEmpty(doc.Description))
+                                    {
+                                        <p class="card-text"><small>@doc.Description</small></p>
+                                    }
+                                    <a href="@doc.FilePath" target="_blank" class="btn btn-sm btn-primary w-100">
+                                        <i class="bi bi-eye"></i> Ver Documento
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="card mb-4">
+            <div class="card-header bg-warning">
+                <h5 class="mb-0">4. Documentos</h5>
+            </div>
+            <div class="card-body text-center text-muted">
+                <i class="bi bi-file-earmark-x" style="font-size: 3rem;"></i>
+                <p class="mt-2">No hay documentos cargados</p>
+            </div>
+        </div>
+    }
+
+    <!-- 5. OBSERVACIONES -->
+    <div class="card mb-4">
+        <div class="card-header bg-secondary text-white">
+            <h5 class="mb-0">5. Observaciones</h5>
+        </div>
+        <div class="card-body">
+            <p>@(Model.Observations ?? "-")</p>
+        </div>
+    </div>
+
+    <!-- 6. HISTORIAL DE ENTREGAS -->
+    @if (Model.Deliveries != null && Model.Deliveries.Any())
+    {
+        <div class="card mb-4">
+            <div class="card-header bg-dark text-white">
+                <h5 class="mb-0">6. Historial de Entregas de Medicamentos</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover">
+                        <thead>
+                            <tr>
+                                <th>Fecha</th>
+                                <th>Medicamento</th>
+                                <th>Cantidad</th>
+                                <th>Dosis</th>
+                                <th>Duración</th>
+                                <th>Entregado Por</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var delivery in Model.Deliveries.OrderByDescending(d => d.DeliveryDate))
+                            {
+                                <tr>
+                                    <td>@delivery.DeliveryDate.ToString("dd/MM/yyyy")</td>
+                                    <td>@(delivery.Medicine?.Name ?? "-")</td>
+                                    <td>@delivery.Quantity</td>
+                                    <td>@(delivery.Dosage ?? "-")</td>
+                                    <td>@(delivery.TreatmentDuration ?? "-")</td>
+                                    <td>@(delivery.DeliveredBy ?? "-")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="card mb-4">
+            <div class="card-header bg-dark text-white">
+                <h5 class="mb-0">6. Historial de Entregas de Medicamentos</h5>
+            </div>
+            <div class="card-body text-center text-muted">
+                <i class="bi bi-box-seam" style="font-size: 3rem;"></i>
+                <p class="mt-2">No hay entregas registradas para este paciente</p>
+            </div>
+        </div>
+    }
+</div>

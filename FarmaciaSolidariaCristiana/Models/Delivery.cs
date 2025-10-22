@@ -10,6 +10,9 @@ namespace FarmaciaSolidariaCristiana.Models
         [Display(Name = "Medicamento")]
         public int MedicineId { get; set; }
 
+        [Display(Name = "Paciente")]
+        public int? PatientId { get; set; }
+
         [Required(ErrorMessage = "La cantidad es obligatoria")]
         [Range(1, int.MaxValue, ErrorMessage = "La cantidad debe ser mayor que 0")]
         [Display(Name = "Cantidad")]
@@ -24,7 +27,30 @@ namespace FarmaciaSolidariaCristiana.Models
         [Display(Name = "Comentarios")]
         public string? Comments { get; set; }
 
-        // Navigation property
+        // 3. MEDICAMENTO SOLICITADO - Información adicional
+        [Display(Name = "Dosis")]
+        [StringLength(100)]
+        public string? Dosage { get; set; }
+
+        [Display(Name = "Duración del Tratamiento")]
+        [StringLength(100)]
+        public string? TreatmentDuration { get; set; }
+
+        // 5. ENTREGA DEL MEDICAMENTO
+        [Display(Name = "Lote")]
+        [StringLength(50)]
+        public string? BatchNumber { get; set; }
+
+        [Display(Name = "Fecha de Vencimiento")]
+        [DataType(DataType.Date)]
+        public DateTime? ExpiryDate { get; set; }
+
+        [Display(Name = "Entregado Por")]
+        [StringLength(200)]
+        public string? DeliveredBy { get; set; }
+
+        // Navigation properties
         public Medicine? Medicine { get; set; }
+        public Patient? Patient { get; set; }
     }
 }

@@ -1,0 +1,306 @@
+@model FarmaciaSolidariaCristiana.Models.Patient
+
+@{
+    ViewData["Title"] = "Editar Paciente";
+}
+
+<div class="container mt-4">
+    <h2>
+        <i class="bi bi-pencil-fill"></i> Editar Ficha de Paciente
+    </h2>
+    <hr />
+
+    <form asp-action="Edit" method="post" enctype="multipart/form-data">
+        <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+        <input type="hidden" asp-for="Id" />
+        <input type="hidden" asp-for="RegistrationDate" />
+        <input type="hidden" asp-for="IsActive" />
+
+        <!-- 1. DATOS DEL PACIENTE -->
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">1. Datos del Paciente</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label asp-for="FullName" class="form-label">Nombre Completo <span class="text-danger">*</span></label>
+                        <input asp-for="FullName" class="form-control" required />
+                        <span asp-validation-for="FullName" class="text-danger"></span>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label asp-for="Age" class="form-label">Edad <span class="text-danger">*</span></label>
+                        <input asp-for="Age" class="form-control" type="number" min="0" max="150" required />
+                        <span asp-validation-for="Age" class="text-danger"></span>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label asp-for="Gender" class="form-label">Género <span class="text-danger">*</span></label>
+                        <select asp-for="Gender" class="form-select" required>
+                            <option value="">Seleccione...</option>
+                            <option value="M">Masculino</option>
+                            <option value="F">Femenino</option>
+                            <option value="O">Otro</option>
+                        </select>
+                        <span asp-validation-for="Gender" class="text-danger"></span>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label asp-for="Address" class="form-label">Dirección</label>
+                        <input asp-for="Address" class="form-control" />
+                        <span asp-validation-for="Address" class="text-danger"></span>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label asp-for="Phone" class="form-label">Teléfono</label>
+                        <input asp-for="Phone" class="form-control" />
+                        <span asp-validation-for="Phone" class="text-danger"></span>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <label asp-for="IdentificationDocument" class="form-label">DNI/Documento</label>
+                        <input asp-for="IdentificationDocument" class="form-control" />
+                        <span asp-validation-for="IdentificationDocument" class="text-danger"></span>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label asp-for="Municipality" class="form-label">Municipio</label>
+                        <input asp-for="Municipality" class="form-control" />
+                        <span asp-validation-for="Municipality" class="text-danger"></span>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label asp-for="Province" class="form-label">Provincia</label>
+                        <input asp-for="Province" class="form-control" />
+                        <span asp-validation-for="Province" class="text-danger"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. DATOS CLÍNICOS -->
+        <div class="card mb-4">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0">2. Datos Clínicos</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label asp-for="MainDiagnosis" class="form-label">Diagnóstico Principal</label>
+                    <textarea asp-for="MainDiagnosis" class="form-control" rows="2"></textarea>
+                    <span asp-validation-for="MainDiagnosis" class="text-danger"></span>
+                </div>
+                <div class="mb-3">
+                    <label asp-for="AssociatedPathologies" class="form-label">Patologías Asociadas</label>
+                    <textarea asp-for="AssociatedPathologies" class="form-control" rows="2"></textarea>
+                    <span asp-validation-for="AssociatedPathologies" class="text-danger"></span>
+                </div>
+                <div class="mb-3">
+                    <label asp-for="KnownAllergies" class="form-label">Alergias Conocidas</label>
+                    <textarea asp-for="KnownAllergies" class="form-control" rows="2"></textarea>
+                    <span asp-validation-for="KnownAllergies" class="text-danger"></span>
+                </div>
+                <div class="mb-3">
+                    <label asp-for="CurrentTreatments" class="form-label">Tratamientos Actuales</label>
+                    <textarea asp-for="CurrentTreatments" class="form-control" rows="2"></textarea>
+                    <span asp-validation-for="CurrentTreatments" class="text-danger"></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. DATOS VITALES -->
+        <div class="card mb-4">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0">3. Datos Vitales</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Presión Arterial (mmHg)</label>
+                        <div class="input-group">
+                            <input asp-for="BloodPressureSystolic" class="form-control" placeholder="Sistólica" type="number" min="0" max="300" />
+                            <span class="input-group-text">/</span>
+                            <input asp-for="BloodPressureDiastolic" class="form-control" placeholder="Diastólica" type="number" min="0" max="200" />
+                        </div>
+                        <small class="form-text text-muted">Ejemplo: 120/80</small>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label asp-for="Weight" class="form-label">Peso (kg)</label>
+                        <input asp-for="Weight" class="form-control" type="number" step="0.01" min="0" max="999.99" />
+                        <span asp-validation-for="Weight" class="text-danger"></span>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label asp-for="Height" class="form-label">Altura (cm)</label>
+                        <input asp-for="Height" class="form-control" type="number" step="0.01" min="0" max="999.99" />
+                        <span asp-validation-for="Height" class="text-danger"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. DOCUMENTOS EXISTENTES -->
+        @if (Model.Documents != null && Model.Documents.Any())
+        {
+            <div class="card mb-4">
+                <div class="card-header bg-warning">
+                    <h5 class="mb-0">4. Documentos Existentes</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        @foreach (var doc in Model.Documents)
+                        {
+                            <div class="col-md-4 mb-3">
+                                <div class="card">
+                                    <div class="card-body">
+                                        <h6 class="card-title">@doc.DocumentType</h6>
+                                        <p class="card-text text-muted small">
+                                            @doc.FileName<br />
+                                            Subido: @doc.UploadDate.ToString("dd/MM/yyyy")
+                                        </p>
+                                        @if (!string.IsNullOrEmpty(doc.Description))
+                                        {
+                                            <p class="card-text"><small>@doc.Description</small></p>
+                                        }
+                                        <div class="btn-group w-100" role="group">
+                                            <a href="@doc.FilePath" target="_blank" class="btn btn-sm btn-info">
+                                                <i class="bi bi-eye"></i> Ver
+                                            </a>
+                                            <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#deleteDocModal-@doc.Id">
+                                                <i class="bi bi-trash"></i> Eliminar
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Delete Document Modal -->
+                                <div class="modal fade" id="deleteDocModal-@doc.Id" tabindex="-1" aria-labelledby="deleteDocModalLabel-@doc.Id" aria-hidden="true">
+                                    <div class="modal-dialog">
+                                        <div class="modal-content">
+                                            <div class="modal-header bg-danger text-white">
+                                                <h5 class="modal-title" id="deleteDocModalLabel-@doc.Id">
+                                                    <i class="bi bi-exclamation-triangle-fill"></i> Confirmar Eliminación
+                                                </h5>
+                                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                                            </div>
+                                            <div class="modal-body">
+                                                <p>¿Está seguro que desea eliminar este documento?</p>
+                                                <p><strong>@doc.DocumentType:</strong> @doc.FileName</p>
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                                <form asp-action="DeleteDocument" asp-route-id="@doc.Id" asp-route-patientId="@Model.Id" method="post" class="d-inline">
+                                                    @Html.AntiForgeryToken()
+                                                    <button type="submit" class="btn btn-danger">Eliminar</button>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+
+        <!-- 4. AGREGAR NUEVOS DOCUMENTOS -->
+        <div class="card mb-4">
+            <div class="card-header bg-warning">
+                <h5 class="mb-0">4. Agregar Nuevos Documentos</h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted">Puede agregar fotos adicionales de documentos médicos.</p>
+                <div id="documentFields">
+                    <div class="document-row mb-3">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <label class="form-label">Tipo de Documento</label>
+                                <select name="documentTypes" class="form-select">
+                                    <option value="Receta Médica">Receta Médica</option>
+                                    <option value="Tarjetón Sanitario">Tarjetón Sanitario</option>
+                                    <option value="Tratamiento">Tratamiento</option>
+                                    <option value="Informe Médico">Informe Médico</option>
+                                    <option value="Otro">Otro</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Archivo (Foto)</label>
+                                <input type="file" name="documents" class="form-control" accept="image/*,.pdf" />
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Descripción</label>
+                                <input type="text" name="documentDescriptions" class="form-control" placeholder="Opcional" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <button type="button" id="addDocumentBtn" class="btn btn-sm btn-secondary">
+                    <i class="bi bi-plus-circle"></i> Agregar Otro Documento
+                </button>
+            </div>
+        </div>
+
+        <!-- 5. OBSERVACIONES -->
+        <div class="card mb-4">
+            <div class="card-header bg-secondary text-white">
+                <h5 class="mb-0">5. Observaciones</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label asp-for="Observations" class="form-label">Observaciones Generales</label>
+                    <textarea asp-for="Observations" class="form-control" rows="4"></textarea>
+                    <span asp-validation-for="Observations" class="text-danger"></span>
+                </div>
+            </div>
+        </div>
+
+        <div class="d-grid gap-2 d-md-flex justify-content-md-end mb-4">
+            <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-secondary">
+                <i class="bi bi-x-circle"></i> Cancelar
+            </a>
+            <button type="submit" class="btn btn-primary">
+                <i class="bi bi-save"></i> Guardar Cambios
+            </button>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    <script>
+        document.getElementById('addDocumentBtn').addEventListener('click', function() {
+            const documentFields = document.getElementById('documentFields');
+            const newRow = document.createElement('div');
+            newRow.className = 'document-row mb-3';
+            newRow.innerHTML = `
+                <div class="row">
+                    <div class="col-md-4">
+                        <label class="form-label">Tipo de Documento</label>
+                        <select name="documentTypes" class="form-select">
+                            <option value="Receta Médica">Receta Médica</option>
+                            <option value="Tarjetón Sanitario">Tarjetón Sanitario</option>
+                            <option value="Tratamiento">Tratamiento</option>
+                            <option value="Informe Médico">Informe Médico</option>
+                            <option value="Otro">Otro</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Archivo (Foto)</label>
+                        <input type="file" name="documents" class="form-control" accept="image/*,.pdf" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Descripción</label>
+                        <div class="input-group">
+                            <input type="text" name="documentDescriptions" class="form-control" placeholder="Opcional" />
+                            <button type="button" class="btn btn-danger remove-document-btn">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            documentFields.appendChild(newRow);
+
+            newRow.querySelector('.remove-document-btn').addEventListener('click', function() {
+                newRow.remove();
+            });
+        });
+    </script>
+}

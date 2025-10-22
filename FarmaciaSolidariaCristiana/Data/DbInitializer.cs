@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using FarmaciaSolidariaCristiana.Models;
 
 namespace FarmaciaSolidariaCristiana.Data
 {
@@ -15,7 +16,7 @@ namespace FarmaciaSolidariaCristiana.Data
             await context.Database.MigrateAsync();
 
             // Create roles
-            string[] roleNames = { "Admin", "Farmaceutico", "Viewer" };
+            string[] roleNames = { "Admin", "Farmaceutico", "Viewer", "ViewerPublic" };
             foreach (var roleName in roleNames)
             {
                 var roleExist = await roleManager.RoleExistsAsync(roleName);
@@ -49,6 +50,23 @@ namespace FarmaciaSolidariaCristiana.Data
                 // Update existing admin password
                 var token = await userManager.GeneratePasswordResetTokenAsync(adminUser);
                 await userManager.ResetPasswordAsync(adminUser, token, "doqkox-gadqud-niJho0");
+            }
+
+            // Seed Sponsors
+            if (!await context.Sponsors.AnyAsync())
+            {
+                var sponsors = new List<Sponsor>
+                {
+                    new Sponsor { Name = "ACAA", Description = "Asociación Cubana de Artesanos Artistas", LogoPath = "/images/sponsors/acaa.png", IsActive = true, DisplayOrder = 1, CreatedDate = DateTime.Now },
+                    new Sponsor { Name = "Adriano Solidaire", Description = "Adriano Solidario", LogoPath = "/images/sponsors/adranosolidaire.png", IsActive = true, DisplayOrder = 2, CreatedDate = DateTime.Now },
+                    new Sponsor { Name = "Apotheek", Description = "Apotheek Peeters Herent, Bélgica", LogoPath = "/images/sponsors/apotheek.png", IsActive = true, DisplayOrder = 3, CreatedDate = DateTime.Now },
+                    new Sponsor { Name = "HSF", Description = "Hospital Sans Frontière", LogoPath = "/images/sponsors/hsf.JPG", IsActive = true, DisplayOrder = 4, CreatedDate = DateTime.Now },
+                    new Sponsor { Name = "Farmacia Janeiro", Description = "Farmacia Janeiro, Portugal", LogoPath = "/images/sponsors/janeiro.png", IsActive = true, DisplayOrder = 5, CreatedDate = DateTime.Now },
+                    new Sponsor { Name = "Sutures Medical", Description = "Aip Medical, Bélgica", LogoPath = "/images/sponsors/suturesmedical.png", IsActive = true, DisplayOrder = 6, CreatedDate = DateTime.Now }
+                };
+                
+                context.Sponsors.AddRange(sponsors);
+                await context.SaveChangesAsync();
             }
         }
     }
