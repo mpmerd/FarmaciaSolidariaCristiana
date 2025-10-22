@@ -13,7 +13,7 @@ Sistema web para la gestión de medicamentos, entregas y donaciones de la Farmac
 - ✅ Generación de reportes PDF con logos institucionales (iText7)
 - ✅ Datos de prueba precargados (12 medicamentos, 8 donaciones, 14 entregas)
 - ✅ Interfaz en español con Bootstrap 5 y logos institucionales
-- ✅ HTTP solo (sin HTTPS) para red local
+- ✅ HTTP solo (sin HTTPS) se opto para pruebas en red local segura, en producción se recomienda HTTPS
 - ✅ Compatible con SQL Server en Linux
 
 ### Reportes
@@ -145,11 +145,11 @@ FarmaciaSolidariaCristiana/
 - Configuración de lockout para intentos fallidos
 
 
-## Uso de https
+# Uso de https
 
 En producción (ej. somee.com), se habilita HTTPS para cifrar datos en tránsito. (logins, entregas, donaciones).
 
-# Ejemplo en somee.com
+## Ejemplo en somee.com
 - Sube el proyecto publicado via FTP o Git deploy.
 - En el panel de somee.com, activa SSL (gratuito con Let's Encrypt o similar).
 - Accede via: https://tudominio.somee.com
