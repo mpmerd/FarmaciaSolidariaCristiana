@@ -452,10 +452,13 @@ Temporary Items
 ##
 ## ASP.NET Core specific
 ##
+# IMPORTANTE: Proteger archivos con credenciales reales
+appsettings.json
 appsettings.Development.json
 appsettings.Production.json
-# Keep appsettings.json template but ignore local overrides
-# appsettings.*.json
+appsettings.*.json
+# Los archivos .template son seguros para compartir
+!appsettings.*.template
 
 # Static web assets
 wwwroot/lib/
@@ -473,8 +476,11 @@ wwwroot/uploads/**/*
 Migrations/
 
 # User secrets
-**/appsettings.*.json
 secrets.json
+# Archivos con credenciales reales (mantener locales)
+appsettings.json
+appsettings.Development.json
+appsettings.Production.json
 
 ##
 ## Project specific

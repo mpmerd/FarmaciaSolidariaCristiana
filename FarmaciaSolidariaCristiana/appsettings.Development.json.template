@@ -1,0 +1,22 @@
+{
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft.AspNetCore": "Warning"
+    }
+  },
+  "SmtpSettings": {
+    "Host": "smtp.gmail.com",
+    "Port": "587",
+    "Username": "tu_email@gmail.com",
+    "Password": "TU_APP_PASSWORD_GMAIL_AQUI",
+    "FromEmail": "tu_email@gmail.com",
+    "FromName": "Farmacia Solidaria Cristiana",
+    "EnableSsl": "true"
+  },
+  "AppSettings": {
+    "EnablePublicRegistration": true,
+    "SiteName": "Farmacia Solidaria Cristiana - Desarrollo",
+    "SiteUrl": "http://localhost:5000"
+  }
+}
