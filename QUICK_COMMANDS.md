@@ -93,7 +93,7 @@ top -p $(pgrep -f FarmaciaSolidariaCristiana)
 
 ### Probar conexión a SQL Server
 ```bash
-sqlcmd -S localhost -U farmaceutico -P 'wuwbug-hAjkip-xikgy3' -Q "SELECT @@VERSION"
+sqlcmd -S localhost -U TU_USUARIO -P 'TU_PASSWORD' -Q "SELECT @@VERSION"
 ```
 
 ### Ver estado de SQL Server
@@ -103,7 +103,7 @@ sudo systemctl status mssql-server
 
 ### Ejecutar consulta
 ```bash
-sqlcmd -S localhost -U farmaceutico -P 'wuwbug-hAjkip-xikgy3' -d FarmaciaDb -Q "SELECT COUNT(*) FROM Medicines"
+sqlcmd -S localhost -U TU_USUARIO -P 'TU_PASSWORD' -d FarmaciaDb -Q "SELECT COUNT(*) FROM Medicines"
 ```
 
 ### Limpiar datos de prueba
@@ -149,10 +149,10 @@ sudo systemctl restart mssql-server
 
 ## 🌐 Acceso a la Aplicación
 
-- **URL por IP:** http://192.168.2.113
-- **URL por nombre:** http://MPMESCRITORIO
+- **URL por IP:** http://TU_IP_SERVIDOR
+- **URL por nombre:** http://TU_NOMBRE_SERVIDOR
 - **Usuario:** admin
-- **Contraseña:** doqkox-gadqud-niJho0
+- **Contraseña:** [Ver CONFIGURACION.md para credenciales por defecto]
 
 ---
 
