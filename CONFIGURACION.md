@@ -100,9 +100,12 @@ Esto creará la base de datos y las tablas necesarias, incluyendo:
 Después de la inicialización, puedes acceder con:
 
 - **Usuario:** `admin`
-- **Contraseña:** `doqkox-gadqud-niJho0`
+- **Contraseña:** `[Generada automáticamente por el sistema]`
 
-⚠️ **IMPORTANTE:** Cambia esta contraseña inmediatamente después del primer acceso.
+⚠️ **IMPORTANTE:** 
+- La contraseña por defecto se genera durante la inicialización de la base de datos
+- Cambia esta contraseña inmediatamente después del primer acceso
+- Consulta los logs de inicialización o el código de `DataSeeder.cs` para ver la contraseña generada
 
 ## 🛡️ Seguridad
 
