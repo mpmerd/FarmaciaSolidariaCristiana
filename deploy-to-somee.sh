@@ -17,6 +17,32 @@ echo "Despliegue a Somee.com"
 echo "==========================================${NC}"
 echo ""
 
+echo -e "${YELLOW}⚠️  IMPORTANTE: Migración de Base de Datos${NC}"
+echo ""
+echo "Si esta es la primera vez que despliegas después de actualizar:"
+echo "  1. Ve al panel de Somee → Manage my DB"
+echo "  2. Ejecuta el script: apply-migration-somee.sql"
+echo "  3. Espera a que diga: MIGRACIÓN COMPLETADA EXITOSAMENTE"
+echo ""
+read -p "¿Ya aplicaste la migración SQL? (s/n): " SQL_APPLIED
+echo ""
+
+if [ "$SQL_APPLIED" != "s" ] && [ "$SQL_APPLIED" != "S" ]; then
+    echo -e "${RED}⚠️  Debes aplicar la migración SQL primero${NC}"
+    echo ""
+    echo "Pasos:"
+    echo "  1. Abre: apply-migration-somee.sql"
+    echo "  2. Copia TODO el contenido"
+    echo "  3. Ve a Somee → Manage my DB → SQL Manager"
+    echo "  4. Pega y ejecuta el script"
+    echo "  5. Vuelve a ejecutar este script"
+    echo ""
+    exit 1
+fi
+
+echo -e "${GREEN}✓ Migración confirmada. Continuando con el despliegue...${NC}"
+echo ""
+
 # Configuración de Somee
 FTP_HOST="farmaciasolidaria.somee.com"
 FTP_USER="maikelpelaez"

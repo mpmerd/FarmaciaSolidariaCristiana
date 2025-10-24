@@ -10,7 +10,7 @@
     </h2>
     <hr />
 
-    <form asp-action="Create" method="post" enctype="multipart/form-data">
+    <form asp-action="Create" method="post" enctype="multipart/form-data" id="patientForm">
         <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
 
         <!-- 1. DATOS DEL PACIENTE -->
@@ -19,6 +19,32 @@
                 <h5 class="mb-0">1. Datos del Paciente</h5>
             </div>
             <div class="card-body">
+                <!-- CARNET O PASAPORTE PRIMERO -->
+                <div class="row">
+                    <div class="col-md-12 mb-3">
+                        <label asp-for="IdentificationDocument" class="form-label">
+                            Carnet de Identidad o Pasaporte <span class="text-danger">*</span>
+                        </label>
+                        <input asp-for="IdentificationDocument" 
+                               id="patientIdentification"
+                               class="form-control" 
+                               placeholder="11 dígitos para CI o letra + 6-7 dígitos para pasaporte" 
+                               required />
+                        <span asp-validation-for="IdentificationDocument" class="text-danger"></span>
+                        <div id="identificationFeedback" class="mt-2"></div>
+                    </div>
+                </div>
+
+                <!-- Área para mostrar datos del paciente existente -->
+                <div id="existingPatientInfo" class="alert alert-info" style="display: none;">
+                    <h6><i class="bi bi-info-circle"></i> Paciente ya registrado</h6>
+                    <p id="existingPatientDetails"></p>
+                    <div id="existingPatientDeliveries"></div>
+                    <button type="button" id="editExistingPatient" class="btn btn-sm btn-warning">
+                        <i class="bi bi-pencil"></i> Editar Ficha Existente
+                    </button>
+                </div>
+
                 <div class="row">
                     <div class="col-md-6 mb-3">
                         <label asp-for="FullName" class="form-label">Nombre Completo <span class="text-danger">*</span></label>
@@ -42,28 +68,16 @@
                 </div>
                 <div class="row">
                     <div class="col-md-6 mb-3">
-                        <label asp-for="Address" class="form-label">Dirección</label>
-                        <input asp-for="Address" class="form-control" />
-                        <span asp-validation-for="Address" class="text-danger"></span>
-                    </div>
-                    <div class="col-md-6 mb-3">
                         <label asp-for="Phone" class="form-label">Teléfono</label>
                         <input asp-for="Phone" class="form-control" />
                         <span asp-validation-for="Phone" class="text-danger"></span>
                     </div>
-                </div>
-                <div class="row">
-                    <div class="col-md-4 mb-3">
-                        <label asp-for="IdentificationDocument" class="form-label">DNI/Documento</label>
-                        <input asp-for="IdentificationDocument" class="form-control" />
-                        <span asp-validation-for="IdentificationDocument" class="text-danger"></span>
-                    </div>
-                    <div class="col-md-4 mb-3">
+                    <div class="col-md-3 mb-3">
                         <label asp-for="Municipality" class="form-label">Municipio</label>
                         <input asp-for="Municipality" class="form-control" />
                         <span asp-validation-for="Municipality" class="text-danger"></span>
                     </div>
-                    <div class="col-md-4 mb-3">
+                    <div class="col-md-3 mb-3">
                         <label asp-for="Province" class="form-label">Provincia</label>
                         <input asp-for="Province" class="form-control" />
                         <span asp-validation-for="Province" class="text-danger"></span>
@@ -196,6 +210,224 @@
 @section Scripts {
     @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
     <script>
+        // Búsqueda automática de paciente por identificación
+        let searchTimeout;
+        const identificationInput = document.getElementById('patientIdentification');
+        const feedbackDiv = document.getElementById('identificationFeedback');
+        const existingPatientInfo = document.getElementById('existingPatientInfo');
+        const existingPatientDetails = document.getElementById('existingPatientDetails');
+        const existingPatientDeliveries = document.getElementById('existingPatientDeliveries');
+
+        // Variable para rastrear si el paciente existe
+        let patientExists = false;
+
+        // Función para deshabilitar todos los campos del formulario
+        function disableFormFields() {
+            patientExists = true; // Marcar que el paciente existe
+            
+            console.log('Deshabilitando campos del formulario...');
+            
+            const form = document.getElementById('patientForm');
+            if (!form) {
+                console.error('Formulario no encontrado');
+                return;
+            }
+            
+            // Deshabilitar inputs de texto
+            const textInputs = form.querySelectorAll('input[type="text"]:not(#patientIdentification), input[type="date"], input[type="email"], input[type="tel"]');
+            console.log('Text inputs encontrados:', textInputs.length);
+            textInputs.forEach(input => {
+                input.disabled = true;
+                input.style.backgroundColor = '#e9ecef';
+                input.style.cursor = 'not-allowed';
+            });
+            
+            // Deshabilitar textareas
+            const textareas = form.querySelectorAll('textarea');
+            console.log('Textareas encontrados:', textareas.length);
+            textareas.forEach(textarea => {
+                textarea.disabled = true;
+                textarea.style.backgroundColor = '#e9ecef';
+                textarea.style.cursor = 'not-allowed';
+            });
+            
+            // Deshabilitar selects
+            const selects = form.querySelectorAll('select');
+            console.log('Selects encontrados:', selects.length);
+            selects.forEach(select => {
+                select.disabled = true;
+                select.style.backgroundColor = '#e9ecef';
+                select.style.cursor = 'not-allowed';
+            });
+            
+            // Deshabilitar inputs de archivo
+            const fileInputs = form.querySelectorAll('input[type="file"]');
+            console.log('File inputs encontrados:', fileInputs.length);
+            fileInputs.forEach(input => {
+                input.disabled = true;
+            });
+
+            // Deshabilitar botones de guardar y agregar documentos
+            const submitBtn = form.querySelector('button[type="submit"]');
+            const addDocBtn = document.getElementById('addDocumentBtn');
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.style.cursor = 'not-allowed';
+                submitBtn.style.opacity = '0.6';
+                console.log('Botón submit deshabilitado');
+            }
+            if (addDocBtn) {
+                addDocBtn.disabled = true;
+                addDocBtn.style.cursor = 'not-allowed';
+                addDocBtn.style.opacity = '0.6';
+                console.log('Botón addDoc deshabilitado');
+            }
+            
+            console.log('Campos deshabilitados completamente');
+        }
+
+        // Función para habilitar todos los campos del formulario
+        function enableFormFields() {
+            patientExists = false; // Marcar que el paciente NO existe
+            
+            console.log('Habilitando campos del formulario...');
+            
+            const form = document.getElementById('patientForm');
+            if (!form) return;
+            
+            // Habilitar inputs de texto
+            const textInputs = form.querySelectorAll('input[type="text"]:not(#patientIdentification), input[type="date"], input[type="email"], input[type="tel"]');
+            textInputs.forEach(input => {
+                input.disabled = false;
+                input.style.backgroundColor = '';
+                input.style.cursor = '';
+            });
+            
+            // Habilitar textareas
+            const textareas = form.querySelectorAll('textarea');
+            textareas.forEach(textarea => {
+                textarea.disabled = false;
+                textarea.style.backgroundColor = '';
+                textarea.style.cursor = '';
+            });
+            
+            // Habilitar selects
+            const selects = form.querySelectorAll('select');
+            selects.forEach(select => {
+                select.disabled = false;
+                select.style.backgroundColor = '';
+                select.style.cursor = '';
+            });
+            
+            // Habilitar inputs de archivo
+            const fileInputs = form.querySelectorAll('input[type="file"]');
+            fileInputs.forEach(input => {
+                input.disabled = false;
+            });
+
+            // Habilitar botones
+            const submitBtn = form.querySelector('button[type="submit"]');
+            const addDocBtn = document.getElementById('addDocumentBtn');
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.style.cursor = '';
+                submitBtn.style.opacity = '';
+            }
+            if (addDocBtn) {
+                addDocBtn.disabled = false;
+                addDocBtn.style.cursor = '';
+                addDocBtn.style.opacity = '';
+            }
+            
+            console.log('Campos habilitados completamente');
+        }
+
+        // Prevenir submit del formulario si el paciente ya existe
+        document.getElementById('patientForm').addEventListener('submit', function(e) {
+            if (patientExists) {
+                e.preventDefault();
+                alert('Este paciente ya está registrado. Use el botón "Editar Ficha Existente" para modificar sus datos.');
+                return false;
+            }
+        });
+
+        identificationInput.addEventListener('blur', function() {
+            const identification = this.value.trim();
+            
+            if (identification.length === 0) {
+                feedbackDiv.innerHTML = '';
+                existingPatientInfo.style.display = 'none';
+                return;
+            }
+
+            // Validar formato
+            const ciPattern = /^\d{11}$/;
+            const passportPattern = /^[A-Za-z]\d{6,7}$/;
+            
+            if (!ciPattern.test(identification) && !passportPattern.test(identification)) {
+                feedbackDiv.innerHTML = '<div class="alert alert-warning"><i class="bi bi-exclamation-triangle"></i> Formato inválido. Use 11 dígitos para CI o letra + 6-7 dígitos para pasaporte.</div>';
+                existingPatientInfo.style.display = 'none';
+                return;
+            }
+
+            // Buscar paciente
+            feedbackDiv.innerHTML = '<div class="spinner-border spinner-border-sm text-primary"></div> Buscando paciente...';
+            
+            fetch(`/Patients/SearchByIdentification?identification=${encodeURIComponent(identification)}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.exists) {
+                        // Mostrar información del paciente existente
+                        existingPatientDetails.innerHTML = `
+                            <strong>Nombre:</strong> ${data.fullName}<br>
+                            <strong>Edad:</strong> ${data.age} años<br>
+                            <strong>Registrado:</strong> ${new Date(data.registrationDate).toLocaleDateString('es-ES')}
+                        `;
+
+                        // Mostrar historial de entregas
+                        if (data.deliveries && data.deliveries.length > 0) {
+                            let deliveriesHtml = '<h6 class="mt-3"><i class="bi bi-box-seam"></i> Historial de Entregas:</h6><ul class="list-group list-group-sm">';
+                            data.deliveries.forEach(delivery => {
+                                deliveriesHtml += `
+                                    <li class="list-group-item">
+                                        <strong>${delivery.medicineName}</strong> - 
+                                        Cantidad: ${delivery.quantity} - 
+                                        Fecha: ${new Date(delivery.deliveryDate).toLocaleDateString('es-ES')}
+                                    </li>
+                                `;
+                            });
+                            deliveriesHtml += '</ul>';
+                            existingPatientDeliveries.innerHTML = deliveriesHtml;
+                        } else {
+                            existingPatientDeliveries.innerHTML = '<p class="text-muted mt-2">Sin entregas registradas</p>';
+                        }
+
+                        existingPatientInfo.style.display = 'block';
+                        feedbackDiv.innerHTML = '';
+
+                        // DESHABILITAR TODOS LOS CAMPOS DEL FORMULARIO
+                        disableFormFields();
+
+                        // Configurar botón de edición
+                        document.getElementById('editExistingPatient').onclick = function() {
+                            window.location.href = `/Patients/Edit/${data.id}`;
+                        };
+                    } else {
+                        feedbackDiv.innerHTML = '<div class="alert alert-success"><i class="bi bi-check-circle"></i> Identificación válida. Paciente nuevo.</div>';
+                        existingPatientInfo.style.display = 'none';
+                        
+                        // HABILITAR TODOS LOS CAMPOS DEL FORMULARIO
+                        enableFormFields();
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    feedbackDiv.innerHTML = '<div class="alert alert-danger"><i class="bi bi-x-circle"></i> Error al buscar paciente.</div>';
+                    existingPatientInfo.style.display = 'none';
+                });
+        });
+
+        // Agregar documentos dinámicamente
         document.getElementById('addDocumentBtn').addEventListener('click', function() {
             const documentFields = document.getElementById('documentFields');
             const newRow = document.createElement('div');

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using FarmaciaSolidariaCristiana.Data;
 using FarmaciaSolidariaCristiana.Models;
+using FarmaciaSolidariaCristiana.Services;
 
 namespace FarmaciaSolidariaCristiana.Controllers
 {
@@ -11,11 +12,19 @@ namespace FarmaciaSolidariaCristiana.Controllers
     {
         private readonly ApplicationDbContext _context;
         private readonly IWebHostEnvironment _environment;
+        private readonly IImageCompressionService _imageCompressionService;
+        private readonly ILogger<PatientsController> _logger;
 
-        public PatientsController(ApplicationDbContext context, IWebHostEnvironment environment)
+        public PatientsController(
+            ApplicationDbContext context, 
+            IWebHostEnvironment environment,
+            IImageCompressionService imageCompressionService,
+            ILogger<PatientsController> logger)
         {
             _context = context;
             _environment = environment;
+            _imageCompressionService = imageCompressionService;
+            _logger = logger;
         }
 
         // GET: Patients
@@ -54,6 +63,47 @@ namespace FarmaciaSolidariaCristiana.Controllers
         public IActionResult Create()
         {
             return View();
+        }
+
+        // GET: API endpoint to search patient by identification
+        [HttpGet]
+        public async Task<IActionResult> SearchByIdentification(string identification)
+        {
+            if (string.IsNullOrWhiteSpace(identification))
+            {
+                return Json(new { exists = false });
+            }
+
+            var patient = await _context.Patients
+                .Include(p => p.Deliveries)
+                    .ThenInclude(d => d.Medicine)
+                .FirstOrDefaultAsync(p => p.IdentificationDocument == identification && p.IsActive);
+
+            if (patient == null)
+            {
+                return Json(new { exists = false });
+            }
+
+            var deliveriesData = patient.Deliveries
+                .OrderByDescending(d => d.DeliveryDate)
+                .Take(5)
+                .Select(d => new
+                {
+                    medicineName = d.Medicine?.Name ?? "N/A",
+                    quantity = d.Quantity,
+                    deliveryDate = d.DeliveryDate
+                })
+                .ToList();
+
+            return Json(new
+            {
+                exists = true,
+                id = patient.Id,
+                fullName = patient.FullName,
+                age = patient.Age,
+                registrationDate = patient.RegistrationDate,
+                deliveries = deliveriesData
+            });
         }
 
         // POST: Patients/Create
@@ -203,9 +253,48 @@ namespace FarmaciaSolidariaCristiana.Controllers
                     var fileName = $"{patientId}_{Guid.NewGuid()}{Path.GetExtension(file.FileName)}";
                     var filePath = Path.Combine(uploadFolder, fileName);
 
-                    using (var stream = new FileStream(filePath, FileMode.Create))
+                    long fileSize = file.Length;
+                    var originalSize = file.Length;
+
+                    // Check if file is an image and compress it
+                    if (_imageCompressionService.IsImage(file.ContentType))
                     {
-                        await file.CopyToAsync(stream);
+                        _logger.LogInformation("Compressing image: {FileName}, Original size: {Size} bytes", 
+                            file.FileName, originalSize);
+
+                        using (var inputStream = file.OpenReadStream())
+                        {
+                            // Compress the image
+                            using (var compressedStream = await _imageCompressionService.CompressImageAsync(
+                                inputStream, 
+                                file.ContentType,
+                                maxWidth: 1920,    // Max width for documents
+                                maxHeight: 1920,   // Max height for documents
+                                quality: 85))      // Quality: 85% is a good balance
+                            {
+                                // Save compressed image
+                                using (var fileStream = new FileStream(filePath, FileMode.Create))
+                                {
+                                    await compressedStream.CopyToAsync(fileStream);
+                                    fileSize = fileStream.Length;
+                                }
+                            }
+                        }
+
+                        var compressionRatio = originalSize > 0 ? (1 - (double)fileSize / originalSize) * 100 : 0;
+                        _logger.LogInformation("Image compressed and saved: {FileName}, New size: {Size} bytes, Compression: {Ratio:F2}%",
+                            fileName, fileSize, compressionRatio);
+                    }
+                    else
+                    {
+                        // Not an image, save as-is
+                        using (var stream = new FileStream(filePath, FileMode.Create))
+                        {
+                            await file.CopyToAsync(stream);
+                            fileSize = stream.Length;
+                        }
+                        _logger.LogInformation("Non-image file saved: {FileName}, Size: {Size} bytes", 
+                            fileName, fileSize);
                     }
 
                     var document = new PatientDocument
@@ -214,7 +303,7 @@ namespace FarmaciaSolidariaCristiana.Controllers
                         DocumentType = documentTypes != null && i < documentTypes.Count ? documentTypes[i] : "Otro",
                         FileName = file.FileName,
                         FilePath = $"/uploads/patient-documents/{fileName}",
-                        FileSize = file.Length,
+                        FileSize = fileSize,
                         ContentType = file.ContentType,
                         Description = documentDescriptions != null && i < documentDescriptions.Count ? documentDescriptions[i] : null,
                         UploadDate = DateTime.Now

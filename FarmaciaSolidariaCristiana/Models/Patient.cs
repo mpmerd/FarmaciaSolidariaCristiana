@@ -6,6 +6,14 @@ namespace FarmaciaSolidariaCristiana.Models
     {
         public int Id { get; set; }
 
+        // CARNET DE IDENTIDAD O PASAPORTE (Obligatorio y único)
+        [Required(ErrorMessage = "El Carnet de Identidad o Pasaporte es requerido")]
+        [Display(Name = "Carnet de Identidad o Pasaporte")]
+        [StringLength(20)]
+        [RegularExpression(@"^(\d{11}|[A-Za-z]\d{6,7})$", 
+            ErrorMessage = "Formato inválido. Use 11 dígitos para Carnet de Identidad o letra seguida de 6-7 dígitos para Pasaporte")]
+        public string IdentificationDocument { get; set; } = string.Empty;
+
         // 1. DATOS DEL PACIENTE
         [Required(ErrorMessage = "El nombre completo es requerido")]
         [Display(Name = "Nombre Completo")]
@@ -29,10 +37,6 @@ namespace FarmaciaSolidariaCristiana.Models
         [Display(Name = "Teléfono / Contacto")]
         [StringLength(50)]
         public string? Phone { get; set; }
-
-        [Display(Name = "Documento de Identidad")]
-        [StringLength(50)]
-        public string? IdentificationDocument { get; set; }
 
         [Display(Name = "Municipio")]
         [StringLength(100)]

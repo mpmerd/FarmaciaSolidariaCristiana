@@ -23,6 +23,16 @@
             </div>
             <div class="card-body">
                 <div class="row">
+                    <div class="col-md-12 mb-3">
+                        <label asp-for="IdentificationDocument" class="form-label">
+                            Carnet de Identidad o Pasaporte <span class="text-danger">*</span>
+                        </label>
+                        <input asp-for="IdentificationDocument" class="form-control" required readonly />
+                        <span asp-validation-for="IdentificationDocument" class="text-danger"></span>
+                        <small class="text-muted">El documento de identidad no se puede modificar</small>
+                    </div>
+                </div>
+                <div class="row">
                     <div class="col-md-6 mb-3">
                         <label asp-for="FullName" class="form-label">Nombre Completo <span class="text-danger">*</span></label>
                         <input asp-for="FullName" class="form-control" required />
@@ -44,22 +54,17 @@
                     </div>
                 </div>
                 <div class="row">
-                    <div class="col-md-6 mb-3">
+                    <div class="col-md-12 mb-3">
                         <label asp-for="Address" class="form-label">Dirección</label>
                         <input asp-for="Address" class="form-control" />
                         <span asp-validation-for="Address" class="text-danger"></span>
                     </div>
-                    <div class="col-md-6 mb-3">
-                        <label asp-for="Phone" class="form-label">Teléfono</label>
-                        <input asp-for="Phone" class="form-control" />
-                        <span asp-validation-for="Phone" class="text-danger"></span>
-                    </div>
                 </div>
                 <div class="row">
                     <div class="col-md-4 mb-3">
-                        <label asp-for="IdentificationDocument" class="form-label">DNI/Documento</label>
-                        <input asp-for="IdentificationDocument" class="form-control" />
-                        <span asp-validation-for="IdentificationDocument" class="text-danger"></span>
+                        <label asp-for="Phone" class="form-label">Teléfono</label>
+                        <input asp-for="Phone" class="form-control" />
+                        <span asp-validation-for="Phone" class="text-danger"></span>
                     </div>
                     <div class="col-md-4 mb-3">
                         <label asp-for="Municipality" class="form-label">Municipio</label>
