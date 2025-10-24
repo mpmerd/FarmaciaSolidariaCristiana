@@ -15,6 +15,9 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 // Register Email Service
 builder.Services.AddScoped<IEmailService, EmailService>();
 
+// Register Image Compression Service
+builder.Services.AddScoped<IImageCompressionService, ImageCompressionService>();
+
 // Configure Identity
 builder.Services.AddIdentity<IdentityUser, IdentityRole>(options =>
 {

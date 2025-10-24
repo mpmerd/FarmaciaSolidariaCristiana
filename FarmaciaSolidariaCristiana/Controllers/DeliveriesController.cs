@@ -52,10 +52,28 @@ namespace FarmaciaSolidariaCristiana.Controllers
         [HttpPost]
         [Authorize(Roles = "Admin,Farmaceutico")]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("MedicineId,Quantity,DeliveryDate,PatientNote,Comments")] Delivery delivery)
+        public async Task<IActionResult> Create([Bind("PatientIdentification,MedicineId,Quantity,DeliveryDate,PatientNote,Comments,Dosage,TreatmentDuration")] Delivery delivery)
         {
             if (ModelState.IsValid)
             {
+                // Buscar el paciente por su identificación
+                var patient = await _context.Patients
+                    .FirstOrDefaultAsync(p => p.IdentificationDocument == delivery.PatientIdentification && p.IsActive);
+
+                if (patient == null)
+                {
+                    ModelState.AddModelError("PatientIdentification", 
+                        "Paciente no encontrado. Por favor, registre primero al paciente en la sección de Pacientes.");
+                    ViewData["MedicineId"] = new SelectList(_context.Medicines, "Id", "Name", delivery.MedicineId);
+                    return View(delivery);
+                }
+
+                // Asignar el paciente a la entrega
+                delivery.PatientId = patient.Id;
+                
+                // Capturar el usuario que realiza la entrega
+                delivery.DeliveredBy = User.Identity?.Name ?? "Sistema";
+
                 var medicine = await _context.Medicines.FindAsync(delivery.MedicineId);
                 if (medicine == null)
                 {
@@ -75,8 +93,9 @@ namespace FarmaciaSolidariaCristiana.Controllers
                 _context.Add(delivery);
                 await _context.SaveChangesAsync();
                 
-                _logger.LogInformation("Delivery created for medicine: {MedicineName}, Quantity: {Quantity}", medicine.Name, delivery.Quantity);
-                TempData["SuccessMessage"] = "Entrega registrada exitosamente.";
+                _logger.LogInformation("Delivery created for patient: {PatientName}, medicine: {MedicineName}, Quantity: {Quantity}", 
+                    patient.FullName, medicine.Name, delivery.Quantity);
+                TempData["SuccessMessage"] = $"Entrega registrada exitosamente para {patient.FullName}.";
                 return RedirectToAction(nameof(Index));
             }
             

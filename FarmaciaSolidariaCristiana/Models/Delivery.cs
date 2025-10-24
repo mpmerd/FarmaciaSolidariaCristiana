@@ -6,6 +6,13 @@ namespace FarmaciaSolidariaCristiana.Models
     {
         public int Id { get; set; }
 
+        [Required(ErrorMessage = "El Carnet de Identidad o Pasaporte es requerido")]
+        [Display(Name = "Carnet de Identidad o Pasaporte")]
+        [StringLength(20)]
+        [RegularExpression(@"^(\d{11}|[A-Za-z]\d{6,7})$", 
+            ErrorMessage = "Formato inválido. Use 11 dígitos para Carnet de Identidad o letra seguida de 6-7 dígitos para Pasaporte")]
+        public string PatientIdentification { get; set; } = string.Empty;
+
         [Required(ErrorMessage = "Debe seleccionar un medicamento")]
         [Display(Name = "Medicamento")]
         public int MedicineId { get; set; }

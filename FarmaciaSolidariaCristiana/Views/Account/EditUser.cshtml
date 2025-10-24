@@ -46,6 +46,10 @@
                         {
                             <span class="badge bg-info fs-6">@Model.CurrentRole</span>
                         }
+                        else if (Model.CurrentRole == "ViewerPublic")
+                        {
+                            <span class="badge bg-warning text-dark fs-6">@Model.CurrentRole</span>
+                        }
                         else
                         {
                             <span class="badge bg-secondary fs-6">Sin rol asignado</span>
@@ -60,6 +64,7 @@
                         <option value="Admin">Admin (Acceso completo)</option>
                         <option value="Farmaceutico">Farmaceutico (Gestión de medicamentos)</option>
                         <option value="Viewer">Viewer (Solo lectura)</option>
+                        <option value="ViewerPublic">ViewerPublic (Público - Solo lectura limitada)</option>
                     </select>
                     <span asp-validation-for="NewRole" class="text-danger"></span>
                     <div class="form-text">

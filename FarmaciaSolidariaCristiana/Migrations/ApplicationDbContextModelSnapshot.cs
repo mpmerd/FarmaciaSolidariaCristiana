@@ -57,6 +57,11 @@ namespace FarmaciaSolidariaCristiana.Migrations
                     b.Property<int?>("PatientId")
                         .HasColumnType("int");
 
+                    b.Property<string>("PatientIdentification")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
                     b.Property<string>("PatientNote")
                         .HasColumnType("nvarchar(max)");
 
@@ -180,8 +185,9 @@ namespace FarmaciaSolidariaCristiana.Migrations
                         .HasColumnType("decimal(5,2)");
 
                     b.Property<string>("IdentificationDocument")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");

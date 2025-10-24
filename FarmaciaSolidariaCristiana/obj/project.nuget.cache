@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "dgSpecHash": "02ZEuGd/cDk=",
+  "dgSpecHash": "oDLzifjvT7k=",
   "success": true,
   "projectFilePath": "/Users/maikelpelaez/Documents/Proyectos/FarmaciaSolidariaCristiana/FarmaciaSolidariaCristiana/FarmaciaSolidariaCristiana.csproj",
   "expectedPackageFiles": [
@@ -74,6 +74,7 @@
     "/Users/maikelpelaez/.nuget/packages/runtime.ubuntu.14.04-x64.runtime.native.system.security.cryptography.openssl/4.3.0/runtime.ubuntu.14.04-x64.runtime.native.system.security.cryptography.openssl.4.3.0.nupkg.sha512",
     "/Users/maikelpelaez/.nuget/packages/runtime.ubuntu.16.04-x64.runtime.native.system.security.cryptography.openssl/4.3.0/runtime.ubuntu.16.04-x64.runtime.native.system.security.cryptography.openssl.4.3.0.nupkg.sha512",
     "/Users/maikelpelaez/.nuget/packages/runtime.ubuntu.16.10-x64.runtime.native.system.security.cryptography.openssl/4.3.0/runtime.ubuntu.16.10-x64.runtime.native.system.security.cryptography.openssl.4.3.0.nupkg.sha512",
+    "/Users/maikelpelaez/.nuget/packages/sixlabors.imagesharp/3.1.11/sixlabors.imagesharp.3.1.11.nupkg.sha512",
     "/Users/maikelpelaez/.nuget/packages/system.appcontext/4.1.0/system.appcontext.4.1.0.nupkg.sha512",
     "/Users/maikelpelaez/.nuget/packages/system.clientmodel/1.0.0/system.clientmodel.1.0.0.nupkg.sha512",
     "/Users/maikelpelaez/.nuget/packages/system.codedom/4.4.0/system.codedom.4.4.0.nupkg.sha512",

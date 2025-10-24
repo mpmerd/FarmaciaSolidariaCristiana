@@ -13,6 +13,26 @@
                 <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
                 
                 <div class="form-group mb-3">
+                    <label asp-for="PatientIdentification" class="form-label">
+                        Carnet de Identidad o Pasaporte <span class="text-danger">*</span>
+                    </label>
+                    <input asp-for="PatientIdentification" 
+                           id="deliveryPatientIdentification"
+                           class="form-control" 
+                           placeholder="11 dígitos para CI o letra + 6-7 dígitos para pasaporte" 
+                           required />
+                    <span asp-validation-for="PatientIdentification" class="text-danger"></span>
+                    <div id="patientInfoFeedback" class="mt-2"></div>
+                </div>
+
+                <!-- Área para mostrar información del paciente -->
+                <div id="patientInfo" class="alert alert-info" style="display: none;">
+                    <h6><i class="bi bi-person-circle"></i> Información del Paciente</h6>
+                    <div id="patientDetails"></div>
+                    <div id="patientDeliveriesHistory"></div>
+                </div>
+                
+                <div class="form-group mb-3">
                     <label asp-for="MedicineId" class="form-label"></label>
                     <select asp-for="MedicineId" class="form-select" asp-items="ViewBag.MedicineId">
                         <option value="">-- Seleccione un Medicamento --</option>
@@ -30,6 +50,23 @@
                     <label asp-for="DeliveryDate" class="form-label"></label>
                     <input asp-for="DeliveryDate" class="form-control" type="date" />
                     <span asp-validation-for="DeliveryDate" class="text-danger"></span>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group mb-3">
+                            <label asp-for="Dosage" class="form-label"></label>
+                            <input asp-for="Dosage" class="form-control" placeholder="Ej: 1 tableta cada 8 horas" />
+                            <span asp-validation-for="Dosage" class="text-danger"></span>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group mb-3">
+                            <label asp-for="TreatmentDuration" class="form-label"></label>
+                            <input asp-for="TreatmentDuration" class="form-control" placeholder="Ej: 7 días, 2 semanas" />
+                            <span asp-validation-for="TreatmentDuration" class="text-danger"></span>
+                        </div>
+                    </div>
                 </div>
                 
                 <div class="form-group mb-3">
@@ -53,4 +90,79 @@
 
 @section Scripts {
     @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    <script>
+        // Búsqueda automática de paciente por identificación
+        const identificationInput = document.getElementById('deliveryPatientIdentification');
+        const feedbackDiv = document.getElementById('patientInfoFeedback');
+        const patientInfo = document.getElementById('patientInfo');
+        const patientDetails = document.getElementById('patientDetails');
+        const patientDeliveriesHistory = document.getElementById('patientDeliveriesHistory');
+
+        identificationInput.addEventListener('blur', function() {
+            const identification = this.value.trim();
+            
+            if (identification.length === 0) {
+                feedbackDiv.innerHTML = '';
+                patientInfo.style.display = 'none';
+                return;
+            }
+
+            // Validar formato
+            const ciPattern = /^\d{11}$/;
+            const passportPattern = /^[A-Za-z]\d{6,7}$/;
+            
+            if (!ciPattern.test(identification) && !passportPattern.test(identification)) {
+                feedbackDiv.innerHTML = '<div class="alert alert-warning"><i class="bi bi-exclamation-triangle"></i> Formato inválido. Use 11 dígitos para CI o letra + 6-7 dígitos para pasaporte.</div>';
+                patientInfo.style.display = 'none';
+                return;
+            }
+
+            // Buscar paciente
+            feedbackDiv.innerHTML = '<div class="spinner-border spinner-border-sm text-primary"></div> Buscando paciente...';
+            
+            fetch(`/Patients/SearchByIdentification?identification=${encodeURIComponent(identification)}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.exists) {
+                        // Mostrar información del paciente
+                        patientDetails.innerHTML = `
+                            <p class="mb-2">
+                                <strong>Nombre:</strong> ${data.fullName}<br>
+                                <strong>Edad:</strong> ${data.age} años<br>
+                                <strong>Registrado:</strong> ${new Date(data.registrationDate).toLocaleDateString('es-ES')}
+                            </p>
+                        `;
+
+                        // Mostrar historial de entregas
+                        if (data.deliveries && data.deliveries.length > 0) {
+                            let deliveriesHtml = '<h6 class="mt-2"><i class="bi bi-box-seam"></i> Entregas Anteriores:</h6><ul class="list-unstyled small">';
+                            data.deliveries.forEach(delivery => {
+                                deliveriesHtml += `
+                                    <li class="mb-1">
+                                        • <strong>${delivery.medicineName}</strong> - 
+                                        Cantidad: ${delivery.quantity} - 
+                                        ${new Date(delivery.deliveryDate).toLocaleDateString('es-ES')}
+                                    </li>
+                                `;
+                            });
+                            deliveriesHtml += '</ul>';
+                            patientDeliveriesHistory.innerHTML = deliveriesHtml;
+                        } else {
+                            patientDeliveriesHistory.innerHTML = '<p class="text-muted small mt-2">Primera entrega para este paciente</p>';
+                        }
+
+                        patientInfo.style.display = 'block';
+                        feedbackDiv.innerHTML = '<div class="alert alert-success small mt-2"><i class="bi bi-check-circle"></i> Paciente encontrado</div>';
+                    } else {
+                        feedbackDiv.innerHTML = '<div class="alert alert-warning small mt-2"><i class="bi bi-exclamation-circle"></i> Paciente no registrado. Por favor, registre primero al paciente en la sección de Pacientes.</div>';
+                        patientInfo.style.display = 'none';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    feedbackDiv.innerHTML = '<div class="alert alert-danger small mt-2"><i class="bi bi-x-circle"></i> Error al buscar paciente.</div>';
+                    patientInfo.style.display = 'none';
+                });
+        });
+    </script>
 }
