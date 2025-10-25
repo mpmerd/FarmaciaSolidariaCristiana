@@ -37,6 +37,9 @@ namespace FarmaciaSolidariaCristiana.Migrations
                     b.Property<string>("Comments")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<DateTime?>("CreatedAt")
+                        .HasColumnType("datetime2");
+
                     b.Property<string>("DeliveredBy")
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");

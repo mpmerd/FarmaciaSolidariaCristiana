@@ -22,6 +22,13 @@
                     <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                 </div>
             }
+            @if (TempData["ErrorMessage"] != null)
+            {
+                <div class="alert alert-danger alert-dismissible fade show">
+                    @TempData["ErrorMessage"]
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            }
             
             <form asp-action="Index" method="get" class="row mb-3">
                 <div class="col-md-4">
@@ -50,16 +57,42 @@
                             <th>Cantidad</th>
                             <th>Fecha</th>
                             <th>Nota Paciente</th>
+                            @if (User.IsInRole("Admin") || User.IsInRole("Farmaceutico"))
+                            {
+                                <th>Acciones</th>
+                            }
                         </tr>
                     </thead>
                     <tbody>
                         @foreach (var item in Model)
                         {
+                            // Si CreatedAt es null (registros antiguos), usar DeliveryDate como referencia
+                            var createdDate = item.CreatedAt ?? item.DeliveryDate;
+                            var hoursSinceCreation = (DateTime.Now - createdDate).TotalHours;
+                            var canDelete = hoursSinceCreation <= 2;
+                            
                             <tr>
                                 <td>@item.Medicine?.Name</td>
                                 <td>@item.Quantity @item.Medicine?.Unit</td>
                                 <td>@item.DeliveryDate.ToString("dd/MM/yyyy")</td>
                                 <td>@item.PatientNote</td>
+                                @if (User.IsInRole("Admin") || User.IsInRole("Farmaceutico"))
+                                {
+                                    <td>
+                                        @if (canDelete)
+                                        {
+                                            <a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-sm btn-danger" title="Eliminar (disponible @((2 - hoursSinceCreation).ToString("F1"))h más)">
+                                                <i class="bi bi-trash"></i>
+                                            </a>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted small" title="Solo se puede eliminar dentro de 2 horas desde su creación">
+                                                <i class="bi bi-lock"></i>
+                                            </span>
+                                        }
+                                    </td>
+                                }
                             </tr>
                         }
                     </tbody>

@@ -1,0 +1,109 @@
+@model FarmaciaSolidariaCristiana.Models.Delivery
+@{
+    ViewData["Title"] = "Eliminar Entrega";
+    var canDelete = (bool)(ViewData["CanDelete"] ?? false);
+    var hoursSinceCreation = (double)(ViewData["HoursSinceCreation"] ?? 0);
+}
+
+<div class="container mt-4">
+    <div class="card">
+        <div class="card-header bg-danger text-white">
+            <h4 class="mb-0"><i class="bi bi-trash"></i> @ViewData["Title"]</h4>
+        </div>
+        <div class="card-body">
+            @if (!canDelete)
+            {
+                <div class="alert alert-danger">
+                    <i class="bi bi-exclamation-triangle-fill"></i>
+                    <strong>No se puede eliminar esta entrega</strong>
+                    <p class="mb-0">Han transcurrido más de 2 horas desde su creación (@hoursSinceCreation.ToString("F1") horas).</p>
+                    <p class="mb-0">Solo se pueden eliminar entregas dentro de las 2 horas posteriores a su registro.</p>
+                </div>
+                
+                <div class="mt-3">
+                    <a asp-action="Index" class="btn btn-secondary">
+                        <i class="bi bi-arrow-left"></i> Volver a la Lista
+                    </a>
+                </div>
+            }
+            else
+            {
+                <div class="alert alert-warning">
+                    <i class="bi bi-exclamation-triangle-fill"></i>
+                    <strong>¿Está seguro que desea eliminar esta entrega?</strong>
+                    <p class="mb-0">Esta acción devolverá el medicamento al inventario.</p>
+                    <p class="mb-0 mt-2"><small>Tiempo desde creación: @hoursSinceCreation.ToString("F1") horas (máximo permitido: 2 horas)</small></p>
+                </div>
+
+                <dl class="row">
+                    <dt class="col-sm-3">Medicamento</dt>
+                    <dd class="col-sm-9">@Model.Medicine?.Name</dd>
+
+                    <dt class="col-sm-3">Cantidad</dt>
+                    <dd class="col-sm-9">@Model.Quantity @Model.Medicine?.Unit</dd>
+
+                    <dt class="col-sm-3">Paciente</dt>
+                    <dd class="col-sm-9">
+                        @if (Model.Patient != null)
+                        {
+                            @Model.Patient.FullName
+                        }
+                        else
+                        {
+                            @Model.PatientIdentification
+                        }
+                    </dd>
+
+                    <dt class="col-sm-3">Fecha de Entrega</dt>
+                    <dd class="col-sm-9">@Model.DeliveryDate.ToString("dd/MM/yyyy HH:mm")</dd>
+
+                    <dt class="col-sm-3">Fecha de Registro</dt>
+                    <dd class="col-sm-9">
+                        @if (Model.CreatedAt.HasValue)
+                        {
+                            @Model.CreatedAt.Value.ToString("dd/MM/yyyy HH:mm")
+                        }
+                        else
+                        {
+                            <span class="text-muted">No registrada (entrega antigua)</span>
+                        }
+                    </dd>
+
+                    @if (!string.IsNullOrEmpty(Model.PatientNote))
+                    {
+                        <dt class="col-sm-3">Nota del Paciente</dt>
+                        <dd class="col-sm-9">@Model.PatientNote</dd>
+                    }
+
+                    @if (!string.IsNullOrEmpty(Model.Comments))
+                    {
+                        <dt class="col-sm-3">Comentarios</dt>
+                        <dd class="col-sm-9">@Model.Comments</dd>
+                    }
+
+                    @if (!string.IsNullOrEmpty(Model.Dosage))
+                    {
+                        <dt class="col-sm-3">Dosis</dt>
+                        <dd class="col-sm-9">@Model.Dosage</dd>
+                    }
+
+                    @if (!string.IsNullOrEmpty(Model.DeliveredBy))
+                    {
+                        <dt class="col-sm-3">Entregado Por</dt>
+                        <dd class="col-sm-9">@Model.DeliveredBy</dd>
+                    }
+                </dl>
+
+                <form asp-action="Delete" method="post" class="d-inline">
+                    <input type="hidden" asp-for="Id" />
+                    <button type="submit" class="btn btn-danger" onclick="return confirm('¿Está absolutamente seguro de eliminar esta entrega? El medicamento será devuelto al inventario.');">
+                        <i class="bi bi-trash"></i> Confirmar Eliminación
+                    </button>
+                    <a asp-action="Index" class="btn btn-secondary">
+                        <i class="bi bi-arrow-left"></i> Cancelar
+                    </a>
+                </form>
+            }
+        </div>
+    </div>
+</div>
