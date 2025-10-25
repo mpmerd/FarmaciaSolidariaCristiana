@@ -28,6 +28,9 @@ namespace FarmaciaSolidariaCristiana.Models
         [Display(Name = "Fecha de Entrega")]
         public DateTime DeliveryDate { get; set; } = DateTime.Now;
 
+        [Display(Name = "Fecha de Creación")]
+        public DateTime? CreatedAt { get; set; }
+
         [Display(Name = "Nota del Paciente")]
         public string? PatientNote { get; set; }
 

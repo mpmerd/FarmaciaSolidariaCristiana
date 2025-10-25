@@ -161,14 +161,39 @@ namespace FarmaciaSolidariaCristiana.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
-            var medicine = await _context.Medicines.FindAsync(id);
-            if (medicine != null)
+            var medicine = await _context.Medicines
+                .Include(m => m.Deliveries)
+                .Include(m => m.Donations)
+                .FirstOrDefaultAsync(m => m.Id == id);
+                
+            if (medicine == null)
             {
-                _context.Medicines.Remove(medicine);
-                await _context.SaveChangesAsync();
-                _logger.LogInformation("Medicine deleted: {MedicineName}", medicine.Name);
-                TempData["SuccessMessage"] = "Medicamento eliminado exitosamente.";
+                return NotFound();
             }
+
+            // Verificar si hay entregas asociadas
+            if (medicine.Deliveries != null && medicine.Deliveries.Any())
+            {
+                TempData["ErrorMessage"] = "No está permitido eliminar este medicamento debido a que ya se han hecho entregas a pacientes.";
+                _logger.LogWarning("Attempted to delete medicine with deliveries: {MedicineName} (ID: {Id})", 
+                    medicine.Name, medicine.Id);
+                return RedirectToAction(nameof(Index));
+            }
+
+            // Verificar si hay donaciones asociadas
+            if (medicine.Donations != null && medicine.Donations.Any())
+            {
+                TempData["ErrorMessage"] = "No está permitido eliminar este medicamento debido a que tiene donaciones registradas.";
+                _logger.LogWarning("Attempted to delete medicine with donations: {MedicineName} (ID: {Id})", 
+                    medicine.Name, medicine.Id);
+                return RedirectToAction(nameof(Index));
+            }
+
+            // Si no tiene entregas ni donaciones, se puede eliminar
+            _context.Medicines.Remove(medicine);
+            await _context.SaveChangesAsync();
+            _logger.LogInformation("Medicine deleted: {MedicineName}", medicine.Name);
+            TempData["SuccessMessage"] = "Medicamento eliminado exitosamente.";
 
             return RedirectToAction(nameof(Index));
         }

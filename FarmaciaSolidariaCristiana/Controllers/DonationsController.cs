@@ -39,13 +39,16 @@ namespace FarmaciaSolidariaCristiana.Controllers
             }
 
             ViewData["TotalDonations"] = await donations.SumAsync(d => d.Quantity);
-            return View(await donations.OrderByDescending(d => d.DonationDate).ToListAsync());
+            return View(await donations
+                .OrderBy(d => d.Medicine!.Name)
+                .ThenByDescending(d => d.DonationDate)
+                .ToListAsync());
         }
 
         [Authorize(Roles = "Admin,Farmaceutico")]
         public IActionResult Create()
         {
-            ViewData["MedicineId"] = new SelectList(_context.Medicines, "Id", "Name");
+            ViewData["MedicineId"] = new SelectList(_context.Medicines.OrderBy(m => m.Name), "Id", "Name");
             return View();
         }
 
@@ -69,7 +72,7 @@ namespace FarmaciaSolidariaCristiana.Controllers
                 }
             }
             
-            ViewData["MedicineId"] = new SelectList(_context.Medicines, "Id", "Name", donation.MedicineId);
+            ViewData["MedicineId"] = new SelectList(_context.Medicines.OrderBy(m => m.Name), "Id", "Name", donation.MedicineId);
             return View(donation);
         }
     }

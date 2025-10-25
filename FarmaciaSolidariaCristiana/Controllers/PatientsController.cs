@@ -197,14 +197,29 @@ namespace FarmaciaSolidariaCristiana.Controllers
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
-            var patient = await _context.Patients.FindAsync(id);
-            if (patient != null)
+            var patient = await _context.Patients
+                .Include(p => p.Deliveries)
+                .FirstOrDefaultAsync(p => p.Id == id);
+                
+            if (patient == null)
             {
-                // Soft delete
-                patient.IsActive = false;
-                await _context.SaveChangesAsync();
-                TempData["SuccessMessage"] = "Paciente eliminado exitosamente.";
+                return NotFound();
             }
+
+            // Verificar si el paciente tiene entregas asociadas
+            if (patient.Deliveries != null && patient.Deliveries.Any())
+            {
+                TempData["ErrorMessage"] = "No está permitido eliminar este paciente porque tiene entregas asignadas.";
+                _logger.LogWarning("Attempted to delete patient with deliveries: {PatientName} (ID: {Id})", 
+                    patient.FullName, patient.Id);
+                return RedirectToAction(nameof(Index));
+            }
+
+            // Soft delete si no tiene entregas
+            patient.IsActive = false;
+            await _context.SaveChangesAsync();
+            _logger.LogInformation("Patient soft-deleted: {PatientName} (ID: {Id})", patient.FullName, patient.Id);
+            TempData["SuccessMessage"] = "Paciente eliminado exitosamente.";
 
             return RedirectToAction(nameof(Index));
         }
