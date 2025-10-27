@@ -1,6 +1,6 @@
 # Changelog - Farmacia Solidaria Cristiana
 
-## [27 de octubre de 2025] - Módulo de Insumos y Entregas Mejoradas
+## [27 de octubre de 2025] - Módulo de Insumos y Sistema Simétrico Completo
 
 ### ✨ Nuevas Funcionalidades
 
@@ -24,6 +24,15 @@
 - **Validación**: No permite seleccionar ambos tipos simultáneamente
 - **Reportes actualizados**: Los reportes incluyen tanto entregas de medicamentos como de insumos
 - **Filtros de búsqueda**: Búsqueda unificada por nombre de medicamento o insumo
+
+#### 🎁 Donaciones Completas - Medicamentos E Insumos
+- **Donaciones flexibles**: Ahora se pueden registrar donaciones de medicamentos O insumos
+- **Selección por tipo**: Interfaz con botones para elegir entre medicamento o insumo
+- **Control de stock**: Incremento automático del stock correspondiente (medicamentos o insumos)
+- **Validación**: No permite seleccionar ambos tipos simultáneamente
+- **Reportes actualizados**: Los reportes incluyen tanto donaciones de medicamentos como de insumos
+- **Filtros de búsqueda**: Búsqueda unificada por nombre de medicamento o insumo
+- **Vista mejorada**: Nueva columna "Tipo" con badges visuales (Medicamento/Insumo)
 
 #### 🏆 Gestión de Patrocinadores (Solo Admin)
 - **CRUD completo** para patrocinadores (solo accesible para Admin)
@@ -50,11 +59,17 @@
   - Nueva columna `Deliveries.SupplyId` nullable
   - Foreign Key a tabla Supplies
   - Índice en SupplyId para rendimiento
-- **Script SQL actualizado**: apply-migration-somee.sql con ambas migraciones
+- **Migración 6**: `20251027171452_AddSupplyToDonations`
+  - `Donations.MedicineId` ahora es nullable (permite NULL)
+  - Nueva columna `Donations.SupplyId` nullable
+  - Foreign Key a tabla Supplies
+  - Índice en SupplyId para rendimiento
+- **Script SQL actualizado**: apply-migration-somee.sql con las 3 nuevas migraciones
 
 #### Modelos
 - **Supply.cs**: Nuevo modelo para insumos con validaciones
 - **Delivery.cs**: Actualizado para soportar MedicineId O SupplyId (ambos nullable)
+- **Donation.cs**: Actualizado para soportar MedicineId O SupplyId (ambos nullable)
 - **Sponsor.cs**: Modelo existente actualizado con gestión mejorada
 
 #### Controladores
@@ -69,6 +84,11 @@
   - **Delete**: Restauración de stock correcto (medicamento o insumo)
   - **Index**: Búsqueda unificada por medicamento o insumo
   - Includes actualizados para cargar Medicine y Supply
+- **DonationsController**:
+  - **Create**: Validación para seleccionar medicamento O insumo (no ambos)
+  - **Create**: Incremento de stock para medicamentos O insumos
+  - **Index**: Búsqueda unificada por medicamento o insumo
+  - Includes actualizados para cargar Medicine y Supply
 - **SponsorsController**:
   - Validación PNG obligatoria
   - Compresión de imágenes con IImageCompressionService
@@ -76,6 +96,7 @@
   - Vista Manage para Admin, Index para público
 - **ReportsController**: 
   - **DeliveriesPDF**: Incluye entregas de medicamentos e insumos con indicador de tipo
+  - **DonationsPDF**: Incluye donaciones de medicamentos e insumos con indicador de tipo
   - **MonthlyPDF**: Inventario separado de Medicamentos e Insumos
   - ViewData con SupplyId para futuros filtros
 
@@ -98,6 +119,15 @@
   - **Delete.cshtml**: 
     - Muestra tipo de entrega
     - Mensaje de confirmación dinámico según tipo
+- **Donations**:
+  - **Create.cshtml**: 
+    - Selector de tipo (Medicamento/Insumo) con botones radio
+    - JavaScript para alternar entre selects
+    - Validación en cliente y servidor
+  - **Index.cshtml**: 
+    - Nueva columna "Tipo" con badge (Medicamento/Insumo)
+    - Búsqueda unificada por medicamento o insumo
+    - Muestra nombre correcto según tipo
 - **Sponsors**:
   - Create.cshtml: Actualizado con validación PNG y tamaño
   - Edit.cshtml: Actualizado con validación PNG
@@ -110,17 +140,20 @@
 - **apply-migration-somee.sql**: 
   - Actualizado con migración 4: AddSuppliesTable
   - Actualizado con migración 5: AddSupplyToDeliveries
-  - Estadísticas ampliadas incluyendo Supplies
-  - **SEGURO**: Preserva todas las entregas existentes con sus medicamentos
+  - Actualizado con migración 6: AddSupplyToDonations
+  - Estadísticas ampliadas incluyendo Supplies, Entregas y Donaciones por tipo
+  - **SEGURO**: Preserva todas las entregas y donaciones existentes con sus medicamentos
   - Verificaciones antes de ejecutar cada cambio
 - **CHANGELOG.md**: Actualizado con todas las funcionalidades
 
 ### 🔒 Seguridad y Preservación de Datos
-- **Datos preservados**: Medicamentos, Usuarios, Patrocinadores, Pacientes, **Entregas existentes**
+- **Datos preservados**: Medicamentos, Usuarios, Patrocinadores, Pacientes, **Entregas existentes**, **Donaciones existentes**
 - **Entregas existentes**: Mantienen su MedicineId intacto (no se pierden)
+- **Donaciones existentes**: Mantienen su MedicineId intacto (no se pierden)
 - **Migraciones seguras**: Script SQL con verificaciones IF NOT EXISTS
-- **Retrocompatibilidad**: Entregas antiguas funcionan sin cambios
+- **Retrocompatibilidad**: Entregas y donaciones antiguas funcionan sin cambios
 - **Validaciones**: Tipos de archivo y tamaños para uploads
+- **Simetría del sistema**: Entregas y Donaciones siguen el mismo patrón para medicamentos e insumos
 
 ---
 

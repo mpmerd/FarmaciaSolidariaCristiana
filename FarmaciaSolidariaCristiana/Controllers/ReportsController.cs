@@ -170,7 +170,10 @@ namespace FarmaciaSolidariaCristiana.Controllers
         [HttpPost]
         public async Task<IActionResult> DonationsPDF(int? medicineId, DateTime? startDate, DateTime? endDate)
         {
-            var donations = _context.Donations.Include(d => d.Medicine).AsQueryable();
+            var donations = _context.Donations
+                .Include(d => d.Medicine)
+                .Include(d => d.Supply)
+                .AsQueryable();
 
             if (medicineId.HasValue)
             {
@@ -197,18 +200,24 @@ namespace FarmaciaSolidariaCristiana.Controllers
 
                 AddPdfHeader(document, "Reporte de Donaciones");
 
-                var table = new Table(UnitValue.CreatePercentArray(new float[] { 3, 2, 2, 4 }))
+                var table = new Table(UnitValue.CreatePercentArray(new float[] { 1, 3, 2, 2, 4 }))
                     .UseAllAvailableWidth();
 
-                table.AddHeaderCell("Medicamento");
+                table.AddHeaderCell("Tipo");
+                table.AddHeaderCell("Item");
                 table.AddHeaderCell("Cantidad");
                 table.AddHeaderCell("Fecha");
                 table.AddHeaderCell("Nota Donante");
 
                 foreach (var item in data)
                 {
-                    table.AddCell(item.Medicine?.Name ?? "");
-                    table.AddCell($"{item.Quantity} {item.Medicine?.Unit ?? ""}");
+                    var itemType = item.Medicine != null ? "Med" : "Ins";
+                    var itemName = item.Medicine?.Name ?? item.Supply?.Name ?? "N/A";
+                    var itemUnit = item.Medicine?.Unit ?? item.Supply?.Unit ?? "";
+                    
+                    table.AddCell(itemType);
+                    table.AddCell(itemName);
+                    table.AddCell($"{item.Quantity} {itemUnit}");
                     table.AddCell(item.DonationDate.ToString("dd/MM/yyyy"));
                     table.AddCell(item.DonorNote ?? "");
                 }

@@ -25,7 +25,7 @@
             
             <form asp-action="Index" method="get" class="row mb-3">
                 <div class="col-md-4">
-                    <input type="text" name="searchString" class="form-control" placeholder="Buscar medicamento..." />
+                    <input type="text" name="searchString" class="form-control" placeholder="Buscar medicamento o insumo..." />
                 </div>
                 <div class="col-md-3">
                     <input type="date" name="startDate" class="form-control" />
@@ -46,7 +46,8 @@
                 <table class="table table-striped">
                     <thead class="table-dark">
                         <tr>
-                            <th>Medicamento</th>
+                            <th>Tipo</th>
+                            <th>Artículo</th>
                             <th>Cantidad</th>
                             <th>Fecha</th>
                             <th>Nota Donante</th>
@@ -56,8 +57,41 @@
                         @foreach (var item in Model)
                         {
                             <tr>
-                                <td>@item.Medicine?.Name</td>
-                                <td>@item.Quantity @item.Medicine?.Unit</td>
+                                <td>
+                                    @if (item.MedicineId.HasValue)
+                                    {
+                                        <span class="badge bg-primary">
+                                            <i class="bi bi-capsule"></i> Medicamento
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-info">
+                                            <i class="bi bi-box-seam"></i> Insumo
+                                        </span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (item.MedicineId.HasValue)
+                                    {
+                                        @item.Medicine?.Name
+                                    }
+                                    else
+                                    {
+                                        @item.Supply?.Name
+                                    }
+                                </td>
+                                <td>
+                                    @item.Quantity 
+                                    @if (item.MedicineId.HasValue)
+                                    {
+                                        @item.Medicine?.Unit
+                                    }
+                                    else
+                                    {
+                                        @item.Supply?.Unit
+                                    }
+                                </td>
                                 <td>@item.DonationDate.ToString("dd/MM/yyyy")</td>
                                 <td>@item.DonorNote</td>
                             </tr>
