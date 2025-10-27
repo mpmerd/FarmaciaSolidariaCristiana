@@ -98,13 +98,17 @@ namespace FarmaciaSolidariaCristiana.Controllers
         public IActionResult Index()
         {
             ViewData["MedicineId"] = new SelectList(_context.Medicines, "Id", "Name");
+            ViewData["SupplyId"] = new SelectList(_context.Supplies, "Id", "Name");
             return View();
         }
 
         [HttpPost]
         public async Task<IActionResult> DeliveriesPDF(int? medicineId, DateTime? startDate, DateTime? endDate)
         {
-            var deliveries = _context.Deliveries.Include(d => d.Medicine).AsQueryable();
+            var deliveries = _context.Deliveries
+                .Include(d => d.Medicine)
+                .Include(d => d.Supply)
+                .AsQueryable();
 
             if (medicineId.HasValue)
             {
@@ -131,18 +135,24 @@ namespace FarmaciaSolidariaCristiana.Controllers
 
                 AddPdfHeader(document, "Reporte de Entregas");
 
-                var table = new Table(UnitValue.CreatePercentArray(new float[] { 3, 2, 2, 4 }))
+                var table = new Table(UnitValue.CreatePercentArray(new float[] { 1, 3, 2, 2, 4 }))
                     .UseAllAvailableWidth();
 
-                table.AddHeaderCell("Medicamento");
+                table.AddHeaderCell("Tipo");
+                table.AddHeaderCell("Item");
                 table.AddHeaderCell("Cantidad");
                 table.AddHeaderCell("Fecha");
                 table.AddHeaderCell("Nota Paciente");
 
                 foreach (var item in data)
                 {
-                    table.AddCell(item.Medicine?.Name ?? "");
-                    table.AddCell($"{item.Quantity} {item.Medicine?.Unit ?? ""}");
+                    var itemType = item.Medicine != null ? "Med" : "Ins";
+                    var itemName = item.Medicine?.Name ?? item.Supply?.Name ?? "N/A";
+                    var itemUnit = item.Medicine?.Unit ?? item.Supply?.Unit ?? "";
+                    
+                    table.AddCell(itemType);
+                    table.AddCell(itemName);
+                    table.AddCell($"{item.Quantity} {itemUnit}");
                     table.AddCell(item.DeliveryDate.ToString("dd/MM/yyyy"));
                     table.AddCell(item.PatientNote ?? "");
                 }
@@ -230,6 +240,7 @@ namespace FarmaciaSolidariaCristiana.Controllers
                 .ToListAsync();
 
             var medicines = await _context.Medicines.ToListAsync();
+            var supplies = await _context.Supplies.ToListAsync();
 
             using (var ms = new MemoryStream())
             {
@@ -248,9 +259,10 @@ namespace FarmaciaSolidariaCristiana.Controllers
 
                 document.Add(new Paragraph($"Total Donaciones: {donations.Sum(d => d.Quantity)}"));
                 document.Add(new Paragraph($"Total Entregas: {deliveries.Sum(d => d.Quantity)}"));
-                document.Add(new Paragraph($"Stock Actual Total: {medicines.Sum(m => m.StockQuantity)}"));
+                document.Add(new Paragraph($"Stock Actual Medicamentos: {medicines.Sum(m => m.StockQuantity)}"));
+                document.Add(new Paragraph($"Stock Actual Insumos: {supplies.Sum(s => s.StockQuantity)}"));
 
-                var inventoryHeader = new Paragraph("\nInventario Actual:").SetFont(boldFont);
+                var inventoryHeader = new Paragraph("\nInventario Actual de Medicamentos:").SetFont(boldFont);
                 document.Add(inventoryHeader);
                 
                 var stockTable = new Table(UnitValue.CreatePercentArray(new float[] { 4, 2 }))
@@ -266,6 +278,23 @@ namespace FarmaciaSolidariaCristiana.Controllers
                 }
 
                 document.Add(stockTable);
+
+                var suppliesHeader = new Paragraph("\nInventario Actual de Insumos:").SetFont(boldFont);
+                document.Add(suppliesHeader);
+                
+                var suppliesTable = new Table(UnitValue.CreatePercentArray(new float[] { 4, 2 }))
+                    .UseAllAvailableWidth();
+
+                suppliesTable.AddHeaderCell("Insumo");
+                suppliesTable.AddHeaderCell("Stock");
+
+                foreach (var supply in supplies.OrderBy(s => s.Name))
+                {
+                    suppliesTable.AddCell(supply.Name);
+                    suppliesTable.AddCell($"{supply.StockQuantity} {supply.Unit}");
+                }
+
+                document.Add(suppliesTable);
                 document.Close();
 
                 _logger.LogInformation("Monthly PDF report generated for {Year}/{Month}", year, month);

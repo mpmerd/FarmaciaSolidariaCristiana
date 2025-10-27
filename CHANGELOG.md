@@ -1,5 +1,129 @@
 # Changelog - Farmacia Solidaria Cristiana
 
+## [27 de octubre de 2025] - Módulo de Insumos y Entregas Mejoradas
+
+### ✨ Nuevas Funcionalidades
+
+#### 📦 Módulo de Insumos Completo
+- **Nuevo módulo completo** para gestión de insumos médicos (materiales no medicamentosos)
+- **Funcionalidades CRUD**: Crear, listar, editar, eliminar insumos
+- **Campos**:
+  - Nombre del insumo
+  - Descripción
+  - Cantidad en stock
+  - Unidad fija: "Unidades" (predeterminada)
+- **Autorización**: Admin y Farmacéutico pueden crear/editar/eliminar
+- **Búsqueda**: Filtro de búsqueda por nombre en la lista de insumos
+- **Navegación**: Nueva opción de menú con icono de caja
+
+#### 🎯 Entregas Mejoradas - Medicamentos E Insumos
+- **Entregas flexibles**: Ahora se pueden hacer entregas de medicamentos O insumos
+- **Selección por tipo**: Interfaz con botones para elegir entre medicamento o insumo
+- **Control de stock**: Descuento automático del stock correspondiente (medicamentos o insumos)
+- **Restauración de stock**: Al eliminar una entrega, se devuelve el stock correcto
+- **Validación**: No permite seleccionar ambos tipos simultáneamente
+- **Reportes actualizados**: Los reportes incluyen tanto entregas de medicamentos como de insumos
+- **Filtros de búsqueda**: Búsqueda unificada por nombre de medicamento o insumo
+
+#### 🏆 Gestión de Patrocinadores (Solo Admin)
+- **CRUD completo** para patrocinadores (solo accesible para Admin)
+- **Subida de logos**:
+  - Solo formato PNG permitido
+  - Tamaño máximo: 2MB
+  - Compresión automática a 400x400px
+  - Validación de tipo de archivo y tamaño
+- **Características**:
+  - Activar/desactivar patrocinadores
+  - Orden de visualización personalizable
+  - Vista de gestión completa (Manage)
+  - Vista pública para usuarios (Index)
+- **Navegación**: Nueva opción "Patrocinadores" en menú (solo visible para Admin)
+- **Optimización de imágenes**: Uso de IImageCompressionService para logos
+
+### 🔧 Cambios Técnicos
+
+#### Base de Datos
+- **Nueva tabla**: `Supplies` (Id, Name, Description, StockQuantity, Unit)
+- **Migración 4**: `20251027160229_AddSuppliesTable`
+- **Migración 5**: `20251027164041_AddSupplyToDeliveries`
+  - `Deliveries.MedicineId` ahora es nullable (permite NULL)
+  - Nueva columna `Deliveries.SupplyId` nullable
+  - Foreign Key a tabla Supplies
+  - Índice en SupplyId para rendimiento
+- **Script SQL actualizado**: apply-migration-somee.sql con ambas migraciones
+
+#### Modelos
+- **Supply.cs**: Nuevo modelo para insumos con validaciones
+- **Delivery.cs**: Actualizado para soportar MedicineId O SupplyId (ambos nullable)
+- **Sponsor.cs**: Modelo existente actualizado con gestión mejorada
+
+#### Controladores
+- **SuppliesController**: 
+  - CRUD completo con autorización
+  - Forzado de Unit="Unidades" en Create y Edit
+  - Búsqueda por nombre
+  - Ordenamiento alfabético
+- **DeliveriesController**:
+  - **Create**: Validación para seleccionar medicamento O insumo (no ambos)
+  - **Create**: Descuento de stock para medicamentos O insumos
+  - **Delete**: Restauración de stock correcto (medicamento o insumo)
+  - **Index**: Búsqueda unificada por medicamento o insumo
+  - Includes actualizados para cargar Medicine y Supply
+- **SponsorsController**:
+  - Validación PNG obligatoria
+  - Compresión de imágenes con IImageCompressionService
+  - Gestión de archivos (eliminar logo anterior)
+  - Vista Manage para Admin, Index para público
+- **ReportsController**: 
+  - **DeliveriesPDF**: Incluye entregas de medicamentos e insumos con indicador de tipo
+  - **MonthlyPDF**: Inventario separado de Medicamentos e Insumos
+  - ViewData con SupplyId para futuros filtros
+
+#### Vistas
+- **Supplies** (5 vistas):
+  - Index.cshtml: Lista con búsqueda y badges de stock
+  - Create.cshtml: Formulario con Unit readonly
+  - Edit.cshtml: Edición con Unit fijo
+  - Details.cshtml: Vista detallada
+  - Delete.cshtml: Confirmación de eliminación
+- **Deliveries**:
+  - **Create.cshtml**: 
+    - Selector de tipo (Medicamento/Insumo) con botones radio
+    - JavaScript para alternar entre selects
+    - Validación en cliente y servidor
+  - **Index.cshtml**: 
+    - Nueva columna "Tipo" con badge (Medicamento/Insumo)
+    - Búsqueda unificada
+    - Muestra nombre correcto según tipo
+  - **Delete.cshtml**: 
+    - Muestra tipo de entrega
+    - Mensaje de confirmación dinámico según tipo
+- **Sponsors**:
+  - Create.cshtml: Actualizado con validación PNG y tamaño
+  - Edit.cshtml: Actualizado con validación PNG
+  - Manage.cshtml: Vista existente para administración
+- **Shared/_Layout.cshtml**: 
+  - Nuevo enlace "Insumos" para todos los usuarios autenticados
+  - Nuevo enlace "Patrocinadores" solo para Admin
+
+### 📝 Documentación
+- **apply-migration-somee.sql**: 
+  - Actualizado con migración 4: AddSuppliesTable
+  - Actualizado con migración 5: AddSupplyToDeliveries
+  - Estadísticas ampliadas incluyendo Supplies
+  - **SEGURO**: Preserva todas las entregas existentes con sus medicamentos
+  - Verificaciones antes de ejecutar cada cambio
+- **CHANGELOG.md**: Actualizado con todas las funcionalidades
+
+### 🔒 Seguridad y Preservación de Datos
+- **Datos preservados**: Medicamentos, Usuarios, Patrocinadores, Pacientes, **Entregas existentes**
+- **Entregas existentes**: Mantienen su MedicineId intacto (no se pierden)
+- **Migraciones seguras**: Script SQL con verificaciones IF NOT EXISTS
+- **Retrocompatibilidad**: Entregas antiguas funcionan sin cambios
+- **Validaciones**: Tipos de archivo y tamaños para uploads
+
+---
+
 ## [25 de octubre de 2025] - Control de Eliminación y Mejoras de UX
 
 ### ✨ Nuevas Funcionalidades

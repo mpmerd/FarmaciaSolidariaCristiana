@@ -1,0 +1,39 @@
+@model FarmaciaSolidariaCristiana.Models.Supply
+@{
+    ViewData["Title"] = "Eliminar Insumo";
+}
+
+<div class="container mt-4">
+    <div class="card">
+        <div class="card-header bg-danger text-white">
+            <h4 class="mb-0">@ViewData["Title"]</h4>
+        </div>
+        <div class="card-body">
+            <div class="alert alert-warning">
+                <i class="bi bi-exclamation-triangle-fill"></i>
+                <strong>¿Está seguro que desea eliminar este insumo?</strong>
+            </div>
+            
+            <dl class="row">
+                <dt class="col-sm-3">@Html.DisplayNameFor(model => model.Name)</dt>
+                <dd class="col-sm-9">@Html.DisplayFor(model => model.Name)</dd>
+                
+                <dt class="col-sm-3">@Html.DisplayNameFor(model => model.Description)</dt>
+                <dd class="col-sm-9">@Html.DisplayFor(model => model.Description)</dd>
+                
+                <dt class="col-sm-3">@Html.DisplayNameFor(model => model.StockQuantity)</dt>
+                <dd class="col-sm-9">@Html.DisplayFor(model => model.StockQuantity) @Html.DisplayFor(model => model.Unit)</dd>
+            </dl>
+            
+            <form asp-action="Delete" method="post">
+                <input type="hidden" asp-for="Id" />
+                <button type="submit" class="btn btn-danger">
+                    <i class="bi bi-trash"></i> Confirmar Eliminación
+                </button>
+                <a asp-action="Index" class="btn btn-secondary">
+                    <i class="bi bi-arrow-left"></i> Cancelar
+                </a>
+            </form>
+        </div>
+    </div>
+</div>

@@ -28,9 +28,10 @@
                         </div>
 
                         <div class="mb-3">
-                            <label for="logoFile" class="form-label">Logo del Patrocinador</label>
-                            <input type="file" class="form-control" id="logoFile" name="logoFile" accept="image/*" />
-                            <small class="form-text text-muted">Formatos aceptados: JPG, PNG, GIF. Tamaño recomendado: 400x200px</small>
+                            <label for="logoFile" class="form-label">Logo del Patrocinador *</label>
+                            <input type="file" class="form-control" id="logoFile" name="logoFile" accept="image/png" required />
+                            <small class="form-text text-muted">Solo archivos PNG. Tamaño máximo: 2MB. Dimensiones recomendadas: 400x400px</small>
+                            <span asp-validation-for="LogoPath" class="text-danger"></span>
                         </div>
 
                         <div class="mb-3">

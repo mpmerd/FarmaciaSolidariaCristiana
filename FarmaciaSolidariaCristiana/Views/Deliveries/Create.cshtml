@@ -33,11 +33,34 @@
                 </div>
                 
                 <div class="form-group mb-3">
+                    <label class="form-label">Tipo de Entrega <span class="text-danger">*</span></label>
+                    <div class="btn-group w-100" role="group">
+                        <input type="radio" class="btn-check" name="deliveryType" id="medicineType" value="medicine" checked>
+                        <label class="btn btn-outline-primary" for="medicineType">
+                            <i class="bi bi-capsule"></i> Medicamento
+                        </label>
+                        
+                        <input type="radio" class="btn-check" name="deliveryType" id="supplyType" value="supply">
+                        <label class="btn btn-outline-info" for="supplyType">
+                            <i class="bi bi-box-seam"></i> Insumo
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="form-group mb-3" id="medicineSelect">
                     <label asp-for="MedicineId" class="form-label"></label>
                     <select asp-for="MedicineId" class="form-select" asp-items="ViewBag.MedicineId">
                         <option value="">-- Seleccione un Medicamento --</option>
                     </select>
                     <span asp-validation-for="MedicineId" class="text-danger"></span>
+                </div>
+
+                <div class="form-group mb-3" id="supplySelect" style="display: none;">
+                    <label asp-for="SupplyId" class="form-label"></label>
+                    <select asp-for="SupplyId" class="form-select" asp-items="ViewBag.SupplyId">
+                        <option value="">-- Seleccione un Insumo --</option>
+                    </select>
+                    <span asp-validation-for="SupplyId" class="text-danger"></span>
                 </div>
                 
                 <div class="form-group mb-3">
@@ -163,6 +186,30 @@
                     feedbackDiv.innerHTML = '<div class="alert alert-danger small mt-2"><i class="bi bi-x-circle"></i> Error al buscar paciente.</div>';
                     patientInfo.style.display = 'none';
                 });
+        });
+
+        // Manejo del selector de tipo de entrega (Medicamento vs Insumo)
+        const medicineRadio = document.getElementById('medicineType');
+        const supplyRadio = document.getElementById('supplyType');
+        const medicineSelectDiv = document.getElementById('medicineSelect');
+        const supplySelectDiv = document.getElementById('supplySelect');
+        const medicineSelect = document.getElementById('MedicineId');
+        const supplySelect = document.getElementById('SupplyId');
+
+        medicineRadio.addEventListener('change', function() {
+            if (this.checked) {
+                medicineSelectDiv.style.display = 'block';
+                supplySelectDiv.style.display = 'none';
+                supplySelect.value = ''; // Limpiar selección de insumo
+            }
+        });
+
+        supplyRadio.addEventListener('change', function() {
+            if (this.checked) {
+                medicineSelectDiv.style.display = 'none';
+                supplySelectDiv.style.display = 'block';
+                medicineSelect.value = ''; // Limpiar selección de medicamento
+            }
         });
     </script>
 }

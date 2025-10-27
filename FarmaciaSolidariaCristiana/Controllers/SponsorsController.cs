@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using FarmaciaSolidariaCristiana.Data;
 using FarmaciaSolidariaCristiana.Models;
+using FarmaciaSolidariaCristiana.Services;
 
 namespace FarmaciaSolidariaCristiana.Controllers
 {
@@ -11,15 +12,18 @@ namespace FarmaciaSolidariaCristiana.Controllers
         private readonly ApplicationDbContext _context;
         private readonly IWebHostEnvironment _environment;
         private readonly ILogger<SponsorsController> _logger;
+        private readonly IImageCompressionService _imageCompressionService;
 
         public SponsorsController(
             ApplicationDbContext context,
             IWebHostEnvironment environment,
-            ILogger<SponsorsController> logger)
+            ILogger<SponsorsController> logger,
+            IImageCompressionService imageCompressionService)
         {
             _context = context;
             _environment = environment;
             _logger = logger;
+            _imageCompressionService = imageCompressionService;
         }
 
         // GET: Sponsors (Público - muestra solo activos)
@@ -65,18 +69,60 @@ namespace FarmaciaSolidariaCristiana.Controllers
                 // Handle logo upload
                 if (logoFile != null && logoFile.Length > 0)
                 {
-                    var uploadsFolder = Path.Combine(_environment.WebRootPath, "images", "sponsors");
-                    Directory.CreateDirectory(uploadsFolder);
-
-                    var uniqueFileName = $"{Guid.NewGuid()}_{logoFile.FileName}";
-                    var filePath = Path.Combine(uploadsFolder, uniqueFileName);
-
-                    using (var fileStream = new FileStream(filePath, FileMode.Create))
+                    // Validate file type (PNG only)
+                    if (!logoFile.ContentType.Equals("image/png", StringComparison.OrdinalIgnoreCase))
                     {
-                        await logoFile.CopyToAsync(fileStream);
+                        ModelState.AddModelError("logoFile", "Solo se permiten archivos PNG.");
+                        return View(sponsor);
                     }
 
-                    sponsor.LogoPath = $"/images/sponsors/{uniqueFileName}";
+                    // Validate file size (max 2MB)
+                    if (logoFile.Length > 2 * 1024 * 1024)
+                    {
+                        ModelState.AddModelError("logoFile", "El tamaño del archivo no debe superar 2MB.");
+                        return View(sponsor);
+                    }
+
+                    try
+                    {
+                        var uploadsFolder = Path.Combine(_environment.WebRootPath, "images", "sponsors");
+                        Directory.CreateDirectory(uploadsFolder);
+
+                        // Generate safe filename
+                        var safeFileName = string.Join("_", sponsor.Name.Split(Path.GetInvalidFileNameChars()));
+                        var fileName = $"{safeFileName}.png";
+                        var filePath = Path.Combine(uploadsFolder, fileName);
+
+                        // Use image compression service
+                        using (var stream = logoFile.OpenReadStream())
+                        {
+                            using (var compressedStream = await _imageCompressionService.CompressImageAsync(
+                                stream, 
+                                logoFile.ContentType, 
+                                maxWidth: 400, 
+                                maxHeight: 400, 
+                                quality: 90))
+                            {
+                                using (var fileStream = new FileStream(filePath, FileMode.Create))
+                                {
+                                    await compressedStream.CopyToAsync(fileStream);
+                                }
+                            }
+                        }
+
+                        sponsor.LogoPath = $"/images/sponsors/{fileName}";
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Error saving sponsor logo");
+                        ModelState.AddModelError("", "Error al guardar la imagen del patrocinador.");
+                        return View(sponsor);
+                    }
+                }
+                else
+                {
+                    ModelState.AddModelError("logoFile", "El logo es requerido al crear un patrocinador.");
+                    return View(sponsor);
                 }
 
                 sponsor.CreatedDate = DateTime.Now;
@@ -126,6 +172,20 @@ namespace FarmaciaSolidariaCristiana.Controllers
                     // Handle logo upload
                     if (logoFile != null && logoFile.Length > 0)
                     {
+                        // Validate file type (PNG only)
+                        if (!logoFile.ContentType.Equals("image/png", StringComparison.OrdinalIgnoreCase))
+                        {
+                            ModelState.AddModelError("logoFile", "Solo se permiten archivos PNG.");
+                            return View(sponsor);
+                        }
+
+                        // Validate file size (max 2MB)
+                        if (logoFile.Length > 2 * 1024 * 1024)
+                        {
+                            ModelState.AddModelError("logoFile", "El tamaño del archivo no debe superar 2MB.");
+                            return View(sponsor);
+                        }
+
                         // Delete old logo if exists
                         if (!string.IsNullOrEmpty(sponsor.LogoPath))
                         {
@@ -136,19 +196,33 @@ namespace FarmaciaSolidariaCristiana.Controllers
                             }
                         }
 
-                        // Upload new logo
+                        // Upload new logo with compression
                         var uploadsFolder = Path.Combine(_environment.WebRootPath, "images", "sponsors");
                         Directory.CreateDirectory(uploadsFolder);
 
-                        var uniqueFileName = $"{Guid.NewGuid()}_{logoFile.FileName}";
-                        var filePath = Path.Combine(uploadsFolder, uniqueFileName);
+                        // Generate safe filename
+                        var safeFileName = string.Join("_", sponsor.Name.Split(Path.GetInvalidFileNameChars()));
+                        var fileName = $"{safeFileName}.png";
+                        var filePath = Path.Combine(uploadsFolder, fileName);
 
-                        using (var fileStream = new FileStream(filePath, FileMode.Create))
+                        // Use image compression service
+                        using (var stream = logoFile.OpenReadStream())
                         {
-                            await logoFile.CopyToAsync(fileStream);
+                            using (var compressedStream = await _imageCompressionService.CompressImageAsync(
+                                stream, 
+                                logoFile.ContentType, 
+                                maxWidth: 400, 
+                                maxHeight: 400, 
+                                quality: 90))
+                            {
+                                using (var fileStream = new FileStream(filePath, FileMode.Create))
+                                {
+                                    await compressedStream.CopyToAsync(fileStream);
+                                }
+                            }
                         }
 
-                        sponsor.LogoPath = $"/images/sponsors/{uniqueFileName}";
+                        sponsor.LogoPath = $"/images/sponsors/{fileName}";
                     }
 
                     _context.Update(sponsor);
@@ -166,6 +240,12 @@ namespace FarmaciaSolidariaCristiana.Controllers
                     {
                         throw;
                     }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error updating sponsor logo");
+                    ModelState.AddModelError("", "Error al actualizar la imagen del patrocinador.");
+                    return View(sponsor);
                 }
 
                 return RedirectToAction(nameof(Manage));

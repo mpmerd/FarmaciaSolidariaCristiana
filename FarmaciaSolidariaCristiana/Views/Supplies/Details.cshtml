@@ -1,0 +1,43 @@
+@model FarmaciaSolidariaCristiana.Models.Supply
+@{
+    ViewData["Title"] = "Detalles del Insumo";
+}
+
+<div class="container mt-4">
+    <div class="card">
+        <div class="card-header bg-info text-white">
+            <h4 class="mb-0">@ViewData["Title"]</h4>
+        </div>
+        <div class="card-body">
+            <dl class="row">
+                <dt class="col-sm-3">@Html.DisplayNameFor(model => model.Name)</dt>
+                <dd class="col-sm-9">@Html.DisplayFor(model => model.Name)</dd>
+                
+                <dt class="col-sm-3">@Html.DisplayNameFor(model => model.Description)</dt>
+                <dd class="col-sm-9">@Html.DisplayFor(model => model.Description)</dd>
+                
+                <dt class="col-sm-3">@Html.DisplayNameFor(model => model.StockQuantity)</dt>
+                <dd class="col-sm-9">
+                    <span class="badge @(Model.StockQuantity > 10 ? "bg-success" : Model.StockQuantity > 0 ? "bg-warning" : "bg-danger")">
+                        @Html.DisplayFor(model => model.StockQuantity)
+                    </span>
+                </dd>
+                
+                <dt class="col-sm-3">@Html.DisplayNameFor(model => model.Unit)</dt>
+                <dd class="col-sm-9">@Html.DisplayFor(model => model.Unit)</dd>
+            </dl>
+            
+            <div class="mt-3">
+                @if (User.IsInRole("Farmaceutico"))
+                {
+                    <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-warning">
+                        <i class="bi bi-pencil"></i> Editar
+                    </a>
+                }
+                <a asp-action="Index" class="btn btn-secondary">
+                    <i class="bi bi-arrow-left"></i> Volver a la Lista
+                </a>
+            </div>
+        </div>
+    </div>
+</div>

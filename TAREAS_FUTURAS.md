@@ -4,94 +4,57 @@
 
 ### 🏆 Alta Prioridad
 
-#### 1. CRUD de Patrocinadores (Solo Admin)
-**Descripción**: Implementar funcionalidad completa para gestionar patrocinadores
+#### 1. Entregas y Donaciones de Insumos
+**Descripción**: Extender el sistema de donaciones para incluir insumos, similar al sistema de entregas
 
 **Requisitos**:
-- Solo usuarios con rol `Admin` pueden acceder
-- Funcionalidades:
-  - ✅ Ver lista de patrocinadores (ya existe en Home)
-  - ➕ Crear nuevo patrocinador
-  - ✏️ Editar patrocinador existente
-  - 🗑️ Eliminar patrocinador
-  - 🔄 Activar/Desactivar patrocinador
-
-**Campos del Modelo** (ya existe en `Models/Sponsor.cs`):
-- Nombre del patrocinador (string)
-- Descripción (string, opcional)
-- Logo (IFormFile → guardar como PNG en `/wwwroot/images/sponsors/`)
-- DisplayOrder (int) - Orden de visualización
-- IsActive (bool) - Si se muestra en la página principal
-- CreatedDate (DateTime)
+- Las donaciones actualmente solo soportan medicamentos
+- Necesitan soportar también insumos médicos
+- Similar a como se implementó para entregas
 
 **Tareas Técnicas**:
-1. Crear `SponsorsController.cs` con acciones CRUD
-   - `[Authorize(Roles = "Admin")]` en todas las acciones
-2. Crear vistas:
-   - `Views/Sponsors/Index.cshtml` - Lista con tabla de patrocinadores
-   - `Views/Sponsors/Create.cshtml` - Formulario para nuevo patrocinador
-   - `Views/Sponsors/Edit.cshtml` - Formulario de edición
-   - `Views/Sponsors/Delete.cshtml` - Confirmación de eliminación
-   - `Views/Sponsors/Details.cshtml` (opcional) - Vista detallada
-3. Manejo de imágenes:
-   - Upload de archivo PNG
-   - Validación de tipo de archivo (solo PNG)
-   - Validación de tamaño (máximo 2MB)
-   - Redimensionar imagen si es necesario (usar `IImageCompressionService`)
-   - Guardar en `/wwwroot/images/sponsors/`
-   - Nombrar archivo: `{nombre-patrocinador}.png`
-   - Al editar logo: eliminar logo anterior si existe
-   - Al eliminar patrocinador: eliminar logo del disco
-4. Validaciones:
-   - Nombre requerido (máximo 100 caracteres)
-   - Descripción opcional (máximo 500 caracteres)
-   - Logo requerido al crear, opcional al editar
-   - DisplayOrder único (no duplicados)
-   - Al desactivar, ocultar en Home pero preservar en BD
-5. Agregar enlace en menú de navegación (solo visible para Admin):
-   ```html
-   @if (User.IsInRole("Admin"))
-   {
-       <li class="nav-item">
-           <a class="nav-link" asp-controller="Sponsors" asp-action="Index">
-               <i class="bi bi-award"></i> Patrocinadores
-           </a>
-       </li>
-   }
-   ```
+1. Actualizar modelo `Donation`:
+   - Hacer `MedicineId` nullable
+   - Agregar `SupplyId` nullable
+   - Agregar relación con `Supply`
+2. Actualizar `DonationsController`:
+   - Validar medicamento O insumo (no ambos)
+   - Actualizar stock correcto según tipo
+3. Actualizar vistas de donaciones:
+   - Selector de tipo (Medicamento/Insumo)
+   - Mostrar tipo en lista
+4. Crear migración `AddSupplyToDonations`
+5. Actualizar `apply-migration-somee.sql`
 
-**Consideraciones**:
-- Los patrocinadores actuales ya están sembrados en `DbInitializer.cs`
-- La vista `Home/Index.cshtml` ya muestra los patrocinadores activos
-- NO usar soft delete, usar campo `IsActive` para activar/desactivar
-- Ordenar por `DisplayOrder` en la vista pública
-
-**Estimación**: 4-6 horas
+**Estimación**: 2-3 horas
 
 ---
 
 ### 🔜 Media Prioridad
 
 #### 2. Filtros Avanzados en Reportes
+- Filtrar entregas y donaciones por tipo (Medicamento/Insumo)
 - Filtrar por rango de fechas más amplio
-- Filtrar por tipo de medicamento
+- Filtrar por medicamento o insumo específico
 - Exportar a Excel además de PDF
 
 #### 3. Dashboard con Estadísticas
 - Medicamentos con stock bajo (alertas)
+- Insumos con stock bajo (alertas)
 - Total de entregas por mes (gráfico)
-- Medicamentos más entregados (top 10)
+- Medicamentos/Insumos más entregados (top 10)
 - Pacientes activos vs totales
+- Comparativa medicamentos vs insumos
 
 #### 4. Sistema de Notificaciones
-- Email cuando stock llegue a mínimo
-- Email de confirmación al registrar entrega
-- Recordatorios de renovación de tratamiento
+- Email a admins, farmacéuticos y viewers cuando stock llegue a mínimo
+- Alertas para medicamentos e insumos
+- Notificación de entregas realizadas
 
 #### 5. Mejorar Búsqueda de Pacientes
 - Búsqueda por nombre además de identificación
 - Autocompletar en campo de búsqueda
-- Mostrar foto del paciente en resultados (opcional)
+- Historial completo de entregas (medicamentos e insumos)
 
 ---
 
@@ -113,13 +76,17 @@
 
 ## 🎯 Roadmap
 
-### Versión 1.1 (Próxima)
+### Versión 1.1 (Completada - 27/10/2025)
 - ✅ Control de eliminación con validaciones
 - ✅ Ordenamiento alfabético
 - ✅ Validación de fechas de entrega
-- 🔄 CRUD de Patrocinadores (En planificación)
+- ✅ CRUD de Patrocinadores (Admin only, PNG, compresión)
+- ✅ Módulo completo de Insumos
+- ✅ Entregas de medicamentos E insumos
+- ✅ Reportes con inventarios separados
 
-### Versión 1.2 (Futuro)
+### Versión 1.2 (En planificación)
+- Donaciones de insumos
 - Filtros avanzados en reportes
 - Dashboard con estadísticas
 
