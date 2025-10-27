@@ -6,9 +6,11 @@ namespace FarmaciaSolidariaCristiana.Models
     {
         public int Id { get; set; }
 
-        [Required(ErrorMessage = "Debe seleccionar un medicamento")]
         [Display(Name = "Medicamento")]
-        public int MedicineId { get; set; }
+        public int? MedicineId { get; set; }
+
+        [Display(Name = "Insumo")]
+        public int? SupplyId { get; set; }
 
         [Required(ErrorMessage = "La cantidad es obligatoria")]
         [Range(1, int.MaxValue, ErrorMessage = "La cantidad debe ser mayor que 0")]
@@ -26,5 +28,6 @@ namespace FarmaciaSolidariaCristiana.Models
 
         // Navigation property
         public Medicine? Medicine { get; set; }
+        public Supply? Supply { get; set; }
     }
 }

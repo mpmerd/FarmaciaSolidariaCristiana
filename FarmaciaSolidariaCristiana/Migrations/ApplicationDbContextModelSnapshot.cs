@@ -106,15 +106,20 @@ namespace FarmaciaSolidariaCristiana.Migrations
                     b.Property<string>("DonorNote")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<int>("MedicineId")
+                    b.Property<int?>("MedicineId")
                         .HasColumnType("int");
 
                     b.Property<int>("Quantity")
                         .HasColumnType("int");
 
+                    b.Property<int?>("SupplyId")
+                        .HasColumnType("int");
+
                     b.HasKey("Id");
 
                     b.HasIndex("MedicineId");
+
+                    b.HasIndex("SupplyId");
 
                     b.ToTable("Donations");
                 });
@@ -571,10 +576,15 @@ namespace FarmaciaSolidariaCristiana.Migrations
                     b.HasOne("FarmaciaSolidariaCristiana.Models.Medicine", "Medicine")
                         .WithMany("Donations")
                         .HasForeignKey("MedicineId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("FarmaciaSolidariaCristiana.Models.Supply", "Supply")
+                        .WithMany()
+                        .HasForeignKey("SupplyId");
 
                     b.Navigation("Medicine");
+
+                    b.Navigation("Supply");
                 });
 
             modelBuilder.Entity("FarmaciaSolidariaCristiana.Models.PatientDocument", b =>

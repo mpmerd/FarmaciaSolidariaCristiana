@@ -13,11 +13,34 @@
                 <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
                 
                 <div class="form-group mb-3">
+                    <label class="form-label">Tipo de Donación <span class="text-danger">*</span></label>
+                    <div class="btn-group w-100" role="group">
+                        <input type="radio" class="btn-check" name="donationType" id="medicineType" value="medicine" checked>
+                        <label class="btn btn-outline-primary" for="medicineType">
+                            <i class="bi bi-capsule"></i> Medicamento
+                        </label>
+                        
+                        <input type="radio" class="btn-check" name="donationType" id="supplyType" value="supply">
+                        <label class="btn btn-outline-info" for="supplyType">
+                            <i class="bi bi-box-seam"></i> Insumo
+                        </label>
+                    </div>
+                </div>
+
+                <div class="form-group mb-3" id="medicineSelect">
                     <label asp-for="MedicineId" class="form-label"></label>
                     <select asp-for="MedicineId" class="form-select" asp-items="ViewBag.MedicineId">
                         <option value="">-- Seleccione un Medicamento --</option>
                     </select>
                     <span asp-validation-for="MedicineId" class="text-danger"></span>
+                </div>
+
+                <div class="form-group mb-3" id="supplySelect" style="display: none;">
+                    <label asp-for="SupplyId" class="form-label"></label>
+                    <select asp-for="SupplyId" class="form-select" asp-items="ViewBag.SupplyId">
+                        <option value="">-- Seleccione un Insumo --</option>
+                    </select>
+                    <span asp-validation-for="SupplyId" class="text-danger"></span>
                 </div>
                 
                 <div class="form-group mb-3">
@@ -53,4 +76,31 @@
 
 @section Scripts {
     @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const medicineRadio = document.getElementById('medicineType');
+            const supplyRadio = document.getElementById('supplyType');
+            const medicineSelect = document.getElementById('medicineSelect');
+            const supplySelect = document.getElementById('supplySelect');
+            const medicineDropdown = document.getElementById('MedicineId');
+            const supplyDropdown = document.getElementById('SupplyId');
+
+            function toggleSelects() {
+                if (medicineRadio.checked) {
+                    medicineSelect.style.display = 'block';
+                    supplySelect.style.display = 'none';
+                    supplyDropdown.value = '';
+                } else {
+                    medicineSelect.style.display = 'none';
+                    supplySelect.style.display = 'block';
+                    medicineDropdown.value = '';
+                }
+            }
+
+            medicineRadio.addEventListener('change', toggleSelects);
+            supplyRadio.addEventListener('change', toggleSelects);
+
+            toggleSelects();
+        });
+    </script>
 }
