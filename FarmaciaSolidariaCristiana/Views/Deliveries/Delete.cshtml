@@ -28,19 +28,35 @@
             }
             else
             {
+                var itemName = Model.Medicine != null ? Model.Medicine.Name : (Model.Supply != null ? Model.Supply.Name : "N/A");
+                var itemUnit = Model.Medicine != null ? Model.Medicine.Unit : (Model.Supply != null ? Model.Supply.Unit : "");
+                var itemType = Model.Medicine != null ? "medicamento" : "insumo";
+                
                 <div class="alert alert-warning">
                     <i class="bi bi-exclamation-triangle-fill"></i>
                     <strong>¿Está seguro que desea eliminar esta entrega?</strong>
-                    <p class="mb-0">Esta acción devolverá el medicamento al inventario.</p>
+                    <p class="mb-0">Esta acción devolverá el @itemType al inventario.</p>
                     <p class="mb-0 mt-2"><small>Tiempo desde creación: @hoursSinceCreation.ToString("F1") horas (máximo permitido: 2 horas)</small></p>
                 </div>
 
                 <dl class="row">
-                    <dt class="col-sm-3">Medicamento</dt>
-                    <dd class="col-sm-9">@Model.Medicine?.Name</dd>
+                    <dt class="col-sm-3">Tipo</dt>
+                    <dd class="col-sm-9">
+                        @if (Model.Medicine != null)
+                        {
+                            <span class="badge bg-primary">Medicamento</span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-info">Insumo</span>
+                        }
+                    </dd>
+                    
+                    <dt class="col-sm-3">@(Model.Medicine != null ? "Medicamento" : "Insumo")</dt>
+                    <dd class="col-sm-9">@itemName</dd>
 
                     <dt class="col-sm-3">Cantidad</dt>
-                    <dd class="col-sm-9">@Model.Quantity @Model.Medicine?.Unit</dd>
+                    <dd class="col-sm-9">@Model.Quantity @itemUnit</dd>
 
                     <dt class="col-sm-3">Paciente</dt>
                     <dd class="col-sm-9">
@@ -96,7 +112,7 @@
 
                 <form asp-action="Delete" method="post" class="d-inline">
                     <input type="hidden" asp-for="Id" />
-                    <button type="submit" class="btn btn-danger" onclick="return confirm('¿Está absolutamente seguro de eliminar esta entrega? El medicamento será devuelto al inventario.');">
+                    <button type="submit" class="btn btn-danger" onclick="return confirm('¿Está absolutamente seguro de eliminar esta entrega? El @itemType será devuelto al inventario.');">
                         <i class="bi bi-trash"></i> Confirmar Eliminación
                     </button>
                     <a asp-action="Index" class="btn btn-secondary">

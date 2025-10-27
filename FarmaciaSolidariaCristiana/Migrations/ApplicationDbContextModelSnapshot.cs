@@ -54,7 +54,7 @@ namespace FarmaciaSolidariaCristiana.Migrations
                     b.Property<DateTime?>("ExpiryDate")
                         .HasColumnType("datetime2");
 
-                    b.Property<int>("MedicineId")
+                    b.Property<int?>("MedicineId")
                         .HasColumnType("int");
 
                     b.Property<int?>("PatientId")
@@ -71,6 +71,9 @@ namespace FarmaciaSolidariaCristiana.Migrations
                     b.Property<int>("Quantity")
                         .HasColumnType("int");
 
+                    b.Property<int?>("SupplyId")
+                        .HasColumnType("int");
+
                     b.Property<string>("TreatmentDuration")
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
@@ -80,6 +83,8 @@ namespace FarmaciaSolidariaCristiana.Migrations
                     b.HasIndex("MedicineId");
 
                     b.HasIndex("PatientId");
+
+                    b.HasIndex("SupplyId");
 
                     b.ToTable("Deliveries");
                 });
@@ -313,6 +318,33 @@ namespace FarmaciaSolidariaCristiana.Migrations
                     b.ToTable("Sponsors");
                 });
 
+            modelBuilder.Entity("FarmaciaSolidariaCristiana.Models.Supply", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Description")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("StockQuantity")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Unit")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Supplies");
+                });
+
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
                 {
                     b.Property<string>("Id")
@@ -516,17 +548,22 @@ namespace FarmaciaSolidariaCristiana.Migrations
                     b.HasOne("FarmaciaSolidariaCristiana.Models.Medicine", "Medicine")
                         .WithMany("Deliveries")
                         .HasForeignKey("MedicineId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("FarmaciaSolidariaCristiana.Models.Patient", "Patient")
                         .WithMany("Deliveries")
                         .HasForeignKey("PatientId")
                         .OnDelete(DeleteBehavior.Restrict);
 
+                    b.HasOne("FarmaciaSolidariaCristiana.Models.Supply", "Supply")
+                        .WithMany()
+                        .HasForeignKey("SupplyId");
+
                     b.Navigation("Medicine");
 
                     b.Navigation("Patient");
+
+                    b.Navigation("Supply");
                 });
 
             modelBuilder.Entity("FarmaciaSolidariaCristiana.Models.Donation", b =>

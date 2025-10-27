@@ -32,7 +32,7 @@
             
             <form asp-action="Index" method="get" class="row mb-3">
                 <div class="col-md-4">
-                    <input type="text" name="searchString" class="form-control" placeholder="Buscar medicamento..." />
+                    <input type="text" name="searchString" class="form-control" placeholder="Buscar medicamento o insumo..." />
                 </div>
                 <div class="col-md-3">
                     <input type="date" name="startDate" class="form-control" />
@@ -53,7 +53,8 @@
                 <table class="table table-striped">
                     <thead class="table-dark">
                         <tr>
-                            <th>Medicamento</th>
+                            <th>Tipo</th>
+                            <th>Item</th>
                             <th>Cantidad</th>
                             <th>Fecha</th>
                             <th>Nota Paciente</th>
@@ -71,9 +72,15 @@
                             var hoursSinceCreation = (DateTime.Now - createdDate).TotalHours;
                             var canDelete = hoursSinceCreation <= 2;
                             
+                            var itemName = item.Medicine != null ? item.Medicine.Name : (item.Supply != null ? item.Supply.Name : "N/A");
+                            var itemUnit = item.Medicine != null ? item.Medicine.Unit : (item.Supply != null ? item.Supply.Unit : "");
+                            var itemType = item.Medicine != null ? "Medicamento" : "Insumo";
+                            var itemBadge = item.Medicine != null ? "bg-primary" : "bg-info";
+                            
                             <tr>
-                                <td>@item.Medicine?.Name</td>
-                                <td>@item.Quantity @item.Medicine?.Unit</td>
+                                <td><span class="badge @itemBadge">@itemType</span></td>
+                                <td>@itemName</td>
+                                <td>@item.Quantity @itemUnit</td>
                                 <td>@item.DeliveryDate.ToString("dd/MM/yyyy")</td>
                                 <td>@item.PatientNote</td>
                                 @if (User.IsInRole("Admin") || User.IsInRole("Farmaceutico"))

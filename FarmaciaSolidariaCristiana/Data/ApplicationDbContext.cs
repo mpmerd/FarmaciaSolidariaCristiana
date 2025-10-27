@@ -12,6 +12,7 @@ namespace FarmaciaSolidariaCristiana.Data
         }
 
         public DbSet<Medicine> Medicines { get; set; }
+        public DbSet<Supply> Supplies { get; set; }
         public DbSet<Delivery> Deliveries { get; set; }
         public DbSet<Donation> Donations { get; set; }
         public DbSet<Patient> Patients { get; set; }

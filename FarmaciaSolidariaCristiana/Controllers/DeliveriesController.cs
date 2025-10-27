@@ -21,11 +21,16 @@ namespace FarmaciaSolidariaCristiana.Controllers
 
         public async Task<IActionResult> Index(string searchString, DateTime? startDate, DateTime? endDate)
         {
-            var deliveries = _context.Deliveries.Include(d => d.Medicine).AsQueryable();
+            var deliveries = _context.Deliveries
+                .Include(d => d.Medicine)
+                .Include(d => d.Supply)
+                .AsQueryable();
 
             if (!string.IsNullOrEmpty(searchString))
             {
-                deliveries = deliveries.Where(d => d.Medicine!.Name.Contains(searchString));
+                deliveries = deliveries.Where(d => 
+                    (d.Medicine != null && d.Medicine.Name.Contains(searchString)) ||
+                    (d.Supply != null && d.Supply.Name.Contains(searchString)));
             }
 
             if (startDate.HasValue)
@@ -40,8 +45,7 @@ namespace FarmaciaSolidariaCristiana.Controllers
 
             ViewData["TotalDeliveries"] = await deliveries.SumAsync(d => d.Quantity);
             return View(await deliveries
-                .OrderBy(d => d.Medicine!.Name)
-                .ThenByDescending(d => d.DeliveryDate)
+                .OrderByDescending(d => d.DeliveryDate)
                 .ToListAsync());
         }
 
@@ -49,14 +53,25 @@ namespace FarmaciaSolidariaCristiana.Controllers
         public IActionResult Create()
         {
             ViewData["MedicineId"] = new SelectList(_context.Medicines.OrderBy(m => m.Name), "Id", "Name");
+            ViewData["SupplyId"] = new SelectList(_context.Supplies.OrderBy(s => s.Name), "Id", "Name");
             return View();
         }
 
         [HttpPost]
         [Authorize(Roles = "Admin,Farmaceutico")]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("PatientIdentification,MedicineId,Quantity,DeliveryDate,PatientNote,Comments,Dosage,TreatmentDuration")] Delivery delivery)
+        public async Task<IActionResult> Create([Bind("PatientIdentification,MedicineId,SupplyId,Quantity,DeliveryDate,PatientNote,Comments,Dosage,TreatmentDuration")] Delivery delivery)
         {
+            // Validar que se haya seleccionado medicamento O insumo (pero no ambos ni ninguno)
+            if (!delivery.MedicineId.HasValue && !delivery.SupplyId.HasValue)
+            {
+                ModelState.AddModelError("", "Debe seleccionar un medicamento o un insumo.");
+            }
+            else if (delivery.MedicineId.HasValue && delivery.SupplyId.HasValue)
+            {
+                ModelState.AddModelError("", "Solo puede seleccionar medicamento O insumo, no ambos.");
+            }
+
             if (ModelState.IsValid)
             {
                 // Validar que la fecha de entrega no sea futura ni más de 5 días en el pasado
@@ -68,6 +83,7 @@ namespace FarmaciaSolidariaCristiana.Controllers
                 {
                     ModelState.AddModelError("DeliveryDate", "La fecha de entrega no puede ser futura.");
                     ViewData["MedicineId"] = new SelectList(_context.Medicines.OrderBy(m => m.Name), "Id", "Name", delivery.MedicineId);
+                    ViewData["SupplyId"] = new SelectList(_context.Supplies.OrderBy(s => s.Name), "Id", "Name", delivery.SupplyId);
                     return View(delivery);
                 }
 
@@ -75,6 +91,7 @@ namespace FarmaciaSolidariaCristiana.Controllers
                 {
                     ModelState.AddModelError("DeliveryDate", "La fecha de entrega no puede ser mayor a 5 días en el pasado.");
                     ViewData["MedicineId"] = new SelectList(_context.Medicines.OrderBy(m => m.Name), "Id", "Name", delivery.MedicineId);
+                    ViewData["SupplyId"] = new SelectList(_context.Supplies.OrderBy(s => s.Name), "Id", "Name", delivery.SupplyId);
                     return View(delivery);
                 }
 
@@ -87,6 +104,7 @@ namespace FarmaciaSolidariaCristiana.Controllers
                     ModelState.AddModelError("PatientIdentification", 
                         "Paciente no encontrado. Por favor, registre primero al paciente en la sección de Pacientes.");
                     ViewData["MedicineId"] = new SelectList(_context.Medicines.OrderBy(m => m.Name), "Id", "Name", delivery.MedicineId);
+                    ViewData["SupplyId"] = new SelectList(_context.Supplies.OrderBy(s => s.Name), "Id", "Name", delivery.SupplyId);
                     return View(delivery);
                 }
 
@@ -99,32 +117,68 @@ namespace FarmaciaSolidariaCristiana.Controllers
                 // Establecer la fecha de creación
                 delivery.CreatedAt = DateTime.Now;
 
-                var medicine = await _context.Medicines.FindAsync(delivery.MedicineId);
-                if (medicine == null)
+                // Manejar medicamento o insumo
+                string itemName = "";
+                string itemUnit = "";
+
+                if (delivery.MedicineId.HasValue)
                 {
-                    ModelState.AddModelError("", "Medicamento no encontrado");
-                    ViewData["MedicineId"] = new SelectList(_context.Medicines.OrderBy(m => m.Name), "Id", "Name", delivery.MedicineId);
-                    return View(delivery);
+                    var medicine = await _context.Medicines.FindAsync(delivery.MedicineId.Value);
+                    if (medicine == null)
+                    {
+                        ModelState.AddModelError("", "Medicamento no encontrado");
+                        ViewData["MedicineId"] = new SelectList(_context.Medicines.OrderBy(m => m.Name), "Id", "Name", delivery.MedicineId);
+                        ViewData["SupplyId"] = new SelectList(_context.Supplies.OrderBy(s => s.Name), "Id", "Name", delivery.SupplyId);
+                        return View(delivery);
+                    }
+
+                    if (medicine.StockQuantity < delivery.Quantity)
+                    {
+                        ModelState.AddModelError("Quantity", $"Stock insuficiente. Disponible: {medicine.StockQuantity} {medicine.Unit}");
+                        ViewData["MedicineId"] = new SelectList(_context.Medicines.OrderBy(m => m.Name), "Id", "Name", delivery.MedicineId);
+                        ViewData["SupplyId"] = new SelectList(_context.Supplies.OrderBy(s => s.Name), "Id", "Name", delivery.SupplyId);
+                        return View(delivery);
+                    }
+
+                    medicine.StockQuantity -= delivery.Quantity;
+                    itemName = medicine.Name;
+                    itemUnit = medicine.Unit;
+                }
+                else if (delivery.SupplyId.HasValue)
+                {
+                    var supply = await _context.Supplies.FindAsync(delivery.SupplyId.Value);
+                    if (supply == null)
+                    {
+                        ModelState.AddModelError("", "Insumo no encontrado");
+                        ViewData["MedicineId"] = new SelectList(_context.Medicines.OrderBy(m => m.Name), "Id", "Name", delivery.MedicineId);
+                        ViewData["SupplyId"] = new SelectList(_context.Supplies.OrderBy(s => s.Name), "Id", "Name", delivery.SupplyId);
+                        return View(delivery);
+                    }
+
+                    if (supply.StockQuantity < delivery.Quantity)
+                    {
+                        ModelState.AddModelError("Quantity", $"Stock insuficiente. Disponible: {supply.StockQuantity} {supply.Unit}");
+                        ViewData["MedicineId"] = new SelectList(_context.Medicines.OrderBy(m => m.Name), "Id", "Name", delivery.MedicineId);
+                        ViewData["SupplyId"] = new SelectList(_context.Supplies.OrderBy(s => s.Name), "Id", "Name", delivery.SupplyId);
+                        return View(delivery);
+                    }
+
+                    supply.StockQuantity -= delivery.Quantity;
+                    itemName = supply.Name;
+                    itemUnit = supply.Unit;
                 }
 
-                if (medicine.StockQuantity < delivery.Quantity)
-                {
-                    ModelState.AddModelError("Quantity", $"Stock insuficiente. Disponible: {medicine.StockQuantity} {medicine.Unit}");
-                    ViewData["MedicineId"] = new SelectList(_context.Medicines.OrderBy(m => m.Name), "Id", "Name", delivery.MedicineId);
-                    return View(delivery);
-                }
-
-                medicine.StockQuantity -= delivery.Quantity;
                 _context.Add(delivery);
                 await _context.SaveChangesAsync();
                 
-                _logger.LogInformation("Delivery created for patient: {PatientName}, medicine: {MedicineName}, Quantity: {Quantity}", 
-                    patient.FullName, medicine.Name, delivery.Quantity);
+                _logger.LogInformation("Delivery created for patient: {PatientName}, item: {ItemName}, Quantity: {Quantity}", 
+                    patient.FullName, itemName, delivery.Quantity);
                 TempData["SuccessMessage"] = $"Entrega registrada exitosamente para {patient.FullName}.";
                 return RedirectToAction(nameof(Index));
             }
             
             ViewData["MedicineId"] = new SelectList(_context.Medicines.OrderBy(m => m.Name), "Id", "Name", delivery.MedicineId);
+            ViewData["SupplyId"] = new SelectList(_context.Supplies.OrderBy(s => s.Name), "Id", "Name", delivery.SupplyId);
             return View(delivery);
         }
 
@@ -139,6 +193,7 @@ namespace FarmaciaSolidariaCristiana.Controllers
 
             var delivery = await _context.Deliveries
                 .Include(d => d.Medicine)
+                .Include(d => d.Supply)
                 .Include(d => d.Patient)
                 .FirstOrDefaultAsync(m => m.Id == id);
                 
@@ -165,6 +220,7 @@ namespace FarmaciaSolidariaCristiana.Controllers
         {
             var delivery = await _context.Deliveries
                 .Include(d => d.Medicine)
+                .Include(d => d.Supply)
                 .FirstOrDefaultAsync(d => d.Id == id);
                 
             if (delivery == null)
@@ -185,17 +241,24 @@ namespace FarmaciaSolidariaCristiana.Controllers
                 return RedirectToAction(nameof(Index));
             }
 
-            // Devolver el medicamento al stock
+            // Devolver al stock (medicamento o insumo)
+            string itemName = "";
             if (delivery.Medicine != null)
             {
                 delivery.Medicine.StockQuantity += delivery.Quantity;
+                itemName = delivery.Medicine.Name;
+            }
+            else if (delivery.Supply != null)
+            {
+                delivery.Supply.StockQuantity += delivery.Quantity;
+                itemName = delivery.Supply.Name;
             }
 
             _context.Deliveries.Remove(delivery);
             await _context.SaveChangesAsync();
             
-            _logger.LogInformation("Delivery deleted: ID {Id}, Medicine: {Medicine}, Quantity: {Quantity}", 
-                delivery.Id, delivery.Medicine?.Name ?? "Unknown", delivery.Quantity);
+            _logger.LogInformation("Delivery deleted: ID {Id}, Item: {Item}, Quantity: {Quantity}", 
+                delivery.Id, itemName, delivery.Quantity);
             TempData["SuccessMessage"] = "Entrega eliminada exitosamente. El stock ha sido restaurado.";
 
             return RedirectToAction(nameof(Index));
