@@ -461,30 +461,33 @@ PRINT ''
 -- Estadísticas de datos
 PRINT 'Estadísticas:'
 
--- Verificar si las columnas SupplyId existen antes de usarlas en las estadísticas
-DECLARE @DeliveriesHasSupplyId BIT = 0;
-DECLARE @DonationsHasSupplyId BIT = 0;
-
-IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'Deliveries' AND COLUMN_NAME = 'SupplyId')
-    SET @DeliveriesHasSupplyId = 1;
-
-IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'Donations' AND COLUMN_NAME = 'SupplyId')
-    SET @DonationsHasSupplyId = 1;
-
--- Estadísticas básicas
+-- Estadísticas básicas (sin columnas que pueden no existir)
 SELECT 
     (SELECT COUNT(*) FROM Patients) AS TotalPacientes,
     (SELECT COUNT(*) FROM Medicines) AS TotalMedicamentos,
-    (SELECT ISNULL(COUNT(*), 0) FROM Supplies) AS TotalInsumos,
+    (SELECT CASE WHEN EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'Supplies') 
+                 THEN (SELECT COUNT(*) FROM Supplies) 
+                 ELSE 0 END) AS TotalInsumos,
     (SELECT COUNT(*) FROM Sponsors) AS TotalPatrocinadores,
     (SELECT COUNT(*) FROM Deliveries) AS TotalEntregas,
     (SELECT COUNT(*) FROM Deliveries WHERE CreatedAt IS NOT NULL) AS EntregasConCreatedAt,
     (SELECT COUNT(*) FROM Deliveries WHERE CreatedAt IS NULL) AS EntregasAntiguasSinCreatedAt,
     (SELECT COUNT(*) FROM Deliveries WHERE MedicineId IS NOT NULL) AS EntregasMedicamentos,
-    (CASE WHEN @DeliveriesHasSupplyId = 1 THEN (SELECT COUNT(*) FROM Deliveries WHERE SupplyId IS NOT NULL) ELSE 0 END) AS EntregasInsumos,
     (SELECT COUNT(*) FROM Donations) AS TotalDonaciones,
-    (SELECT COUNT(*) FROM Donations WHERE MedicineId IS NOT NULL) AS DonacionesMedicamentos,
-    (CASE WHEN @DonationsHasSupplyId = 1 THEN (SELECT COUNT(*) FROM Donations WHERE SupplyId IS NOT NULL) ELSE 0 END) AS DonacionesInsumos;
+    (SELECT COUNT(*) FROM Donations WHERE MedicineId IS NOT NULL) AS DonacionesMedicamentos;
+
+-- Estadísticas adicionales solo si las columnas existen (SQL dinámico)
+IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'Deliveries' AND COLUMN_NAME = 'SupplyId')
+BEGIN
+    DECLARE @SqlDeliveries NVARCHAR(MAX) = 'SELECT COUNT(*) AS EntregasInsumos FROM Deliveries WHERE SupplyId IS NOT NULL';
+    EXEC sp_executesql @SqlDeliveries;
+END
+
+IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'Donations' AND COLUMN_NAME = 'SupplyId')
+BEGIN
+    DECLARE @SqlDonations NVARCHAR(MAX) = 'SELECT COUNT(*) AS DonacionesInsumos FROM Donations WHERE SupplyId IS NOT NULL';
+    EXEC sp_executesql @SqlDonations;
+END
 
 PRINT ''
 PRINT '========================================================================='
