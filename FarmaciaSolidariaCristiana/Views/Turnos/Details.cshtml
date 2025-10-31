@@ -1,0 +1,398 @@
+@model FarmaciaSolidariaCristiana.Models.Turno
+@{
+    ViewData["Title"] = "Detalles del Turno";
+}
+
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-12">
+            @if (TempData["SuccessMessage"] != null)
+            {
+                <div class="alert alert-success alert-dismissible fade show">
+                    <i class="bi bi-check-circle"></i> @TempData["SuccessMessage"]
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            }
+
+            <div class="card shadow-lg">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="mb-0">
+                        <i class="bi bi-file-text"></i> Detalles del Turno
+                        @if (Model.NumeroTurno.HasValue)
+                        {
+                            <span class="badge bg-dark float-end fs-5">#@Model.NumeroTurno.Value.ToString("000")</span>
+                        }
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        @* Información General *@
+                        <div class="col-md-6">
+                            <div class="card mb-3 border-info">
+                                <div class="card-header bg-info text-white">
+                                    <h5 class="mb-0"><i class="bi bi-info-circle"></i> Información General</h5>
+                                </div>
+                                <div class="card-body">
+                                    <table class="table table-sm">
+                                        <tr>
+                                            <td><strong>ID:</strong></td>
+                                            <td>@Model.Id</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Estado:</strong></td>
+                                            <td>
+                                                @switch (Model.Estado)
+                                                {
+                                                    case "Pendiente":
+                                                        <span class="badge bg-warning text-dark">
+                                                            <i class="bi bi-hourglass-split"></i> Pendiente
+                                                        </span>
+                                                        break;
+                                                    case "Aprobado":
+                                                        <span class="badge bg-success">
+                                                            <i class="bi bi-check-circle"></i> Aprobado
+                                                        </span>
+                                                        break;
+                                                    case "Rechazado":
+                                                        <span class="badge bg-danger">
+                                                            <i class="bi bi-x-circle"></i> Rechazado
+                                                        </span>
+                                                        break;
+                                                    case "Completado":
+                                                        <span class="badge bg-info">
+                                                            <i class="bi bi-check-all"></i> Completado
+                                                        </span>
+                                                        break;
+                                                }
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Fecha Solicitud:</strong></td>
+                                            <td>@Model.FechaSolicitud.ToString("dd/MM/yyyy HH:mm")</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Fecha Preferida:</strong></td>
+                                            <td>@Model.FechaPreferida.ToString("dd/MM/yyyy HH:mm")</td>
+                                        </tr>
+                                        @if (Model.FechaRevision.HasValue)
+                                        {
+                                            <tr>
+                                                <td><strong>Fecha Revisión:</strong></td>
+                                                <td>@Model.FechaRevision.Value.ToString("dd/MM/yyyy HH:mm")</td>
+                                            </tr>
+                                        }
+                                        @if (Model.FechaEntrega.HasValue)
+                                        {
+                                            <tr>
+                                                <td><strong>Fecha Entrega:</strong></td>
+                                                <td>@Model.FechaEntrega.Value.ToString("dd/MM/yyyy HH:mm")</td>
+                                            </tr>
+                                        }
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        @* Información del Usuario *@
+                        <div class="col-md-6">
+                            <div class="card mb-3 border-primary">
+                                <div class="card-header bg-primary text-white">
+                                    <h5 class="mb-0"><i class="bi bi-person"></i> Información del Usuario</h5>
+                                </div>
+                                <div class="card-body">
+                                    <table class="table table-sm">
+                                        <tr>
+                                            <td><strong>Usuario:</strong></td>
+                                            <td>@Model.User?.UserName</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Email:</strong></td>
+                                            <td>@Model.User?.Email</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Documento Hash:</strong></td>
+                                            <td>
+                                                <small class="text-muted font-monospace">
+                                                    @(Model.DocumentoIdentidadHash?.Length > 30 
+                                                        ? Model.DocumentoIdentidadHash.Substring(0, 30) + "..." 
+                                                        : Model.DocumentoIdentidadHash)
+                                                </small>
+                                            </td>
+                                        </tr>
+                                        @if (Model.RevisadoPor != null)
+                                        {
+                                            <tr>
+                                                <td><strong>Revisado Por:</strong></td>
+                                                <td>@Model.RevisadoPor.UserName</td>
+                                            </tr>
+                                        }
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    @* Medicamentos Solicitados *@
+                    <div class="card mb-3 border-success">
+                        <div class="card-header bg-success text-white">
+                            <h5 class="mb-0"><i class="bi bi-capsule"></i> Medicamentos Solicitados (@Model.Medicamentos.Count)</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Medicamento</th>
+                                            <th>Cant. Solicitada</th>
+                                            <th>Stock al Solicitar</th>
+                                            <th>Cant. Aprobada</th>
+                                            <th>Notas</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var tm in Model.Medicamentos)
+                                        {
+                                            <tr>
+                                                <td>
+                                                    <strong>@tm.Medicine?.Name</strong><br/>
+                                                    <small class="text-muted">@tm.Medicine?.Description</small>
+                                                </td>
+                                                <td>
+                                                    <span class="badge bg-primary">@tm.CantidadSolicitada</span>
+                                                </td>
+                                                <td>
+                                                    @if (tm.DisponibleAlSolicitar)
+                                                    {
+                                                        <span class="badge bg-success">
+                                                            <i class="bi bi-check"></i> Disponible
+                                                        </span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="badge bg-warning text-dark">
+                                                            <i class="bi bi-exclamation-triangle"></i> Stock Bajo
+                                                        </span>
+                                                    }
+                                                </td>
+                                                <td>
+                                                    @if (tm.CantidadAprobada.HasValue)
+                                                    {
+                                                        <span class="badge bg-success">@tm.CantidadAprobada.Value</span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="text-muted">-</span>
+                                                    }
+                                                </td>
+                                                <td>
+                                                    @if (!string.IsNullOrEmpty(tm.Notas))
+                                                    {
+                                                        <small>@tm.Notas</small>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="text-muted">-</span>
+                                                    }
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    @* Documentos Adjuntos *@
+                    <div class="card mb-3 border-warning">
+                        <div class="card-header bg-warning text-dark">
+                            <h5 class="mb-0"><i class="bi bi-paperclip"></i> Documentos Adjuntos</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6><i class="bi bi-file-medical"></i> Receta Médica:</h6>
+                                    @if (!string.IsNullOrEmpty(Model.RecetaMedicaPath))
+                                    {
+                                        <a href="/@Model.RecetaMedicaPath" target="_blank" class="btn btn-outline-primary btn-sm">
+                                            <i class="bi bi-download"></i> Ver/Descargar
+                                        </a>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">No adjuntado</span>
+                                    }
+                                </div>
+                                <div class="col-md-6">
+                                    <h6><i class="bi bi-card-heading"></i> Tarjetón:</h6>
+                                    @if (!string.IsNullOrEmpty(Model.TarjetonPath))
+                                    {
+                                        <a href="/@Model.TarjetonPath" target="_blank" class="btn btn-outline-primary btn-sm">
+                                            <i class="bi bi-download"></i> Ver/Descargar
+                                        </a>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">No adjuntado</span>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    @* Notas y Comentarios *@
+                    <div class="row">
+                        @if (!string.IsNullOrEmpty(Model.NotasSolicitante))
+                        {
+                            <div class="col-md-6">
+                                <div class="card mb-3 border-secondary">
+                                    <div class="card-header bg-secondary text-white">
+                                        <h6 class="mb-0"><i class="bi bi-chat-left-text"></i> Notas del Solicitante</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <p class="mb-0">@Model.NotasSolicitante</p>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+
+                        @if (!string.IsNullOrEmpty(Model.ComentariosFarmaceutico))
+                        {
+                            <div class="col-md-6">
+                                <div class="card mb-3 border-info">
+                                    <div class="card-header bg-info text-white">
+                                        <h6 class="mb-0"><i class="bi bi-chat-right-text"></i> Comentarios del Farmacéutico</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <p class="mb-0">@Model.ComentariosFarmaceutico</p>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+
+                    @* Acciones para Farmacéutico/Admin *@
+                    @if (User.IsInRole("Farmaceutico") || User.IsInRole("Admin"))
+                    {
+                        <div class="card border-dark">
+                            <div class="card-header bg-dark text-white">
+                                <h5 class="mb-0"><i class="bi bi-gear"></i> Acciones</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="btn-group" role="group">
+                                    @if (Model.Estado == "Pendiente")
+                                    {
+                                        <button type="button" class="btn btn-success btn-lg" data-bs-toggle="modal" data-bs-target="#approveModal">
+                                            <i class="bi bi-check-circle"></i> Aprobar Turno
+                                        </button>
+                                        <button type="button" class="btn btn-danger btn-lg" data-bs-toggle="modal" data-bs-target="#rejectModal">
+                                            <i class="bi bi-x-circle"></i> Rechazar Turno
+                                        </button>
+                                    }
+                                    
+                                    @if (Model.Estado == "Aprobado")
+                                    {
+                                        <form asp-action="Complete" asp-route-id="@Model.Id" method="post" class="d-inline">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn btn-info btn-lg" 
+                                                    onclick="return confirm('¿Marcar este turno como completado/entregado?')">
+                                                <i class="bi bi-check-all"></i> Marcar Como Completado
+                                            </button>
+                                        </form>
+                                    }
+
+                                    <a asp-action="Dashboard" class="btn btn-outline-secondary btn-lg">
+                                        <i class="bi bi-arrow-left"></i> Volver al Dashboard
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+
+                        @* Modal Aprobar *@
+                        <div class="modal fade" id="approveModal" tabindex="-1">
+                            <div class="modal-dialog modal-lg">
+                                <div class="modal-content">
+                                    <form asp-action="Approve" asp-route-id="@Model.Id" method="post">
+                                        @Html.AntiForgeryToken()
+                                        <div class="modal-header bg-success text-white">
+                                            <h5 class="modal-title">Aprobar Turno #@Model.Id</h5>
+                                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <p class="lead">¿Estás seguro de aprobar este turno para <strong>@Model.User?.UserName</strong>?</p>
+                                            
+                                            <div class="alert alert-info">
+                                                <h6><i class="bi bi-info-circle"></i> Acciones automáticas:</h6>
+                                                <ul class="mb-0">
+                                                    <li>Se generará un <strong>número de turno único</strong></li>
+                                                    <li>Se enviará un <strong>email de confirmación</strong> al usuario</li>
+                                                    <li>Se generará un <strong>PDF con los detalles</strong> (si configurado)</li>
+                                                </ul>
+                                            </div>
+
+                                            <div class="mb-3">
+                                                <label class="form-label">Comentarios/Instrucciones (Opcional)</label>
+                                                <textarea name="comentarios" class="form-control" rows="4" 
+                                                          placeholder="Instrucciones adicionales para el usuario, horarios específicos, etc..."></textarea>
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                            <button type="submit" class="btn btn-success btn-lg">
+                                                <i class="bi bi-check-circle"></i> Confirmar Aprobación
+                                            </button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+
+                        @* Modal Rechazar *@
+                        <div class="modal fade" id="rejectModal" tabindex="-1">
+                            <div class="modal-dialog">
+                                <div class="modal-content">
+                                    <form asp-action="Reject" asp-route-id="@Model.Id" method="post">
+                                        @Html.AntiForgeryToken()
+                                        <div class="modal-header bg-danger text-white">
+                                            <h5 class="modal-title">Rechazar Turno #@Model.Id</h5>
+                                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <p class="lead">Rechazar turno de <strong>@Model.User?.UserName</strong></p>
+                                            
+                                            <div class="alert alert-warning">
+                                                <i class="bi bi-exclamation-triangle"></i> 
+                                                El usuario recibirá un email con el motivo del rechazo.
+                                            </div>
+
+                                            <div class="mb-3">
+                                                <label class="form-label">Motivo del Rechazo <span class="text-danger">*</span></label>
+                                                <textarea name="motivo" class="form-control" rows="5" required
+                                                          placeholder="Explica claramente el motivo (ej: medicamentos no disponibles, documentación incompleta, etc.)"></textarea>
+                                                <small class="form-text text-muted">Este mensaje será enviado al usuario.</small>
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                            <button type="submit" class="btn btn-danger">
+                                                <i class="bi bi-x-circle"></i> Confirmar Rechazo
+                                            </button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        @* Botón para usuarios normales *@
+                        <div class="mt-3">
+                            <a asp-action="Index" class="btn btn-primary">
+                                <i class="bi bi-arrow-left"></i> Volver a Mis Turnos
+                            </a>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

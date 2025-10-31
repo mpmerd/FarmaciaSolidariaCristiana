@@ -1,0 +1,310 @@
+@model List<FarmaciaSolidariaCristiana.Models.Turno>
+@{
+    ViewData["Title"] = "Dashboard de Turnos";
+    var pendientes = Model.Count(t => t.Estado == "Pendiente");
+    var aprobados = Model.Count(t => t.Estado == "Aprobado");
+    var completados = Model.Count(t => t.Estado == "Completado");
+}
+
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card shadow">
+                <div class="card-header bg-info text-white">
+                    <h3 class="mb-0">
+                        <i class="bi bi-kanban"></i> Dashboard de Turnos
+                    </h3>
+                </div>
+                <div class="card-body">
+                    @if (TempData["SuccessMessage"] != null)
+                    {
+                        <div class="alert alert-success alert-dismissible fade show">
+                            <i class="bi bi-check-circle"></i> @TempData["SuccessMessage"]
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    }
+                    
+                    @if (TempData["ErrorMessage"] != null)
+                    {
+                        <div class="alert alert-danger alert-dismissible fade show">
+                            <i class="bi bi-exclamation-triangle"></i> @TempData["ErrorMessage"]
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    }
+
+                    @* Estadísticas *@
+                    <div class="row mb-4">
+                        <div class="col-md-3">
+                            <div class="card text-white bg-warning">
+                                <div class="card-body text-center">
+                                    <h2 class="mb-0">@pendientes</h2>
+                                    <p class="mb-0">Pendientes</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card text-white bg-success">
+                                <div class="card-body text-center">
+                                    <h2 class="mb-0">@aprobados</h2>
+                                    <p class="mb-0">Aprobados</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card text-white bg-info">
+                                <div class="card-body text-center">
+                                    <h2 class="mb-0">@completados</h2>
+                                    <p class="mb-0">Completados</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card text-white bg-primary">
+                                <div class="card-body text-center">
+                                    <h2 class="mb-0">@Model.Count</h2>
+                                    <p class="mb-0">Total</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    @* Filtros *@
+                    <div class="card mb-3">
+                        <div class="card-body">
+                            <form asp-action="Dashboard" method="get" class="row g-3">
+                                <div class="col-md-3">
+                                    <label class="form-label">Estado</label>
+                                    <select name="estado" class="form-select">
+                                        <option value="">Todos</option>
+                                        <option value="Pendiente" selected="@(ViewData["EstadoFiltro"]?.ToString() == "Pendiente")">Pendiente</option>
+                                        <option value="Aprobado" selected="@(ViewData["EstadoFiltro"]?.ToString() == "Aprobado")">Aprobado</option>
+                                        <option value="Rechazado" selected="@(ViewData["EstadoFiltro"]?.ToString() == "Rechazado")">Rechazado</option>
+                                        <option value="Completado" selected="@(ViewData["EstadoFiltro"]?.ToString() == "Completado")">Completado</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Desde</label>
+                                    <input type="date" name="desde" class="form-control" value="@ViewData["DesdeFiltro"]" />
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Hasta</label>
+                                    <input type="date" name="hasta" class="form-control" value="@ViewData["HastaFiltro"]" />
+                                </div>
+                                <div class="col-md-3 d-flex align-items-end">
+                                    <button type="submit" class="btn btn-primary me-2">
+                                        <i class="bi bi-filter"></i> Filtrar
+                                    </button>
+                                    <a asp-action="Dashboard" class="btn btn-outline-secondary">
+                                        <i class="bi bi-x-circle"></i> Limpiar
+                                    </a>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                    @* Acciones rápidas *@
+                    <div class="mb-3">
+                        <a asp-action="Verify" class="btn btn-outline-primary">
+                            <i class="bi bi-search"></i> Verificar por Documento
+                        </a>
+                    </div>
+
+                    @* Tabla de Turnos *@
+                    <div class="table-responsive">
+                        <table class="table table-hover" id="turnosTable">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Usuario</th>
+                                    <th>Estado</th>
+                                    <th>Número</th>
+                                    <th>Fecha Solicitud</th>
+                                    <th>Fecha Turno</th>
+                                    <th>Medicamentos</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var turno in Model)
+                                {
+                                    <tr class="@(turno.Estado == "Pendiente" ? "table-warning" : "")">
+                                        <td>@turno.Id</td>
+                                        <td>
+                                            <strong>@turno.User?.UserName</strong><br/>
+                                            <small class="text-muted">@turno.User?.Email</small>
+                                        </td>
+                                        <td>
+                                            @switch (turno.Estado)
+                                            {
+                                                case "Pendiente":
+                                                    <span class="badge bg-warning text-dark">
+                                                        <i class="bi bi-hourglass-split"></i> Pendiente
+                                                    </span>
+                                                    break;
+                                                case "Aprobado":
+                                                    <span class="badge bg-success">
+                                                        <i class="bi bi-check-circle"></i> Aprobado
+                                                    </span>
+                                                    break;
+                                                case "Rechazado":
+                                                    <span class="badge bg-danger">
+                                                        <i class="bi bi-x-circle"></i> Rechazado
+                                                    </span>
+                                                    break;
+                                                case "Completado":
+                                                    <span class="badge bg-info">
+                                                        <i class="bi bi-check-all"></i> Completado
+                                                    </span>
+                                                    break;
+                                            }
+                                        </td>
+                                        <td>
+                                            @if (turno.NumeroTurno.HasValue)
+                                            {
+                                                <span class="badge bg-dark fs-6">#@turno.NumeroTurno.Value.ToString("000")</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted">-</span>
+                                            }
+                                        </td>
+                                        <td>
+                                            <small>@turno.FechaSolicitud.ToString("dd/MM/yyyy HH:mm")</small>
+                                        </td>
+                                        <td>
+                                            <small>@turno.FechaPreferida.ToString("dd/MM/yyyy HH:mm")</small>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-primary">@turno.Medicamentos.Count</span>
+                                        </td>
+                                        <td>
+                                            <div class="btn-group btn-group-sm" role="group">
+                                                <a asp-action="Details" asp-route-id="@turno.Id" class="btn btn-outline-info" title="Ver Detalles">
+                                                    <i class="bi bi-eye"></i>
+                                                </a>
+                                                
+                                                @if (turno.Estado == "Pendiente")
+                                                {
+                                                    <button type="button" class="btn btn-outline-success" data-bs-toggle="modal" 
+                                                            data-bs-target="#approveModal@(turno.Id)" title="Aprobar">
+                                                        <i class="bi bi-check"></i>
+                                                    </button>
+                                                    <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" 
+                                                            data-bs-target="#rejectModal@(turno.Id)" title="Rechazar">
+                                                        <i class="bi bi-x"></i>
+                                                    </button>
+                                                }
+                                                
+                                                @if (turno.Estado == "Aprobado")
+                                                {
+                                                    <form asp-action="Complete" asp-route-id="@turno.Id" method="post" class="d-inline">
+                                                        @Html.AntiForgeryToken()
+                                                        <button type="submit" class="btn btn-outline-primary" 
+                                                                onclick="return confirm('¿Marcar este turno como entregado/completado?')" 
+                                                                title="Completar">
+                                                            <i class="bi bi-check-all"></i>
+                                                        </button>
+                                                    </form>
+                                                }
+                                            </div>
+                                        </td>
+                                    </tr>
+
+                                    @* Modal Aprobar *@
+                                    @if (turno.Estado == "Pendiente")
+                                    {
+                                        <div class="modal fade" id="approveModal@(turno.Id)" tabindex="-1">
+                                            <div class="modal-dialog">
+                                                <div class="modal-content">
+                                                    <form asp-action="Approve" asp-route-id="@turno.Id" method="post">
+                                                        @Html.AntiForgeryToken()
+                                                        <div class="modal-header bg-success text-white">
+                                                            <h5 class="modal-title">Aprobar Turno #@turno.Id</h5>
+                                                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                                        </div>
+                                                        <div class="modal-body">
+                                                            <p>¿Estás seguro de aprobar este turno para <strong>@turno.User?.UserName</strong>?</p>
+                                                            <div class="mb-3">
+                                                                <label class="form-label">Comentarios (Opcional)</label>
+                                                                <textarea name="comentarios" class="form-control" rows="3" 
+                                                                          placeholder="Instrucciones adicionales para el usuario..."></textarea>
+                                                            </div>
+                                                            <div class="alert alert-info">
+                                                                <small>
+                                                                    <i class="bi bi-info-circle"></i> 
+                                                                    Se generará un número de turno y se enviará un email al usuario.
+                                                                </small>
+                                                            </div>
+                                                        </div>
+                                                        <div class="modal-footer">
+                                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                                            <button type="submit" class="btn btn-success">
+                                                                <i class="bi bi-check-circle"></i> Aprobar Turno
+                                                            </button>
+                                                        </div>
+                                                    </form>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        @* Modal Rechazar *@
+                                        <div class="modal fade" id="rejectModal@(turno.Id)" tabindex="-1">
+                                            <div class="modal-dialog">
+                                                <div class="modal-content">
+                                                    <form asp-action="Reject" asp-route-id="@turno.Id" method="post">
+                                                        @Html.AntiForgeryToken()
+                                                        <div class="modal-header bg-danger text-white">
+                                                            <h5 class="modal-title">Rechazar Turno #@turno.Id</h5>
+                                                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                                        </div>
+                                                        <div class="modal-body">
+                                                            <p>Rechazar turno de <strong>@turno.User?.UserName</strong></p>
+                                                            <div class="mb-3">
+                                                                <label class="form-label">Motivo del Rechazo <span class="text-danger">*</span></label>
+                                                                <textarea name="motivo" class="form-control" rows="4" required
+                                                                          placeholder="Explica el motivo del rechazo (será enviado al usuario por email)..."></textarea>
+                                                            </div>
+                                                        </div>
+                                                        <div class="modal-footer">
+                                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                                            <button type="submit" class="btn btn-danger">
+                                                                <i class="bi bi-x-circle"></i> Rechazar Turno
+                                                            </button>
+                                                        </div>
+                                                    </form>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    }
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+
+                    @if (!Model.Any())
+                    {
+                        <div class="alert alert-light border text-center">
+                            <i class="bi bi-inbox" style="font-size: 3rem;"></i>
+                            <p class="mt-2">No hay turnos con los filtros seleccionados</p>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // DataTables para mejor manejo de la tabla
+        $(document).ready(function() {
+            $('#turnosTable').DataTable({
+                language: {
+                    url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/es-ES.json'
+                },
+                order: [[4, 'desc']], // Ordenar por fecha de solicitud descendente
+                pageLength: 25
+            });
+        });
+    </script>
+}
