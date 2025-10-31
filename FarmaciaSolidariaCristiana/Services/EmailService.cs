@@ -356,15 +356,18 @@ namespace FarmaciaSolidariaCristiana.Services
             }
         }
 
-        public async Task<bool> SendTurnoNotificationToFarmaceuticosAsync(string userName, int turnoId)
+        public async Task<bool> SendTurnoNotificationToFarmaceuticosAsync(string userName, int turnoId, string tipoSolicitud)
         {
             try
             {
                 // Obtener configuración de URL base
                 var baseUrl = _configuration["AppSettings:BaseUrl"] ?? "https://farmaciasolidaria.somee.com";
                 var turnoDetailsUrl = $"{baseUrl}/Turnos/Details/{turnoId}";
+                
+                var tipoIcono = tipoSolicitud == "Medicamentos" ? "💊" : "🩹";
+                var tipoTexto = tipoSolicitud == "Medicamentos" ? "medicamentos" : "insumos médicos";
 
-                var subject = "⚕️ Nueva Solicitud de Turno - Revisión Pendiente";
+                var subject = $"⚕️ Nueva Solicitud de Turno ({tipoSolicitud}) - Revisión Pendiente";
                 var body = $@"
                     <!DOCTYPE html>
                     <html>
@@ -386,11 +389,12 @@ namespace FarmaciaSolidariaCristiana.Services
                             </div>
                             <div class='content'>
                                 <p>Estimado/a Farmacéutico/a,</p>
-                                <p>Se ha recibido una <strong>nueva solicitud de turno</strong> que requiere tu revisión y aprobación.</p>
+                                <p>Se ha recibido una <strong>nueva solicitud de turno para {tipoTexto}</strong> {tipoIcono} que requiere tu revisión y aprobación.</p>
                                 
                                 <div class='highlight'>
                                     <strong>Detalles de la Solicitud:</strong><br/>
                                     • <strong>Usuario:</strong> {userName}<br/>
+                                    • <strong>Tipo:</strong> {tipoIcono} {tipoSolicitud}<br/>
                                     • <strong>ID de Turno:</strong> #{turnoId}<br/>
                                     • <strong>Fecha de Solicitud:</strong> {DateTime.Now:dd/MM/yyyy HH:mm}<br/>
                                 </div>

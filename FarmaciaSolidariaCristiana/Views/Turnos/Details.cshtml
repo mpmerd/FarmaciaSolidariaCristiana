@@ -135,75 +135,150 @@
                         </div>
                     </div>
 
-                    @* Medicamentos Solicitados *@
-                    <div class="card mb-3 border-success">
-                        <div class="card-header bg-success text-white">
-                            <h5 class="mb-0"><i class="bi bi-capsule"></i> Medicamentos Solicitados (@Model.Medicamentos.Count)</h5>
-                        </div>
-                        <div class="card-body">
-                            <div class="table-responsive">
-                                <table class="table table-hover">
-                                    <thead class="table-light">
-                                        <tr>
-                                            <th>Medicamento</th>
-                                            <th>Cant. Solicitada</th>
-                                            <th>Stock al Solicitar</th>
-                                            <th>Cant. Aprobada</th>
-                                            <th>Notas</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        @foreach (var tm in Model.Medicamentos)
-                                        {
+                    @* Medicamentos o Insumos Solicitados *@
+                    @if (Model.Medicamentos != null && Model.Medicamentos.Any())
+                    {
+                        <div class="card mb-3 border-success">
+                            <div class="card-header bg-success text-white">
+                                <h5 class="mb-0"><i class="bi bi-capsule"></i> Medicamentos Solicitados (@Model.Medicamentos.Count)</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead class="table-light">
                                             <tr>
-                                                <td>
-                                                    <strong>@tm.Medicine?.Name</strong><br/>
-                                                    <small class="text-muted">@tm.Medicine?.Description</small>
-                                                </td>
-                                                <td>
-                                                    <span class="badge bg-primary">@tm.CantidadSolicitada</span>
-                                                </td>
-                                                <td>
-                                                    @if (tm.DisponibleAlSolicitar)
-                                                    {
-                                                        <span class="badge bg-success">
-                                                            <i class="bi bi-check"></i> Disponible
-                                                        </span>
-                                                    }
-                                                    else
-                                                    {
-                                                        <span class="badge bg-warning text-dark">
-                                                            <i class="bi bi-exclamation-triangle"></i> Stock Bajo
-                                                        </span>
-                                                    }
-                                                </td>
-                                                <td>
-                                                    @if (tm.CantidadAprobada.HasValue)
-                                                    {
-                                                        <span class="badge bg-success">@tm.CantidadAprobada.Value</span>
-                                                    }
-                                                    else
-                                                    {
-                                                        <span class="text-muted">-</span>
-                                                    }
-                                                </td>
-                                                <td>
-                                                    @if (!string.IsNullOrEmpty(tm.Notas))
-                                                    {
-                                                        <small>@tm.Notas</small>
-                                                    }
-                                                    else
-                                                    {
-                                                        <span class="text-muted">-</span>
-                                                    }
-                                                </td>
+                                                <th>Medicamento</th>
+                                                <th>Cant. Solicitada</th>
+                                                <th>Stock al Solicitar</th>
+                                                <th>Cant. Aprobada</th>
+                                                <th>Notas</th>
                                             </tr>
-                                        }
-                                    </tbody>
-                                </table>
+                                        </thead>
+                                        <tbody>
+                                            @foreach (var tm in Model.Medicamentos)
+                                            {
+                                                <tr>
+                                                    <td>
+                                                        <strong>@tm.Medicine?.Name</strong><br/>
+                                                        <small class="text-muted">@tm.Medicine?.Description</small>
+                                                    </td>
+                                                    <td>
+                                                        <span class="badge bg-primary">@tm.CantidadSolicitada</span>
+                                                    </td>
+                                                    <td>
+                                                        @if (tm.DisponibleAlSolicitar)
+                                                        {
+                                                            <span class="badge bg-success">
+                                                                <i class="bi bi-check"></i> Disponible
+                                                            </span>
+                                                        }
+                                                        else
+                                                        {
+                                                            <span class="badge bg-warning text-dark">
+                                                                <i class="bi bi-exclamation-triangle"></i> Stock Bajo
+                                                            </span>
+                                                        }
+                                                    </td>
+                                                    <td>
+                                                        @if (tm.CantidadAprobada.HasValue)
+                                                        {
+                                                            <span class="badge bg-success">@tm.CantidadAprobada.Value</span>
+                                                        }
+                                                        else
+                                                        {
+                                                            <span class="text-muted">-</span>
+                                                        }
+                                                    </td>
+                                                    <td>
+                                                        @if (!string.IsNullOrEmpty(tm.Notas))
+                                                        {
+                                                            <small>@tm.Notas</small>
+                                                        }
+                                                        else
+                                                        {
+                                                            <span class="text-muted">-</span>
+                                                        }
+                                                    </td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
                         </div>
-                    </div>
+                    }
+                    
+                    @if (Model.Insumos != null && Model.Insumos.Any())
+                    {
+                        <div class="card mb-3 border-info">
+                            <div class="card-header bg-info text-white">
+                                <h5 class="mb-0"><i class="bi bi-box-seam"></i> Insumos Médicos Solicitados (@Model.Insumos.Count)</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>Insumo</th>
+                                                <th>Cant. Solicitada</th>
+                                                <th>Stock al Solicitar</th>
+                                                <th>Cant. Aprobada</th>
+                                                <th>Notas</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach (var ti in Model.Insumos)
+                                            {
+                                                <tr>
+                                                    <td>
+                                                        <strong>@ti.Supply?.Name</strong><br/>
+                                                        <small class="text-muted">@ti.Supply?.Description</small>
+                                                    </td>
+                                                    <td>
+                                                        <span class="badge bg-primary">@ti.CantidadSolicitada</span>
+                                                    </td>
+                                                    <td>
+                                                        @if (ti.DisponibleAlSolicitar)
+                                                        {
+                                                            <span class="badge bg-success">
+                                                                <i class="bi bi-check"></i> Disponible
+                                                            </span>
+                                                        }
+                                                        else
+                                                        {
+                                                            <span class="badge bg-warning text-dark">
+                                                                <i class="bi bi-exclamation-triangle"></i> Stock Bajo
+                                                            </span>
+                                                        }
+                                                    </td>
+                                                    <td>
+                                                        @if (ti.CantidadAprobada.HasValue)
+                                                        {
+                                                            <span class="badge bg-success">@ti.CantidadAprobada.Value</span>
+                                                        }
+                                                        else
+                                                        {
+                                                            <span class="text-muted">-</span>
+                                                        }
+                                                    </td>
+                                                    <td>
+                                                        @if (!string.IsNullOrEmpty(ti.Notas))
+                                                        {
+                                                            <small>@ti.Notas</small>
+                                                        }
+                                                        else
+                                                        {
+                                                            <span class="text-muted">-</span>
+                                                        }
+                                                    </td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    }
 
                     @* Documentos Adjuntos *@
                     <div class="card mb-3 border-warning">

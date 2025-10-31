@@ -72,7 +72,7 @@
                     <div class="card mb-3">
                         <div class="card-body">
                             <form asp-action="Dashboard" method="get" class="row g-3">
-                                <div class="col-md-3">
+                                <div class="col-md-2">
                                     <label class="form-label">Estado</label>
                                     <select name="estado" class="form-select">
                                         <option value="">Todos</option>
@@ -82,11 +82,19 @@
                                         <option value="Completado" selected="@(ViewData["EstadoFiltro"]?.ToString() == "Completado")">Completado</option>
                                     </select>
                                 </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">Tipo</label>
+                                    <select name="tipo" class="form-select">
+                                        <option value="">Todos</option>
+                                        <option value="Medicamentos" selected="@(ViewData["TipoFiltro"]?.ToString() == "Medicamentos")">Medicamentos</option>
+                                        <option value="Insumos" selected="@(ViewData["TipoFiltro"]?.ToString() == "Insumos")">Insumos</option>
+                                    </select>
+                                </div>
                                 <div class="col-md-3">
                                     <label class="form-label">Desde</label>
                                     <input type="date" name="desde" class="form-control" value="@ViewData["DesdeFiltro"]" />
                                 </div>
-                                <div class="col-md-3">
+                                <div class="col-md-2">
                                     <label class="form-label">Hasta</label>
                                     <input type="date" name="hasta" class="form-control" value="@ViewData["HastaFiltro"]" />
                                 </div>
@@ -116,22 +124,44 @@
                                 <tr>
                                     <th>ID</th>
                                     <th>Usuario</th>
+                                    <th>Tipo</th>
                                     <th>Estado</th>
                                     <th>Número</th>
                                     <th>Fecha Solicitud</th>
                                     <th>Fecha Turno</th>
-                                    <th>Medicamentos</th>
+                                    <th>Items</th>
                                     <th>Acciones</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 @foreach (var turno in Model)
                                 {
+                                    var hasMedicines = turno.Medicamentos != null && turno.Medicamentos.Any();
+                                    var hasSupplies = turno.Insumos != null && turno.Insumos.Any();
+                                    
                                     <tr class="@(turno.Estado == "Pendiente" ? "table-warning" : "")">
                                         <td>@turno.Id</td>
                                         <td>
                                             <strong>@turno.User?.UserName</strong><br/>
                                             <small class="text-muted">@turno.User?.Email</small>
+                                        </td>
+                                        <td>
+                                            @if (hasMedicines)
+                                            {
+                                                <span class="badge bg-primary">
+                                                    <i class="bi bi-capsule"></i> Medicamentos
+                                                </span>
+                                            }
+                                            else if (hasSupplies)
+                                            {
+                                                <span class="badge bg-info">
+                                                    <i class="bi bi-box-seam"></i> Insumos
+                                                </span>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted">-</span>
+                                            }
                                         </td>
                                         <td>
                                             @switch (turno.Estado)
@@ -175,7 +205,18 @@
                                             <small>@(turno.FechaPreferida?.ToString("dd/MM/yyyy HH:mm") ?? "Por asignar")</small>
                                         </td>
                                         <td>
-                                            <span class="badge bg-primary">@turno.Medicamentos.Count</span>
+                                            @if (hasMedicines)
+                                            {
+                                                <span class="badge bg-primary">@turno.Medicamentos!.Count medicamentos</span>
+                                            }
+                                            else if (hasSupplies)
+                                            {
+                                                <span class="badge bg-info">@turno.Insumos!.Count insumos</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted">-</span>
+                                            }
                                         </td>
                                         <td>
                                             <div class="btn-group btn-group-sm" role="group">
