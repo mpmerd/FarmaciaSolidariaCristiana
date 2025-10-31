@@ -1,0 +1,116 @@
+@model FarmaciaSolidariaCristiana.Models.Turno
+@{
+    ViewData["Title"] = "Solicitud Enviada";
+}
+
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow-lg">
+                <div class="card-header bg-success text-white text-center py-4">
+                    <h2 class="mb-0">
+                        <i class="bi bi-check-circle" style="font-size: 3rem;"></i>
+                    </h2>
+                    <h3 class="mt-2">¡Solicitud Enviada!</h3>
+                </div>
+                <div class="card-body p-4">
+                    <div class="alert alert-info">
+                        <h5><i class="bi bi-info-circle"></i> ¿Qué sigue?</h5>
+                        <ol class="mb-0">
+                            <li>Tu solicitud será revisada por nuestro equipo farmacéutico</li>
+                            <li>Verificaremos la disponibilidad de los medicamentos</li>
+                            <li>Revisaremos los documentos adjuntos</li>
+                            <li>Recibirás un email con la respuesta (aprobado/rechazado)</li>
+                            <li>Si es aprobado, tendrás tu número de turno y fecha confirmada</li>
+                        </ol>
+                    </div>
+
+                    <h4 class="mt-4 mb-3">Detalles de tu Solicitud</h4>
+                    
+                    <div class="card mb-3">
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <strong><i class="bi bi-calendar"></i> Fecha Solicitada:</strong><br/>
+                                    <span class="text-muted">@Model.FechaPreferida.ToString("dddd, dd MMMM yyyy")</span>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <strong><i class="bi bi-clock"></i> Hora:</strong><br/>
+                                    <span class="text-muted">@Model.FechaPreferida.ToString("HH:mm")</span>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <strong><i class="bi bi-hourglass-split"></i> Estado:</strong><br/>
+                                    <span class="badge bg-warning text-dark">Pendiente de Revisión</span>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <strong><i class="bi bi-calendar-event"></i> Fecha de Solicitud:</strong><br/>
+                                    <span class="text-muted">@Model.FechaSolicitud.ToString("dd/MM/yyyy HH:mm")</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <h5 class="mt-4 mb-3">Medicamentos Solicitados</h5>
+                    <div class="table-responsive">
+                        <table class="table table-bordered">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Medicamento</th>
+                                    <th>Cantidad</th>
+                                    <th>Disponible</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var med in Model.Medicamentos)
+                                {
+                                    <tr>
+                                        <td>@med.Medicine?.Name</td>
+                                        <td>@med.CantidadSolicitada @med.Medicine?.Unit</td>
+                                        <td>
+                                            @if (med.DisponibleAlSolicitar)
+                                            {
+                                                <span class="badge bg-success">
+                                                    <i class="bi bi-check-circle"></i> Disponible
+                                                </span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-warning text-dark">
+                                                    <i class="bi bi-exclamation-triangle"></i> Stock limitado
+                                                </span>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+
+                    @if (!string.IsNullOrEmpty(Model.NotasSolicitante))
+                    {
+                        <div class="mt-3">
+                            <strong><i class="bi bi-chat-left-text"></i> Tus Notas:</strong>
+                            <p class="mt-2 p-3 bg-light border rounded">@Model.NotasSolicitante</p>
+                        </div>
+                    }
+
+                    <div class="alert alert-warning mt-4">
+                        <h6><i class="bi bi-exclamation-triangle"></i> Importante</h6>
+                        <ul class="mb-0">
+                            <li>Tiempo estimado de respuesta: <strong>24-48 horas hábiles</strong></li>
+                            <li>Revisa tu correo electrónico regularmente</li>
+                            <li>Si tu turno es aprobado, trae tu documento de identidad original</li>
+                            <li>Puedes ver el estado de tu solicitud en la página principal</li>
+                        </ul>
+                    </div>
+
+                    <div class="d-grid gap-2 mt-4">
+                        <a asp-action="Index" class="btn btn-primary btn-lg">
+                            <i class="bi bi-house"></i> Volver al Inicio
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

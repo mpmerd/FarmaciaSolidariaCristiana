@@ -1,0 +1,269 @@
+@model FarmaciaSolidariaCristiana.Models.Turno
+@{
+    ViewData["Title"] = "Verificar Turno por Documento";
+}
+
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow-lg">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="mb-0">
+                        <i class="bi bi-search"></i> Verificar Turno por Documento
+                    </h3>
+                </div>
+                <div class="card-body">
+                    @if (TempData["ErrorMessage"] != null)
+                    {
+                        <div class="alert alert-danger alert-dismissible fade show">
+                            <i class="bi bi-exclamation-triangle"></i> @TempData["ErrorMessage"]
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    }
+
+                    @if (Model == null)
+                    {
+                        @* Formulario de búsqueda *@
+                        <div class="alert alert-info">
+                            <h5><i class="bi bi-info-circle"></i> Instrucciones</h5>
+                            <p class="mb-0">
+                                Ingresa el <strong>número de documento de identidad</strong> del usuario para buscar su turno.
+                                Este sistema permite verificar turnos cuando los usuarios llegan a recoger sus medicamentos.
+                            </p>
+                        </div>
+
+                        <form asp-action="Verify" method="post" class="mt-4">
+                            @Html.AntiForgeryToken()
+                            
+                            <div class="mb-4">
+                                <label for="documentoIdentidad" class="form-label">
+                                    <i class="bi bi-card-text"></i> Documento de Identidad
+                                </label>
+                                <input type="text" 
+                                       class="form-control form-control-lg" 
+                                       id="documentoIdentidad" 
+                                       name="documentoIdentidad" 
+                                       required 
+                                       placeholder="Ej: 12345678901"
+                                       autofocus />
+                                <small class="form-text text-muted">
+                                    Ingresa el documento sin espacios ni caracteres especiales.
+                                </small>
+                            </div>
+
+                            <div class="d-grid gap-2">
+                                <button type="submit" class="btn btn-primary btn-lg">
+                                    <i class="bi bi-search"></i> Buscar Turno
+                                </button>
+                                <a asp-action="Dashboard" class="btn btn-outline-secondary">
+                                    <i class="bi bi-arrow-left"></i> Volver al Dashboard
+                                </a>
+                            </div>
+                        </form>
+
+                        <div class="mt-4">
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <h6 class="card-title"><i class="bi bi-shield-check"></i> Seguridad y Privacidad</h6>
+                                    <p class="card-text small mb-0">
+                                        Los documentos de identidad están cifrados en la base de datos usando SHA-256.
+                                        Este sistema solo busca turnos aprobados y pendientes de entrega.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        @* Resultado de la búsqueda *@
+                        <div class="alert alert-success">
+                            <h5><i class="bi bi-check-circle"></i> ¡Turno Encontrado!</h5>
+                            <p class="mb-0">Se encontró un turno para el documento proporcionado.</p>
+                        </div>
+
+                        <div class="card mb-3 border-primary">
+                            <div class="card-header bg-primary text-white">
+                                <h5 class="mb-0">
+                                    <i class="bi bi-calendar-check"></i> Información del Turno
+                                    @if (Model.NumeroTurno.HasValue)
+                                    {
+                                        <span class="badge bg-dark float-end fs-5">#@Model.NumeroTurno.Value.ToString("000")</span>
+                                    }
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <table class="table table-sm">
+                                            <tr>
+                                                <td><strong>Usuario:</strong></td>
+                                                <td>@Model.User?.UserName</td>
+                                            </tr>
+                                            <tr>
+                                                <td><strong>Email:</strong></td>
+                                                <td>@Model.User?.Email</td>
+                                            </tr>
+                                            <tr>
+                                                <td><strong>Estado:</strong></td>
+                                                <td>
+                                                    @switch (Model.Estado)
+                                                    {
+                                                        case "Pendiente":
+                                                            <span class="badge bg-warning text-dark">
+                                                                <i class="bi bi-hourglass-split"></i> Pendiente
+                                                            </span>
+                                                            break;
+                                                        case "Aprobado":
+                                                            <span class="badge bg-success">
+                                                                <i class="bi bi-check-circle"></i> Aprobado
+                                                            </span>
+                                                            break;
+                                                        case "Rechazado":
+                                                            <span class="badge bg-danger">
+                                                                <i class="bi bi-x-circle"></i> Rechazado
+                                                            </span>
+                                                            break;
+                                                        case "Completado":
+                                                            <span class="badge bg-info">
+                                                                <i class="bi bi-check-all"></i> Completado
+                                                            </span>
+                                                            break;
+                                                    }
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <table class="table table-sm">
+                                            <tr>
+                                                <td><strong>Fecha Turno:</strong></td>
+                                                <td>@Model.FechaPreferida.ToString("dd/MM/yyyy HH:mm")</td>
+                                            </tr>
+                                            <tr>
+                                                <td><strong>Fecha Solicitud:</strong></td>
+                                                <td>@Model.FechaSolicitud.ToString("dd/MM/yyyy")</td>
+                                            </tr>
+                                            @if (Model.FechaRevision.HasValue)
+                                            {
+                                                <tr>
+                                                    <td><strong>Revisado:</strong></td>
+                                                    <td>@Model.FechaRevision.Value.ToString("dd/MM/yyyy")</td>
+                                                </tr>
+                                            }
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        @* Medicamentos *@
+                        <div class="card mb-3 border-success">
+                            <div class="card-header bg-success text-white">
+                                <h5 class="mb-0">
+                                    <i class="bi bi-capsule"></i> Medicamentos Aprobados (@Model.Medicamentos.Count)
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>Medicamento</th>
+                                                <th>Presentación</th>
+                                                <th class="text-center">Cantidad</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach (var tm in Model.Medicamentos)
+                                            {
+                                                <tr>
+                                                    <td><strong>@tm.Medicine?.Name</strong></td>
+                                                    <td>@tm.Medicine?.Description</td>
+                                                    <td class="text-center">
+                                                        <span class="badge bg-primary fs-6">
+                                                            @(tm.CantidadAprobada ?? tm.CantidadSolicitada)
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        @* Comentarios *@
+                        @if (!string.IsNullOrEmpty(Model.ComentariosFarmaceutico))
+                        {
+                            <div class="card mb-3 border-info">
+                                <div class="card-header bg-info text-white">
+                                    <h6 class="mb-0"><i class="bi bi-chat-right-text"></i> Comentarios del Farmacéutico</h6>
+                                </div>
+                                <div class="card-body">
+                                    <p class="mb-0">@Model.ComentariosFarmaceutico</p>
+                                </div>
+                            </div>
+                        }
+
+                        @* Acciones *@
+                        <div class="card border-dark">
+                            <div class="card-header bg-dark text-white">
+                                <h5 class="mb-0"><i class="bi bi-gear"></i> Acciones Disponibles</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="d-grid gap-2">
+                                    @if (Model.Estado == "Aprobado")
+                                    {
+                                        <form asp-action="Complete" asp-route-id="@Model.Id" method="post">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn btn-success btn-lg" 
+                                                    onclick="return confirm('¿Confirmar que el usuario ha recogido los medicamentos?')">
+                                                <i class="bi bi-check-all"></i> Marcar Como Entregado
+                                            </button>
+                                        </form>
+                                        
+                                        <div class="alert alert-warning mb-0">
+                                            <small>
+                                                <i class="bi bi-exclamation-triangle"></i> 
+                                                <strong>Verificar documento de identidad físico antes de entregar.</strong>
+                                            </small>
+                                        </div>
+                                    }
+                                    else if (Model.Estado == "Completado")
+                                    {
+                                        <div class="alert alert-info mb-0">
+                                            <i class="bi bi-info-circle"></i> 
+                                            Este turno ya fue completado el @Model.FechaEntrega?.ToString("dd/MM/yyyy HH:mm")
+                                        </div>
+                                    }
+                                    else if (Model.Estado == "Pendiente")
+                                    {
+                                        <div class="alert alert-warning mb-0">
+                                            <i class="bi bi-exclamation-triangle"></i> 
+                                            Este turno aún está pendiente de aprobación.
+                                        </div>
+                                    }
+                                    else if (Model.Estado == "Rechazado")
+                                    {
+                                        <div class="alert alert-danger mb-0">
+                                            <i class="bi bi-x-circle"></i> 
+                                            Este turno fue rechazado.
+                                        </div>
+                                    }
+
+                                    <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-primary">
+                                        <i class="bi bi-eye"></i> Ver Detalles Completos
+                                    </a>
+                                    
+                                    <a asp-action="Verify" class="btn btn-outline-secondary">
+                                        <i class="bi bi-arrow-left"></i> Nueva Búsqueda
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
