@@ -132,8 +132,8 @@
                             <div class="card-body">
                                 <div class="mb-3">
                                     <label class="form-label">Buscar Insumo <span class="text-danger">*</span></label>
-                                    <input type="text" id="supplySearch" class="form-control" placeholder="Escribe para buscar..." />
-                                    <small class="form-text text-muted">Selecciona los insumos médicos que necesitas</small>
+                                    <input type="text" id="supplySearch" class="form-control" placeholder="Escribe para buscar (mínimo 2 caracteres)..." autocomplete="off" />
+                                    <small class="form-text text-muted">Escribe el nombre del insumo médico que necesitas y selecciónalo de la lista</small>
                                 </div>
 
                                 <div id="selectedSupplies" class="mb-3">
@@ -145,28 +145,7 @@
                                     </div>
                                 </div>
 
-                                <div class="list-group" id="supplyResults" style="max-height: 300px; overflow-y: auto; display: none;">
-                                    @if (supplies != null && supplies.Any())
-                                    {
-                                        @foreach (var sup in supplies)
-                                        {
-                                            <a href="#" class="list-group-item list-group-item-action supply-item" 
-                                               data-id="@sup.Id" 
-                                               data-name="@sup.Name" 
-                                               data-stock="@sup.StockQuantity"
-                                               data-unit="@sup.Unit">
-                                                <div class="d-flex justify-content-between align-items-center">
-                                                    <div>
-                                                        <strong>@sup.Name</strong>
-                                                    </div>
-                                                    <span class="badge @(sup.StockQuantity > 10 ? "bg-success" : sup.StockQuantity > 5 ? "bg-warning text-dark" : "bg-danger")">
-                                                        Stock: @sup.StockQuantity @sup.Unit
-                                                    </span>
-                                                </div>
-                                            </a>
-                                        }
-                                    }
-                                </div>
+                                <div class="list-group" id="supplyResults" style="max-height: 300px; overflow-y: auto;"></div>
                             </div>
                         </div>
 
@@ -399,23 +378,53 @@
 
             // ========== INSUMOS ==========
             
-            // Búsqueda de insumos
+            // Búsqueda de insumos con AJAX (igual que medicamentos)
             supplySearch.on('input', function() {
-                const query = $(this).val().trim().toLowerCase();
+                const query = $(this).val().trim();
                 
                 if (query.length < 2) {
-                    supplyResults.find('.supply-item').parent().show();
-                    supplyResults.hide();
+                    supplyResults.empty().hide();
                     return;
                 }
                 
-                supplyResults.show();
-                supplyResults.find('.supply-item').each(function() {
-                    const name = $(this).data('name').toLowerCase();
-                    if (name.includes(query)) {
-                        $(this).show();
-                    } else {
-                        $(this).hide();
+                $.ajax({
+                    url: '@Url.Action("SearchSupplies", "Turnos")',
+                    type: 'GET',
+                    data: { query: query },
+                    success: function(response) {
+                        supplyResults.empty();
+                        
+                        if (response.supplies && response.supplies.length > 0) {
+                            response.supplies.forEach(function(supply) {
+                                const stockBadge = supply.stock > 0 
+                                    ? `<span class="badge bg-success">Stock: ${supply.stock} ${supply.unit}</span>`
+                                    : '<span class="badge bg-danger">Sin stock</span>';
+                                
+                                const item = $(`
+                                    <a href="#" class="list-group-item list-group-item-action supply-item" 
+                                       data-id="${supply.id}" 
+                                       data-name="${supply.name}" 
+                                       data-stock="${supply.stock}" 
+                                       data-unit="${supply.unit}">
+                                        <div class="d-flex w-100 justify-content-between">
+                                            <h6 class="mb-1">${supply.name}</h6>
+                                            ${stockBadge}
+                                        </div>
+                                        <small class="text-muted">${supply.description || 'Sin descripción'}</small>
+                                    </a>
+                                `);
+                                
+                                supplyResults.append(item);
+                            });
+                            supplyResults.show();
+                        } else {
+                            supplyResults.html('<div class="list-group-item text-muted">No se encontraron insumos</div>');
+                            supplyResults.show();
+                        }
+                    },
+                    error: function() {
+                        supplyResults.html('<div class="list-group-item text-danger">Error al buscar insumos</div>');
+                        supplyResults.show();
                     }
                 });
             });
