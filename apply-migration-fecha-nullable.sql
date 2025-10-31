@@ -5,7 +5,7 @@
 -- Fecha: 31 de octubre de 2025
 -- 
 -- MIGRACIÓN:
--- ✅ 20251031XXXXXX_MakeFechaPreferidaNullable
+-- ✅ 20251031190210_MakeFechaPreferidaNullable
 -- 
 -- IMPORTANTE: Ejecutar en el panel SQL de Somee.com
 -- PREREQUISITO: La migración AddTurnosSystem debe estar aplicada
@@ -35,24 +35,17 @@ BEGIN CATCH
     PRINT '✗ ERROR al modificar columna FechaPreferida: ' + ERROR_MESSAGE()
 END CATCH
 
--- Registrar migración (reemplazar XXXXXX con el número real de la migración)
+-- Registrar migración
 IF NOT EXISTS (SELECT * FROM __EFMigrationsHistory 
-               WHERE MigrationId LIKE '202510%_MakeFechaPreferidaNullable')
+               WHERE MigrationId = '20251031190210_MakeFechaPreferidaNullable')
 BEGIN
-    -- Obtener el último MigrationId para ver el número exacto
-    DECLARE @lastMigrationId NVARCHAR(150);
-    DECLARE @newMigrationId NVARCHAR(150);
-    
-    SELECT TOP 1 @lastMigrationId = MigrationId 
-    FROM __EFMigrationsHistory 
-    ORDER BY MigrationId DESC;
-    
-    PRINT '✓ Última migración registrada: ' + @lastMigrationId;
-    PRINT '⚠ NOTA: Ejecuta este comando con el MigrationId correcto de tu sistema:';
-    PRINT '   INSERT INTO __EFMigrationsHistory (MigrationId, ProductVersion)';
-    PRINT '   VALUES (''20251031XXXXXX_MakeFechaPreferidaNullable'', ''8.0.11'');';
-    PRINT ''
-    PRINT '📝 Reemplaza XXXXXX con el timestamp correcto de tu carpeta Migrations';
+    INSERT INTO __EFMigrationsHistory (MigrationId, ProductVersion)
+    VALUES ('20251031190210_MakeFechaPreferidaNullable', '8.0.11');
+    PRINT '✓ Migración 8 registrada'
+END
+ELSE
+BEGIN
+    PRINT '✓ Migración 8 ya estaba registrada'
 END
 
 PRINT ''

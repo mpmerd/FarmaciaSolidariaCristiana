@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Mail;
+using Microsoft.AspNetCore.Identity;
 
 namespace FarmaciaSolidariaCristiana.Services
 {
@@ -7,11 +8,19 @@ namespace FarmaciaSolidariaCristiana.Services
     {
         private readonly IConfiguration _configuration;
         private readonly ILogger<EmailService> _logger;
+        private readonly UserManager<IdentityUser> _userManager;
+        private readonly RoleManager<IdentityRole> _roleManager;
 
-        public EmailService(IConfiguration configuration, ILogger<EmailService> logger)
+        public EmailService(
+            IConfiguration configuration, 
+            ILogger<EmailService> logger,
+            UserManager<IdentityUser> userManager,
+            RoleManager<IdentityRole> roleManager)
         {
             _configuration = configuration;
             _logger = logger;
+            _userManager = userManager;
+            _roleManager = roleManager;
         }
 
         public async Task SendEmailAsync(string toEmail, string subject, string body)
@@ -410,8 +419,29 @@ namespace FarmaciaSolidariaCristiana.Services
                     </html>
                 ";
 
-                // Obtener todos los emails de usuarios con rol Farmaceutico
-                // Necesitamos inyectar UserManager y RoleManager
+                // Obtener todos los usuarios con rol "Farmaceutico" desde la base de datos
+                var farmaceuticoRole = await _roleManager.FindByNameAsync("Farmaceutico");
+                if (farmaceuticoRole == null)
+                {
+                    _logger.LogWarning("No se encontró el rol 'Farmaceutico' en la base de datos");
+                    return false;
+                }
+
+                var farmaceuticos = await _userManager.GetUsersInRoleAsync("Farmaceutico");
+                var farmaceuticoEmails = farmaceuticos
+                    .Where(u => !string.IsNullOrEmpty(u.Email))
+                    .Select(u => u.Email!)
+                    .ToList();
+
+                if (!farmaceuticoEmails.Any())
+                {
+                    _logger.LogWarning("No hay usuarios con rol 'Farmaceutico' que tengan email configurado");
+                    return false;
+                }
+
+                _logger.LogInformation("Enviando notificación de turno #{TurnoId} a {Count} farmacéuticos", 
+                    turnoId, farmaceuticoEmails.Count);
+
                 var smtpSettings = _configuration.GetSection("SmtpSettings");
                 var host = smtpSettings["Host"];
                 var port = int.Parse(smtpSettings["Port"] ?? "587");
@@ -421,17 +451,13 @@ namespace FarmaciaSolidariaCristiana.Services
                 var fromName = smtpSettings["FromName"] ?? "Farmacia Solidaria Cristiana";
                 var enableSsl = bool.Parse(smtpSettings["EnableSsl"] ?? "true");
 
-                // Lista hardcodeada de emails de farmacéuticos (temporal)
-                // TODO: Obtener dinámicamente desde UserManager
-                var farmaceuticoEmails = _configuration.GetSection("Notifications:FarmaceuticoEmails").Get<string[]>() 
-                    ?? new[] { "admin@farmaciasolidaria.somee.com" }; // Fallback al admin
-
                 using var client = new SmtpClient(host, port)
                 {
                     Credentials = new NetworkCredential(username, password),
                     EnableSsl = enableSsl
                 };
 
+                int successCount = 0;
                 foreach (var email in farmaceuticoEmails)
                 {
                     try
@@ -446,6 +472,7 @@ namespace FarmaciaSolidariaCristiana.Services
 
                         mailMessage.To.Add(email);
                         await client.SendMailAsync(mailMessage);
+                        successCount++;
                         _logger.LogInformation("Notificación de turno enviada a farmacéutico: {Email}", email);
                     }
                     catch (Exception emailEx)
@@ -455,7 +482,10 @@ namespace FarmaciaSolidariaCristiana.Services
                     }
                 }
 
-                return true;
+                _logger.LogInformation("Notificaciones enviadas exitosamente: {Success}/{Total}", 
+                    successCount, farmaceuticoEmails.Count);
+
+                return successCount > 0;
             }
             catch (Exception ex)
             {
