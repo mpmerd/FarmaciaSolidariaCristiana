@@ -2,7 +2,7 @@
 -- SCRIPT DE MIGRACIÓN COMPLETO PARA SOMEE
 -- Farmacia Solidaria Cristiana
 -- =====================================================================================
--- Fecha: 27 de octubre de 2025
+-- Fecha: 31 de octubre de 2025
 -- 
 -- INCLUYE TODAS LAS MIGRACIONES:
 -- ✅ 20251023213325_AddPatientIdentificationRequired
@@ -11,6 +11,8 @@
 -- ✅ 20251027160229_AddSuppliesTable
 -- ✅ 20251027164041_AddSupplyToDeliveries
 -- ✅ 20251027171452_AddSupplyToDonations
+-- ✅ 20251028000000_AddTurnosSystem
+-- ✅ 20251031224145_AddTurnoInsumos
 -- 
 -- IMPORTANTE: Ejecutar en el panel SQL de Somee.com
 -- =====================================================================================
@@ -458,6 +460,66 @@ AND COLUMN_NAME IN ('MedicineId', 'SupplyId');
 
 PRINT ''
 
+-- =====================================================================================
+-- MIGRACIÓN 8: AddTurnoInsumos (31/10/2025)
+-- =====================================================================================
+
+PRINT '-- MIGRACIÓN 8: Soporte de Insumos en Turnos...'
+PRINT ''
+
+-- Verificar si la tabla TurnoInsumos ya existe
+IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'TurnoInsumos')
+BEGIN
+    BEGIN TRY
+        -- Crear tabla TurnoInsumos
+        CREATE TABLE [TurnoInsumos] (
+            [Id] int IDENTITY(1,1) NOT NULL,
+            [TurnoId] int NOT NULL,
+            [SupplyId] int NOT NULL,
+            [CantidadSolicitada] int NOT NULL,
+            [DisponibleAlSolicitar] bit NOT NULL,
+            [CantidadAprobada] int NULL,
+            [Notas] nvarchar(500) NULL,
+            CONSTRAINT [PK_TurnoInsumos] PRIMARY KEY ([Id])
+        );
+        PRINT '✓ Tabla TurnoInsumos creada'
+        
+        -- Crear foreign key hacia Supplies (RESTRICT)
+        ALTER TABLE [TurnoInsumos] ADD CONSTRAINT [FK_TurnoInsumos_Supplies_SupplyId] 
+            FOREIGN KEY ([SupplyId]) REFERENCES [Supplies] ([Id]);
+        PRINT '✓ Foreign key TurnoInsumos -> Supplies creada (RESTRICT)'
+        
+        -- Crear foreign key hacia Turnos (CASCADE)
+        ALTER TABLE [TurnoInsumos] ADD CONSTRAINT [FK_TurnoInsumos_Turnos_TurnoId] 
+            FOREIGN KEY ([TurnoId]) REFERENCES [Turnos] ([Id]) ON DELETE CASCADE;
+        PRINT '✓ Foreign key TurnoInsumos -> Turnos creada (CASCADE)'
+        
+        -- Crear índice en SupplyId
+        CREATE INDEX [IX_TurnoInsumos_SupplyId] ON [TurnoInsumos] ([SupplyId]);
+        PRINT '✓ Índice IX_TurnoInsumos_SupplyId creado'
+        
+        -- Crear índice en TurnoId
+        CREATE INDEX [IX_TurnoInsumos_TurnoId] ON [TurnoInsumos] ([TurnoId]);
+        PRINT '✓ Índice IX_TurnoInsumos_TurnoId creado'
+        
+        PRINT ''
+        PRINT '✅ Migración AddTurnoInsumos completada exitosamente'
+    END TRY
+    BEGIN CATCH
+        PRINT '✗ ERROR en AddTurnoInsumos: ' + ERROR_MESSAGE()
+    END CATCH
+END
+ELSE
+BEGIN
+    PRINT '⚠ Tabla TurnoInsumos ya existe, omitiendo migración'
+END
+
+PRINT ''
+
+-- =====================================================================================
+-- VERIFICACIONES Y ESTADÍSTICAS FINALES
+-- =====================================================================================
+
 -- Estadísticas de datos
 PRINT 'Estadísticas:'
 
@@ -474,7 +536,16 @@ SELECT
     (SELECT COUNT(*) FROM Deliveries WHERE CreatedAt IS NULL) AS EntregasAntiguasSinCreatedAt,
     (SELECT COUNT(*) FROM Deliveries WHERE MedicineId IS NOT NULL) AS EntregasMedicamentos,
     (SELECT COUNT(*) FROM Donations) AS TotalDonaciones,
-    (SELECT COUNT(*) FROM Donations WHERE MedicineId IS NOT NULL) AS DonacionesMedicamentos;
+    (SELECT COUNT(*) FROM Donations WHERE MedicineId IS NOT NULL) AS DonacionesMedicamentos,
+    (SELECT CASE WHEN EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'Turnos') 
+                 THEN (SELECT COUNT(*) FROM Turnos) 
+                 ELSE 0 END) AS TotalTurnos,
+    (SELECT CASE WHEN EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'TurnoMedicamentos') 
+                 THEN (SELECT COUNT(*) FROM TurnoMedicamentos) 
+                 ELSE 0 END) AS TotalTurnoMedicamentos,
+    (SELECT CASE WHEN EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'TurnoInsumos') 
+                 THEN (SELECT COUNT(*) FROM TurnoInsumos) 
+                 ELSE 0 END) AS TotalTurnoInsumos;
 
 -- Estadísticas adicionales solo si las columnas existen (SQL dinámico)
 IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'Deliveries' AND COLUMN_NAME = 'SupplyId')
@@ -501,6 +572,8 @@ PRINT '  • Control de tiempo para eliminar entregas (CreatedAt)'
 PRINT '  • Nueva tabla Supplies para gestión de insumos'
 PRINT '  • Entregas ahora soportan medicamentos E insumos'
 PRINT '  • Donaciones ahora soportan medicamentos E insumos'
+PRINT '  • Sistema de Turnos implementado (Martes/Jueves 1-4 PM)'
+PRINT '  • Turnos ahora soportan medicamentos E insumos médicos'
 PRINT ''
 PRINT '📌 IMPORTANTE:'
 PRINT '  • Entregas antiguas tienen CreatedAt = NULL (usan DeliveryDate)'
@@ -512,6 +585,8 @@ PRINT '  • Datos de producción preservados: Medicamentos, Usuarios, Patrocina
 PRINT '  • Entregas existentes mantienen sus medicamentos (MedicineId)'
 PRINT '  • Donaciones existentes mantienen sus medicamentos (MedicineId)'
 PRINT '  • Nuevas entregas/donaciones pueden ser de medicamentos O insumos'
+PRINT '  • Turnos permiten solicitar medicamentos O insumos (no ambos a la vez)'
+PRINT '  • Límite: 30 turnos por día, horario Martes/Jueves 1-4 PM (slots de 6 min)'
 PRINT ''
 PRINT 'Finalizado: ' + CONVERT(VARCHAR, GETDATE(), 120)
 PRINT '========================================================================='

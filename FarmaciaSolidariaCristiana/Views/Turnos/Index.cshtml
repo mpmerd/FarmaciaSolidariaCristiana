@@ -105,22 +105,44 @@
                                     <thead class="table-light">
                                         <tr>
                                             <th>Número</th>
+                                            <th>Tipo</th>
                                             <th>Estado</th>
                                             <th>Fecha Solicitud</th>
                                             <th>Fecha Turno</th>
-                                            <th>Medicamentos</th>
+                                            <th>Items</th>
                                             <th>Acciones</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         @foreach (var turno in userTurnos)
                                         {
+                                            var hasMedicines = turno.Medicamentos != null && turno.Medicamentos.Any();
+                                            var hasSupplies = turno.Insumos != null && turno.Insumos.Any();
+                                            
                                             <tr>
                                                 <td>
                                                     @if (turno.NumeroTurno.HasValue)
                                                     {
                                                         <span class="badge bg-dark" style="font-size: 1.1em;">
                                                             #@turno.NumeroTurno.Value.ToString("000")
+                                                        </span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="text-muted">-</span>
+                                                    }
+                                                </td>
+                                                <td>
+                                                    @if (hasMedicines)
+                                                    {
+                                                        <span class="badge bg-primary">
+                                                            <i class="bi bi-capsule"></i> Medicamentos
+                                                        </span>
+                                                    }
+                                                    else if (hasSupplies)
+                                                    {
+                                                        <span class="badge bg-info">
+                                                            <i class="bi bi-box-seam"></i> Insumos
                                                         </span>
                                                     }
                                                     else
@@ -160,13 +182,27 @@
                                                 <td>@(turno.FechaPreferida?.ToString("dd/MM/yyyy HH:mm") ?? "Por asignar")</td>
                                                 <td>
                                                     <small>
-                                                        @foreach (var med in turno.Medicamentos.Take(2))
+                                                        @if (hasMedicines)
                                                         {
-                                                            <span class="badge bg-light text-dark">@med.Medicine?.Name</span>
+                                                            @foreach (var med in turno.Medicamentos!.Take(2))
+                                                            {
+                                                                <span class="badge bg-light text-dark">@med.Medicine?.Name</span>
+                                                            }
+                                                            @if (turno.Medicamentos!.Count > 2)
+                                                            {
+                                                                <span class="badge bg-secondary">+@(turno.Medicamentos.Count - 2) más</span>
+                                                            }
                                                         }
-                                                        @if (turno.Medicamentos.Count > 2)
+                                                        else if (hasSupplies)
                                                         {
-                                                            <span class="badge bg-secondary">+@(turno.Medicamentos.Count - 2) más</span>
+                                                            @foreach (var ins in turno.Insumos!.Take(2))
+                                                            {
+                                                                <span class="badge bg-light text-dark">@ins.Supply?.Name</span>
+                                                            }
+                                                            @if (turno.Insumos!.Count > 2)
+                                                            {
+                                                                <span class="badge bg-secondary">+@(turno.Insumos.Count - 2) más</span>
+                                                            }
                                                         }
                                                     </small>
                                                 </td>

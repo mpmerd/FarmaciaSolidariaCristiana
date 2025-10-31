@@ -25,6 +25,6 @@ namespace FarmaciaSolidariaCristiana.Services
         /// <summary>
         /// Envía notificación a todos los farmacéuticos cuando hay una nueva solicitud de turno
         /// </summary>
-        Task<bool> SendTurnoNotificationToFarmaceuticosAsync(string userName, int turnoId);
+        Task<bool> SendTurnoNotificationToFarmaceuticosAsync(string userName, int turnoId, string tipoSolicitud);
     }
 }

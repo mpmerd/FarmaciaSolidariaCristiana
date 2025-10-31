@@ -265,10 +265,13 @@ namespace FarmaciaSolidariaCristiana.Controllers
                 // Enviar notificación a farmacéuticos (NO en segundo plano para mantener contexto de BD)
                 try
                 {
-                    _logger.LogInformation("Iniciando envío de notificaciones a farmacéuticos para turno {TurnoId}", createdTurno.Id);
+                    var tipoSolicitud = medicamentos.Any() ? "Medicamentos" : "Insumos";
+                    _logger.LogInformation("Iniciando envío de notificaciones a farmacéuticos para turno {TurnoId} (Tipo: {Tipo})", 
+                        createdTurno.Id, tipoSolicitud);
                     var notificationSent = await _emailService.SendTurnoNotificationToFarmaceuticosAsync(
                         user?.UserName ?? "Usuario", 
-                        createdTurno.Id);
+                        createdTurno.Id,
+                        tipoSolicitud);
                     
                     if (notificationSent)
                     {
