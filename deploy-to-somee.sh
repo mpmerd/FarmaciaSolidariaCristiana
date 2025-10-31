@@ -99,13 +99,14 @@ echo ""
 
 # Usar lftp para subir archivos (ignorar errores de chmod que Somee no soporta)
 # Sin --delete para evitar conflictos con archivos en uso
+# Removemos --ignore-time para forzar la actualización del DLL
 lftp -c "
 set ssl:verify-certificate no;
 set ftp:use-feat no;
 set ftp:use-site-chmod no;
 open -u $FTP_USER,$FTP_PASS ftp://$FTP_HOST;
 cd $FTP_REMOTE_PATH;
-mirror --reverse --verbose --parallel=3 --ignore-time $PUBLISH_DIR .
+mirror --reverse --verbose --parallel=3 --newer-than=now-1d $PUBLISH_DIR .
 "
 
 LFTP_EXIT_CODE=$?
