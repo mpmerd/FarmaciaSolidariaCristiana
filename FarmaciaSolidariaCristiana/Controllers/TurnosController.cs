@@ -96,6 +96,15 @@ namespace FarmaciaSolidariaCristiana.Controllers
 
             ViewBag.Medicines = medicines;
 
+            // Pasar insumos disponibles
+            var supplies = await _context.Supplies
+                .Where(s => s.StockQuantity > 0)
+                .OrderBy(s => s.Name)
+                .Select(s => new { s.Id, s.Name, s.StockQuantity, s.Unit })
+                .ToListAsync();
+
+            ViewBag.Supplies = supplies;
+
             return View();
         }
 
@@ -110,15 +119,30 @@ namespace FarmaciaSolidariaCristiana.Controllers
             [Bind("DocumentoIdentidad,NotasSolicitante")] TurnoRequestViewModel model,
             List<int> medicineIds,
             List<int> quantities,
+            List<int> supplyIds,
+            List<int> supplyQuantities,
             IFormFile? receta,
             IFormFile? tarjeton)
         {
             try
             {
-                // Validaciones básicas
-                if (!medicineIds.Any() || medicineIds.Count != quantities.Count)
+                // Validaciones básicas - debe haber medicamentos O insumos
+                bool hasMedicines = medicineIds != null && medicineIds.Any();
+                bool hasSupplies = supplyIds != null && supplyIds.Any();
+
+                if (!hasMedicines && !hasSupplies)
                 {
-                    ModelState.AddModelError("", "Debe seleccionar al menos un medicamento con cantidad");
+                    ModelState.AddModelError("", "Debe seleccionar al menos un medicamento o insumo");
+                }
+
+                if (hasMedicines && medicineIds.Count != quantities.Count)
+                {
+                    ModelState.AddModelError("", "Error en las cantidades de medicamentos");
+                }
+
+                if (hasSupplies && supplyIds.Count != supplyQuantities.Count)
+                {
+                    ModelState.AddModelError("", "Error en las cantidades de insumos");
                 }
 
                 // Validar uploads (receta opcional, tarjeton opcional)
@@ -155,13 +179,20 @@ namespace FarmaciaSolidariaCristiana.Controllers
 
                 if (!ModelState.IsValid)
                 {
-                    // Recargar medicamentos
+                    // Recargar medicamentos e insumos
                     var medicines = await _context.Medicines
                         .Where(m => m.StockQuantity > 0)
                         .OrderBy(m => m.Name)
                         .Select(m => new { m.Id, m.Name, m.StockQuantity, m.Unit })
                         .ToListAsync();
                     ViewBag.Medicines = medicines;
+
+                    var supplies = await _context.Supplies
+                        .Where(s => s.StockQuantity > 0)
+                        .OrderBy(s => s.Name)
+                        .Select(s => new { s.Id, s.Name, s.StockQuantity, s.Unit })
+                        .ToListAsync();
+                    ViewBag.Supplies = supplies;
                     
                     return View(model);
                 }
@@ -170,11 +201,27 @@ namespace FarmaciaSolidariaCristiana.Controllers
 
                 // Crear lista de medicamentos solicitados
                 var medicamentos = new List<(int MedicineId, int Quantity)>();
-                for (int i = 0; i < medicineIds.Count; i++)
+                if (medicineIds != null)
                 {
-                    if (quantities[i] > 0)
+                    for (int i = 0; i < medicineIds.Count; i++)
                     {
-                        medicamentos.Add((medicineIds[i], quantities[i]));
+                        if (quantities[i] > 0)
+                        {
+                            medicamentos.Add((medicineIds[i], quantities[i]));
+                        }
+                    }
+                }
+
+                // Crear lista de insumos solicitados
+                var insumos = new List<(int SupplyId, int Quantity)>();
+                if (supplyIds != null)
+                {
+                    for (int i = 0; i < supplyIds.Count; i++)
+                    {
+                        if (supplyQuantities[i] > 0)
+                        {
+                            insumos.Add((supplyIds[i], supplyQuantities[i]));
+                        }
                     }
                 }
 
@@ -187,7 +234,7 @@ namespace FarmaciaSolidariaCristiana.Controllers
                     NotasSolicitante = model.NotasSolicitante
                 };
 
-                var createdTurno = await _turnoService.CreateTurnoAsync(turno, medicamentos, receta, tarjeton);
+                var createdTurno = await _turnoService.CreateTurnoAsync(turno, medicamentos, insumos, receta, tarjeton);
 
                 // Enviar email de confirmación al usuario (no bloqueante)
                 var user = await _userManager.GetUserAsync(User);
@@ -253,6 +300,13 @@ namespace FarmaciaSolidariaCristiana.Controllers
                     .Select(m => new { m.Id, m.Name, m.StockQuantity, m.Unit })
                     .ToListAsync();
                 ViewBag.Medicines = medicines;
+
+                var supplies = await _context.Supplies
+                    .Where(s => s.StockQuantity > 0)
+                    .OrderBy(s => s.Name)
+                    .Select(s => new { s.Id, s.Name, s.StockQuantity, s.Unit })
+                    .ToListAsync();
+                ViewBag.Supplies = supplies;
 
                 return View(model);
             }

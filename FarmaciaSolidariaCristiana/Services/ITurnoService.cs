@@ -31,7 +31,8 @@ namespace FarmaciaSolidariaCristiana.Services
         /// <summary>
         /// Crea una nueva solicitud de turno
         /// </summary>
-        Task<Turno> CreateTurnoAsync(Turno turno, List<(int MedicineId, int Quantity)> medicamentos, 
+        Task<Turno> CreateTurnoAsync(Turno turno, List<(int MedicineId, int Quantity)> medicamentos,
+            List<(int SupplyId, int Quantity)> insumos,
             IFormFile? receta, IFormFile? tarjeton);
 
         /// <summary>

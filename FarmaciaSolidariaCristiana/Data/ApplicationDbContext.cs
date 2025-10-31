@@ -20,6 +20,7 @@ namespace FarmaciaSolidariaCristiana.Data
         public DbSet<Sponsor> Sponsors { get; set; }
         public DbSet<Turno> Turnos { get; set; }
         public DbSet<TurnoMedicamento> TurnoMedicamentos { get; set; }
+        public DbSet<TurnoInsumo> TurnoInsumos { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -74,6 +75,19 @@ namespace FarmaciaSolidariaCristiana.Data
                 .HasOne(tm => tm.Medicine)
                 .WithMany()
                 .HasForeignKey(tm => tm.MedicineId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Configure TurnoInsumo relationships
+            modelBuilder.Entity<TurnoInsumo>()
+                .HasOne(ti => ti.Turno)
+                .WithMany(t => t.Insumos)
+                .HasForeignKey(ti => ti.TurnoId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<TurnoInsumo>()
+                .HasOne(ti => ti.Supply)
+                .WithMany()
+                .HasForeignKey(ti => ti.SupplyId)
                 .OnDelete(DeleteBehavior.Restrict);
 
             // Configure decimal precision for Patient vitals
