@@ -452,6 +452,36 @@ namespace FarmaciaSolidariaCristiana.Controllers
                 name = medicine.Name
             });
         }
+
+        // GET: Turnos/SearchMedicines
+        /// <summary>
+        /// API endpoint para búsqueda de medicamentos por texto (autocompletado)
+        /// </summary>
+        [HttpGet]
+        [Authorize]
+        public async Task<JsonResult> SearchMedicines(string query)
+        {
+            if (string.IsNullOrWhiteSpace(query) || query.Length < 2)
+            {
+                return Json(new { medicines = new List<object>() });
+            }
+
+            var medicines = await _context.Medicines
+                .Where(m => m.Name.Contains(query))
+                .OrderBy(m => m.Name)
+                .Take(10)
+                .Select(m => new
+                {
+                    id = m.Id,
+                    name = m.Name,
+                    stock = m.StockQuantity,
+                    unit = m.Unit,
+                    description = m.Description
+                })
+                .ToListAsync();
+
+            return Json(new { medicines });
+        }
     }
 
     /// <summary>

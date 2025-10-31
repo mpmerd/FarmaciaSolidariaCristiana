@@ -183,7 +183,7 @@
                 }
                 
                 $.ajax({
-                    url: '@Url.Action("CheckStock", "Turnos")',
+                    url: '@Url.Action("SearchMedicines", "Turnos")',
                     type: 'GET',
                     data: { query: query },
                     success: function(response) {
