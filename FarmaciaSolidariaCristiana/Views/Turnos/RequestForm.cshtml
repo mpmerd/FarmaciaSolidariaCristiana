@@ -36,11 +36,12 @@
                             <div class="card-body">
                                 <div class="mb-3">
                                     <label asp-for="DocumentoIdentidad" class="form-label">
-                                        Documento de Identidad (Carnet/Pasaporte) <span class="text-danger">*</span>
+                                        Carnet de Identidad o Pasaporte <span class="text-danger">*</span>
                                     </label>
-                                    <input asp-for="DocumentoIdentidad" class="form-control" placeholder="Ej: 88012312345" />
+                                    <input asp-for="DocumentoIdentidad" class="form-control" placeholder="Ej: 88012312345 o A1234567" />
                                     <span asp-validation-for="DocumentoIdentidad" class="text-danger"></span>
                                     <small class="form-text text-muted">
+                                        <i class="bi bi-info-circle"></i> 11 dígitos para CI o letra + 6-7 dígitos para Pasaporte. 
                                         <i class="bi bi-shield-lock"></i> Tu documento será encriptado por seguridad
                                     </small>
                                 </div>

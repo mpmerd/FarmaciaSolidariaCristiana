@@ -465,7 +465,7 @@ namespace FarmaciaSolidariaCristiana.Services
         /// <summary>
         /// Genera PDF del turno con logos y detalles
         /// </summary>
-        private async Task<string> GenerateTurnoPdfAsync(Turno turno)
+        private Task<string> GenerateTurnoPdfAsync(Turno turno)
         {
             try
             {
@@ -624,12 +624,12 @@ namespace FarmaciaSolidariaCristiana.Services
                 }
 
                 _logger.LogInformation("PDF generado exitosamente para turno #{TurnoId}: {FilePath}", turno.Id, relativeP);
-                return relativeP;
+                return Task.FromResult(relativeP);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error al generar PDF para turno #{TurnoId}", turno.Id);
-                return string.Empty;
+                return Task.FromResult(string.Empty);
             }
         }
 
