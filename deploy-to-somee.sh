@@ -76,6 +76,23 @@ echo ""
 echo ""
 
 echo -e "${YELLOW}Conectando a Somee vía FTP...${NC}"
+
+# Primero crear directorios necesarios si no existen
+echo -e "${YELLOW}Creando directorios necesarios en el servidor...${NC}"
+lftp -c "
+set ssl:verify-certificate no;
+set ftp:use-feat no;
+set ftp:use-site-chmod no;
+open -u $FTP_USER,$FTP_PASS ftp://$FTP_HOST;
+cd $FTP_REMOTE_PATH;
+mkdir -p wwwroot/uploads/turnos;
+mkdir -p wwwroot/pdfs/turnos;
+echo 'Directorios de turnos creados/verificados'
+"
+
+echo -e "${GREEN}✓ Directorios verificados${NC}"
+echo ""
+
 echo -e "${YELLOW}Subiendo archivos...${NC}"
 echo "Esto puede tardar varios minutos..."
 echo ""

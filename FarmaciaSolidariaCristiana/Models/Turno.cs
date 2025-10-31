@@ -5,7 +5,7 @@ namespace FarmaciaSolidariaCristiana.Models
 {
     /// <summary>
     /// Representa una solicitud de turno para retirar medicamentos en la farmacia.
-    /// Sistema anti-abuso: 1 turno por mes por usuario, validación manual de documentos.
+    /// Sistema anti-abuso: 2 turnos por mes por usuario, validación manual de documentos.
     /// </summary>
     public class Turno
     {
