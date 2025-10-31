@@ -2,8 +2,14 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
 using FarmaciaSolidariaCristiana.Data;
 using FarmaciaSolidariaCristiana.Services;
+using System.Globalization;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Configurar cultura en español
+var cultureInfo = new CultureInfo("es-ES");
+CultureInfo.DefaultThreadCurrentCulture = cultureInfo;
+CultureInfo.DefaultThreadCurrentUICulture = cultureInfo;
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();

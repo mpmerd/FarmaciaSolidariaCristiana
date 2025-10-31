@@ -403,7 +403,7 @@ namespace FarmaciaSolidariaCristiana.Services
 
                                 <p><strong>Acciones disponibles:</strong></p>
                                 <ul>
-                                    <li>✅ <strong>Aprobar:</strong> Se asignará automáticamente una fecha y hora (Martes/Viernes 1-4 PM)</li>
+                                    <li>✅ <strong>Aprobar:</strong> Se asignará automáticamente una fecha y hora (Martes/Jueves 1-4 PM)</li>
                                     <li>❌ <strong>Rechazar:</strong> Se notificará al usuario el motivo</li>
                                 </ul>
 
