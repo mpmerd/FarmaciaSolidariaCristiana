@@ -420,6 +420,8 @@ namespace FarmaciaSolidariaCristiana.Services
                 .Include(t => t.User)
                 .Include(t => t.Medicamentos)
                     .ThenInclude(tm => tm.Medicine)
+                .Include(t => t.Insumos)
+                    .ThenInclude(ti => ti.Supply)
                 .Where(t => t.Estado == EstadoTurno.Pendiente)
                 .OrderBy(t => t.FechaSolicitud)
                 .ToListAsync();
@@ -435,6 +437,8 @@ namespace FarmaciaSolidariaCristiana.Services
                 .Include(t => t.RevisadoPor)
                 .Include(t => t.Medicamentos)
                     .ThenInclude(tm => tm.Medicine)
+                .Include(t => t.Insumos)
+                    .ThenInclude(ti => ti.Supply)
                 .AsQueryable();
 
             if (!string.IsNullOrEmpty(estado))
@@ -465,6 +469,8 @@ namespace FarmaciaSolidariaCristiana.Services
                 .Include(t => t.RevisadoPor)
                 .Include(t => t.Medicamentos)
                     .ThenInclude(tm => tm.Medicine)
+                .Include(t => t.Insumos)
+                    .ThenInclude(ti => ti.Supply)
                 .FirstOrDefaultAsync(t => t.Id == id);
         }
 
@@ -801,29 +807,60 @@ namespace FarmaciaSolidariaCristiana.Services
                     document.Add(infoTable);
 
                     // === MEDICAMENTOS APROBADOS ===
-                    document.Add(new Paragraph("\nMedicamentos Aprobados:")
-                        .SetFont(boldFont)
-                        .SetFontSize(14)
-                        .SetMarginTop(10));
-
-                    var medicTable = new Table(UnitValue.CreatePercentArray(new float[] { 60, 20, 20 }))
-                        .UseAllAvailableWidth()
-                        .SetMarginTop(10);
-
-                    // Encabezados
-                    medicTable.AddHeaderCell(new Cell().Add(new Paragraph("Medicamento").SetFont(boldFont)).SetBackgroundColor(ColorConstants.LIGHT_GRAY));
-                    medicTable.AddHeaderCell(new Cell().Add(new Paragraph("Cantidad").SetFont(boldFont)).SetBackgroundColor(ColorConstants.LIGHT_GRAY).SetTextAlignment(TextAlignment.CENTER));
-                    medicTable.AddHeaderCell(new Cell().Add(new Paragraph("Unidad").SetFont(boldFont)).SetBackgroundColor(ColorConstants.LIGHT_GRAY).SetTextAlignment(TextAlignment.CENTER));
-
-                    // Datos
-                    foreach (var tm in turno.Medicamentos)
+                    if (turno.Medicamentos != null && turno.Medicamentos.Any())
                     {
-                        medicTable.AddCell(new Cell().Add(new Paragraph(tm.Medicine?.Name ?? "N/A").SetFont(normalFont)));
-                        medicTable.AddCell(new Cell().Add(new Paragraph((tm.CantidadAprobada ?? tm.CantidadSolicitada).ToString()).SetFont(normalFont)).SetTextAlignment(TextAlignment.CENTER));
-                        medicTable.AddCell(new Cell().Add(new Paragraph(tm.Medicine?.Unit ?? "").SetFont(normalFont)).SetTextAlignment(TextAlignment.CENTER));
+                        document.Add(new Paragraph("\nMedicamentos Aprobados:")
+                            .SetFont(boldFont)
+                            .SetFontSize(14)
+                            .SetMarginTop(10));
+
+                        var medicTable = new Table(UnitValue.CreatePercentArray(new float[] { 60, 20, 20 }))
+                            .UseAllAvailableWidth()
+                            .SetMarginTop(10);
+
+                        // Encabezados
+                        medicTable.AddHeaderCell(new Cell().Add(new Paragraph("Medicamento").SetFont(boldFont)).SetBackgroundColor(ColorConstants.LIGHT_GRAY));
+                        medicTable.AddHeaderCell(new Cell().Add(new Paragraph("Cantidad").SetFont(boldFont)).SetBackgroundColor(ColorConstants.LIGHT_GRAY).SetTextAlignment(TextAlignment.CENTER));
+                        medicTable.AddHeaderCell(new Cell().Add(new Paragraph("Unidad").SetFont(boldFont)).SetBackgroundColor(ColorConstants.LIGHT_GRAY).SetTextAlignment(TextAlignment.CENTER));
+
+                        // Datos
+                        foreach (var tm in turno.Medicamentos)
+                        {
+                            medicTable.AddCell(new Cell().Add(new Paragraph(tm.Medicine?.Name ?? "N/A").SetFont(normalFont)));
+                            medicTable.AddCell(new Cell().Add(new Paragraph((tm.CantidadAprobada ?? tm.CantidadSolicitada).ToString()).SetFont(normalFont)).SetTextAlignment(TextAlignment.CENTER));
+                            medicTable.AddCell(new Cell().Add(new Paragraph(tm.Medicine?.Unit ?? "").SetFont(normalFont)).SetTextAlignment(TextAlignment.CENTER));
+                        }
+
+                        document.Add(medicTable);
                     }
 
-                    document.Add(medicTable);
+                    // === INSUMOS APROBADOS ===
+                    if (turno.Insumos != null && turno.Insumos.Any())
+                    {
+                        document.Add(new Paragraph("\nInsumos Médicos Aprobados:")
+                            .SetFont(boldFont)
+                            .SetFontSize(14)
+                            .SetMarginTop(10));
+
+                        var insumoTable = new Table(UnitValue.CreatePercentArray(new float[] { 60, 20, 20 }))
+                            .UseAllAvailableWidth()
+                            .SetMarginTop(10);
+
+                        // Encabezados
+                        insumoTable.AddHeaderCell(new Cell().Add(new Paragraph("Insumo").SetFont(boldFont)).SetBackgroundColor(ColorConstants.LIGHT_GRAY));
+                        insumoTable.AddHeaderCell(new Cell().Add(new Paragraph("Cantidad").SetFont(boldFont)).SetBackgroundColor(ColorConstants.LIGHT_GRAY).SetTextAlignment(TextAlignment.CENTER));
+                        insumoTable.AddHeaderCell(new Cell().Add(new Paragraph("Unidad").SetFont(boldFont)).SetBackgroundColor(ColorConstants.LIGHT_GRAY).SetTextAlignment(TextAlignment.CENTER));
+
+                        // Datos
+                        foreach (var ti in turno.Insumos)
+                        {
+                            insumoTable.AddCell(new Cell().Add(new Paragraph(ti.Supply?.Name ?? "N/A").SetFont(normalFont)));
+                            insumoTable.AddCell(new Cell().Add(new Paragraph((ti.CantidadAprobada ?? ti.CantidadSolicitada).ToString()).SetFont(normalFont)).SetTextAlignment(TextAlignment.CENTER));
+                            insumoTable.AddCell(new Cell().Add(new Paragraph(ti.Supply?.Unit ?? "").SetFont(normalFont)).SetTextAlignment(TextAlignment.CENTER));
+                        }
+
+                        document.Add(insumoTable);
+                    }
 
                     // === COMENTARIOS ===
                     if (!string.IsNullOrEmpty(turno.ComentariosFarmaceutico))

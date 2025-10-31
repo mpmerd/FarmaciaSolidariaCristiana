@@ -2,6 +2,7 @@
 @{
     ViewData["Title"] = "Solicitar Turno";
     var medicines = ViewBag.Medicines as List<dynamic>;
+    var supplies = ViewBag.Supplies as List<dynamic>;
 }
 
 <div class="container mt-4">
@@ -18,7 +19,7 @@
                         <h5><i class="bi bi-info-circle"></i> Instrucciones</h5>
                         <ul class="mb-0">
                             <li>Completa todos los campos requeridos</li>
-                            <li>Selecciona los medicamentos que necesitas</li>
+                            <li>Selecciona los medicamentos o insumos que necesitas</li>
                             <li>Adjunta tu documento de identidad (obligatorio)</li>
                             <li>Si tienes receta médica, adjúntala (recomendado)</li>
                             <li>Recibirás un email cuando tu solicitud sea revisada</li>
@@ -50,14 +51,35 @@
                                 <div class="alert alert-info" role="alert">
                                     <i class="bi bi-calendar-check"></i> <strong>Asignación Automática de Turnos:</strong><br/>
                                     Una vez que tu solicitud sea aprobada por un farmacéutico, se te asignará automáticamente 
-                                    una fecha y hora para retirar tus medicamentos. Los turnos son los <strong>Martes y Jueves 
+                                    una fecha y hora para retirar tus productos. Los turnos son los <strong>Martes y Jueves 
                                     de 1:00 PM a 4:00 PM</strong>. Recibirás un email con tu turno cuando sea aprobado.
                                 </div>
                             </div>
                         </div>
 
-                        @* Selección de Medicamentos *@
+                        @* Selector de Tipo: Medicamento o Insumo *@
                         <div class="card mb-3">
+                            <div class="card-header bg-light">
+                                <h5 class="mb-0"><i class="bi bi-grid-3x3-gap"></i> Tipo de Solicitud</h5>
+                            </div>
+                            <div class="card-body">
+                                <label class="form-label">Selecciona el tipo <span class="text-danger">*</span></label>
+                                <div class="btn-group w-100" role="group" aria-label="Tipo de turno">
+                                    <input type="radio" class="btn-check" name="turnoType" id="medicineType" value="medicine" checked>
+                                    <label class="btn btn-outline-primary" for="medicineType">
+                                        <i class="bi bi-capsule"></i> Medicamentos
+                                    </label>
+                                    
+                                    <input type="radio" class="btn-check" name="turnoType" id="supplyType" value="supply">
+                                    <label class="btn btn-outline-info" for="supplyType">
+                                        <i class="bi bi-box-seam"></i> Insumos Médicos
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        @* Selección de Medicamentos *@
+                        <div class="card mb-3" id="medicineSection">
                             <div class="card-header bg-light">
                                 <h5 class="mb-0"><i class="bi bi-capsule"></i> Medicamentos Solicitados</h5>
                             </div>
@@ -93,6 +115,52 @@
                                                     </div>
                                                     <span class="badge @(med.StockQuantity > 10 ? "bg-success" : med.StockQuantity > 5 ? "bg-warning text-dark" : "bg-danger")">
                                                         Stock: @med.StockQuantity @med.Unit
+                                                    </span>
+                                                </div>
+                                            </a>
+                                        }
+                                    }
+                                </div>
+                            </div>
+                        </div>
+
+                        @* Selección de Insumos *@
+                        <div class="card mb-3" id="supplySection" style="display: none;">
+                            <div class="card-header bg-light">
+                                <h5 class="mb-0"><i class="bi bi-box-seam"></i> Insumos Médicos Solicitados</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <label class="form-label">Buscar Insumo <span class="text-danger">*</span></label>
+                                    <input type="text" id="supplySearch" class="form-control" placeholder="Escribe para buscar..." />
+                                    <small class="form-text text-muted">Selecciona los insumos médicos que necesitas</small>
+                                </div>
+
+                                <div id="selectedSupplies" class="mb-3">
+                                    <label class="form-label">Insumos Seleccionados:</label>
+                                    <div id="suppliesList" class="border rounded p-3 bg-light" style="min-height: 100px;">
+                                        <p class="text-muted text-center mb-0" id="emptySupplyMessage">
+                                            <i class="bi bi-inbox"></i> No has seleccionado insumos aún
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div class="list-group" id="supplyResults" style="max-height: 300px; overflow-y: auto; display: none;">
+                                    @if (supplies != null && supplies.Any())
+                                    {
+                                        @foreach (var sup in supplies)
+                                        {
+                                            <a href="#" class="list-group-item list-group-item-action supply-item" 
+                                               data-id="@sup.Id" 
+                                               data-name="@sup.Name" 
+                                               data-stock="@sup.StockQuantity"
+                                               data-unit="@sup.Unit">
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <div>
+                                                        <strong>@sup.Name</strong>
+                                                    </div>
+                                                    <span class="badge @(sup.StockQuantity > 10 ? "bg-success" : sup.StockQuantity > 5 ? "bg-warning text-dark" : "bg-danger")">
+                                                        Stock: @sup.StockQuantity @sup.Unit
                                                     </span>
                                                 </div>
                                             </a>
@@ -164,15 +232,46 @@
     @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
     
     <script>
-        // Sistema de selección de medicamentos
+        // Sistema de selección de medicamentos e insumos
         let selectedMedicines = [];
+        let selectedSupplies = [];
 
         $(document).ready(function() {
+            // Elementos
             const medicineSearch = $('#medicineSearch');
             const medicineResults = $('#medicineResults');
             const medicinesList = $('#medicinesList');
             const emptyMessage = $('#emptyMessage');
 
+            const supplySearch = $('#supplySearch');
+            const supplyResults = $('#supplyResults');
+            const suppliesList = $('#suppliesList');
+            const emptySupplyMessage = $('#emptySupplyMessage');
+
+            const medicineSection = $('#medicineSection');
+            const supplySection = $('#supplySection');
+
+            // Cambio entre medicamentos e insumos
+            $('input[name="turnoType"]').on('change', function() {
+                if ($(this).val() === 'medicine') {
+                    medicineSection.show();
+                    supplySection.hide();
+                    // Limpiar selección de insumos si cambia a medicamentos
+                    selectedSupplies = [];
+                    suppliesList.find('.supply-card').remove();
+                    emptySupplyMessage.show();
+                } else {
+                    medicineSection.hide();
+                    supplySection.show();
+                    // Limpiar selección de medicamentos si cambia a insumos
+                    selectedMedicines = [];
+                    medicinesList.find('.medicine-card').remove();
+                    emptyMessage.show();
+                }
+            });
+
+            // ========== MEDICAMENTOS ==========
+            
             // Búsqueda de medicamentos con AJAX
             medicineSearch.on('input', function() {
                 const query = $(this).val().trim();
@@ -222,7 +321,7 @@
                 });
             });
 
-            // Seleccionar medicamento (delegated event para elementos dinámicos)
+            // Seleccionar medicamento
             medicineResults.on('click', '.medicine-item', function(e) {
                 e.preventDefault();
                 
@@ -231,20 +330,15 @@
                 const stock = $(this).data('stock');
                 const unit = $(this).data('unit');
 
-                // Verificar si ya está seleccionado
                 if (selectedMedicines.find(m => m.id === id)) {
                     alert('Este medicamento ya está seleccionado');
                     return;
                 }
 
-                // Agregar a la lista
                 addMedicine(id, name, stock, unit);
                 
-                // Limpiar búsqueda
                 medicineSearch.val('');
                 medicineResults.empty().hide();
-                medicineSearch.val('');
-                medicineResults.hide();
             });
 
             function addMedicine(id, name, stock, unit) {
@@ -283,7 +377,6 @@
                 
                 medicinesList.append(medicineItem);
 
-                // Evento para quitar
                 medicineItem.find('.remove-medicine').on('click', function() {
                     selectedMedicines = selectedMedicines.filter(m => m.id !== id);
                     medicineItem.remove();
@@ -293,7 +386,6 @@
                     }
                 });
 
-                // Validar cantidad
                 medicineItem.find('.quantity-input').on('change', function() {
                     const value = parseInt($(this).val());
                     if (value > stock) {
@@ -305,15 +397,122 @@
                 });
             }
 
-            // Validación del formulario
+            // ========== INSUMOS ==========
+            
+            // Búsqueda de insumos
+            supplySearch.on('input', function() {
+                const query = $(this).val().trim().toLowerCase();
+                
+                if (query.length < 2) {
+                    supplyResults.find('.supply-item').parent().show();
+                    supplyResults.hide();
+                    return;
+                }
+                
+                supplyResults.show();
+                supplyResults.find('.supply-item').each(function() {
+                    const name = $(this).data('name').toLowerCase();
+                    if (name.includes(query)) {
+                        $(this).show();
+                    } else {
+                        $(this).hide();
+                    }
+                });
+            });
+
+            // Seleccionar insumo
+            supplyResults.on('click', '.supply-item', function(e) {
+                e.preventDefault();
+                
+                const id = $(this).data('id');
+                const name = $(this).data('name');
+                const stock = $(this).data('stock');
+                const unit = $(this).data('unit');
+
+                if (selectedSupplies.find(s => s.id === id)) {
+                    alert('Este insumo ya está seleccionado');
+                    return;
+                }
+
+                addSupply(id, name, stock, unit);
+                
+                supplySearch.val('');
+                supplyResults.hide();
+            });
+
+            function addSupply(id, name, stock, unit) {
+                const supplyItem = $(`
+                    <div class="card mb-2 supply-card" data-id="${id}">
+                        <div class="card-body py-2">
+                            <div class="row align-items-center">
+                                <div class="col-md-5">
+                                    <strong>${name}</strong>
+                                    <input type="hidden" name="supplyIds" value="${id}" />
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="input-group input-group-sm">
+                                        <span class="input-group-text">Cantidad</span>
+                                        <input type="number" name="supplyQuantities" class="form-control quantity-input" 
+                                               min="1" max="${stock}" value="1" required />
+                                        <span class="input-group-text">${unit}</span>
+                                    </div>
+                                    <small class="text-muted">Stock disponible: ${stock}</small>
+                                </div>
+                                <div class="col-md-3 text-end">
+                                    <button type="button" class="btn btn-sm btn-danger remove-supply">
+                                        <i class="bi bi-trash"></i> Quitar
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `);
+
+                selectedSupplies.push({ id, name, stock, unit });
+                
+                if (selectedSupplies.length === 1) {
+                    emptySupplyMessage.hide();
+                }
+                
+                suppliesList.append(supplyItem);
+
+                supplyItem.find('.remove-supply').on('click', function() {
+                    selectedSupplies = selectedSupplies.filter(s => s.id !== id);
+                    supplyItem.remove();
+                    
+                    if (selectedSupplies.length === 0) {
+                        emptySupplyMessage.show();
+                    }
+                });
+
+                supplyItem.find('.quantity-input').on('change', function() {
+                    const value = parseInt($(this).val());
+                    if (value > stock) {
+                        alert(`La cantidad no puede ser mayor al stock disponible (${stock})`);
+                        $(this).val(stock);
+                    } else if (value < 1) {
+                        $(this).val(1);
+                    }
+                });
+            }
+
+            // ========== VALIDACIÓN ==========
+            
             $('#turnoForm').on('submit', function(e) {
-                if (selectedMedicines.length === 0) {
+                const turnoType = $('input[name="turnoType"]:checked').val();
+                
+                if (turnoType === 'medicine' && selectedMedicines.length === 0) {
                     e.preventDefault();
                     alert('Debes seleccionar al menos un medicamento');
                     return false;
                 }
+                
+                if (turnoType === 'supply' && selectedSupplies.length === 0) {
+                    e.preventDefault();
+                    alert('Debes seleccionar al menos un insumo');
+                    return false;
+                }
 
-                // Deshabilitar botón para evitar doble envío
                 $('#submitBtn').prop('disabled', true).html('<i class="bi bi-hourglass-split"></i> Enviando...');
             });
 
