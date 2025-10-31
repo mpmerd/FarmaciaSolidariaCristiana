@@ -378,7 +378,7 @@ namespace FarmaciaSolidariaCristiana.Migrations
                     b.Property<DateTime?>("FechaEntrega")
                         .HasColumnType("datetime2");
 
-                    b.Property<DateTime>("FechaPreferida")
+                    b.Property<DateTime?>("FechaPreferida")
                         .HasColumnType("datetime2");
 
                     b.Property<DateTime?>("FechaRevision")

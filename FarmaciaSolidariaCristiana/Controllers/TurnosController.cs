@@ -107,7 +107,7 @@ namespace FarmaciaSolidariaCristiana.Controllers
         [ValidateAntiForgeryToken]
         [Authorize(Roles = "ViewerPublic")]
         public async Task<IActionResult> RequestForm(
-            [Bind("DocumentoIdentidad,FechaPreferida,NotasSolicitante")] TurnoRequestViewModel model,
+            [Bind("DocumentoIdentidad,NotasSolicitante")] TurnoRequestViewModel model,
             List<int> medicineIds,
             List<int> quantities,
             IFormFile? receta,
@@ -119,38 +119,6 @@ namespace FarmaciaSolidariaCristiana.Controllers
                 if (!medicineIds.Any() || medicineIds.Count != quantities.Count)
                 {
                     ModelState.AddModelError("", "Debe seleccionar al menos un medicamento con cantidad");
-                }
-
-                // Validar fecha preferida
-                if (model.FechaPreferida < DateTime.Now.AddHours(24))
-                {
-                    ModelState.AddModelError("FechaPreferida", "La fecha del turno debe ser al menos 24 horas en el futuro");
-                }
-
-                if (model.FechaPreferida > DateTime.Now.AddMonths(1))
-                {
-                    ModelState.AddModelError("FechaPreferida", "La fecha del turno no puede ser mayor a 1 mes");
-                }
-                
-                // Validar que sea Martes (2) o Viernes (5)
-                var dayOfWeek = (int)model.FechaPreferida.DayOfWeek;
-                if (dayOfWeek != 2 && dayOfWeek != 5)
-                {
-                    ModelState.AddModelError("FechaPreferida", "Los turnos solo están disponibles los Martes y Viernes");
-                }
-                
-                // Validar horario 1:00 PM a 4:00 PM (13:00 a 16:00)
-                var hour = model.FechaPreferida.Hour;
-                if (hour < 13 || hour >= 16)
-                {
-                    ModelState.AddModelError("FechaPreferida", "Los turnos solo están disponibles de 1:00 PM a 4:00 PM");
-                }
-                
-                // Validar capacidad diaria (30 turnos por día)
-                var (hasCapacity, currentCount, capacityReason) = await _turnoService.CheckDailyCapacityAsync(model.FechaPreferida);
-                if (!hasCapacity)
-                {
-                    ModelState.AddModelError("FechaPreferida", $"No hay disponibilidad para ese día. Ya hay {currentCount} turnos programados (máximo: 30 por día). Por favor selecciona otro día.");
                 }
 
                 // Validar uploads (receta opcional, tarjeton opcional)
@@ -210,18 +178,18 @@ namespace FarmaciaSolidariaCristiana.Controllers
                     }
                 }
 
-                // Crear turno
+                // Crear turno (sin fecha, se asignará al aprobar)
                 var turno = new Turno
                 {
                     UserId = userId!,
                     DocumentoIdentidadHash = _turnoService.HashDocument(model.DocumentoIdentidad),
-                    FechaPreferida = model.FechaPreferida,
+                    FechaPreferida = null, // Se asigna automáticamente al aprobar
                     NotasSolicitante = model.NotasSolicitante
                 };
 
                 var createdTurno = await _turnoService.CreateTurnoAsync(turno, medicamentos, receta, tarjeton);
 
-                // Enviar email de confirmación (no bloqueante)
+                // Enviar email de confirmación al usuario (no bloqueante)
                 var user = await _userManager.GetUserAsync(User);
                 if (user?.Email != null)
                 {
@@ -245,6 +213,29 @@ namespace FarmaciaSolidariaCristiana.Controllers
                     {
                         _logger.LogWarning(ex, "Error iniciando envío de email para turno {TurnoId}", createdTurno.Id);
                     }
+                }
+
+                // Enviar notificación a farmacéuticos (no bloqueante)
+                try
+                {
+                    _ = Task.Run(async () =>
+                    {
+                        try
+                        {
+                            await _emailService.SendTurnoNotificationToFarmaceuticosAsync(
+                                user?.UserName ?? "Usuario", 
+                                createdTurno.Id);
+                            _logger.LogInformation("Notificaciones enviadas a farmacéuticos para turno {TurnoId}", createdTurno.Id);
+                        }
+                        catch (Exception emailEx)
+                        {
+                            _logger.LogWarning(emailEx, "No se pudo enviar notificaciones a farmacéuticos para turno {TurnoId}", createdTurno.Id);
+                        }
+                    });
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Error iniciando envío de notificaciones a farmacéuticos para turno {TurnoId}", createdTurno.Id);
                 }
 
                 TempData["SuccessMessage"] = "Tu solicitud de turno ha sido enviada exitosamente. " +
@@ -510,10 +501,6 @@ namespace FarmaciaSolidariaCristiana.Controllers
         [RegularExpression(@"^(\d{11}|[A-Za-z]\d{6,7})$", 
             ErrorMessage = "Formato inválido. Use 11 dígitos para Carnet de Identidad o letra seguida de 6-7 dígitos para Pasaporte")]
         public string DocumentoIdentidad { get; set; } = string.Empty;
-
-        [Required(ErrorMessage = "La fecha preferida es obligatoria")]
-        [DataType(DataType.DateTime)]
-        public DateTime FechaPreferida { get; set; } = DateTime.Now.AddDays(2);
 
         [StringLength(1000, ErrorMessage = "Las notas no pueden superar 1000 caracteres")]
         public string? NotasSolicitante { get; set; }

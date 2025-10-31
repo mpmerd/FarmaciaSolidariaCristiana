@@ -94,6 +94,95 @@ namespace FarmaciaSolidariaCristiana.Services
         }
 
         /// <summary>
+        /// Obtiene el próximo slot disponible para turnos
+        /// Martes/Viernes, 1-4 PM, slots cada 6 minutos (30 turnos/día)
+        /// </summary>
+        public async Task<DateTime> GetNextAvailableSlotAsync()
+        {
+            var now = DateTime.Now;
+            var startDate = now.Date.AddDays(7); // Empezar desde la próxima semana
+            
+            // Slots por día: De 1 PM (13:00) a 4 PM (16:00) = 3 horas = 180 minutos
+            // 180 minutos / 6 minutos por slot = 30 slots por día
+            const int SLOT_DURATION_MINUTES = 6;
+            const int START_HOUR = 13; // 1 PM
+            const int MAX_SLOTS_PER_DAY = 30;
+
+            // Buscar hasta 8 semanas en el futuro
+            for (int week = 0; week < 8; week++)
+            {
+                var checkDate = startDate.AddDays(week * 7);
+                
+                // Obtener los martes y viernes de esta semana
+                var daysToCheck = new List<DateTime>();
+                
+                // Martes (2)
+                var tuesday = checkDate.AddDays((DayOfWeek.Tuesday - checkDate.DayOfWeek + 7) % 7);
+                if (tuesday >= startDate)
+                {
+                    daysToCheck.Add(tuesday);
+                }
+                
+                // Viernes (5)
+                var friday = checkDate.AddDays((DayOfWeek.Friday - checkDate.DayOfWeek + 7) % 7);
+                if (friday >= startDate)
+                {
+                    daysToCheck.Add(friday);
+                }
+
+                daysToCheck = daysToCheck.OrderBy(d => d).ToList();
+
+                foreach (var day in daysToCheck)
+                {
+                    // Obtener todos los turnos aprobados/completados para este día
+                    var turnosDelDia = await _context.Turnos
+                        .Where(t => t.FechaPreferida.HasValue &&
+                                   t.FechaPreferida.Value.Date == day.Date &&
+                                   (t.Estado == EstadoTurno.Aprobado || t.Estado == EstadoTurno.Completado))
+                        .OrderBy(t => t.FechaPreferida)
+                        .Select(t => t.FechaPreferida!.Value)
+                        .ToListAsync();
+
+                    // Si hay menos de 30 turnos, buscar el primer slot disponible
+                    if (turnosDelDia.Count < MAX_SLOTS_PER_DAY)
+                    {
+                        // Generar todos los slots posibles del día
+                        var allSlots = new List<DateTime>();
+                        for (int i = 0; i < MAX_SLOTS_PER_DAY; i++)
+                        {
+                            var slotTime = day.Date
+                                .AddHours(START_HOUR)
+                                .AddMinutes(i * SLOT_DURATION_MINUTES);
+                            allSlots.Add(slotTime);
+                        }
+
+                        // Encontrar el primer slot que no esté ocupado
+                        foreach (var slot in allSlots)
+                        {
+                            if (!turnosDelDia.Contains(slot))
+                            {
+                                _logger.LogInformation("Slot disponible encontrado: {Slot} ({Day})", 
+                                    slot.ToString("dd/MM/yyyy HH:mm"), 
+                                    slot.DayOfWeek == DayOfWeek.Tuesday ? "Martes" : "Viernes");
+                                return slot;
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Si no encontramos slot en 8 semanas, devolver el primer martes en 8 semanas
+            var fallbackDate = startDate.AddDays(8 * 7);
+            var fallbackTuesday = fallbackDate.AddDays((DayOfWeek.Tuesday - fallbackDate.DayOfWeek + 7) % 7);
+            var fallbackSlot = fallbackTuesday.Date.AddHours(START_HOUR);
+            
+            _logger.LogWarning("No se encontró slot disponible en 8 semanas, usando fallback: {Slot}", 
+                fallbackSlot.ToString("dd/MM/yyyy HH:mm"));
+            
+            return fallbackSlot;
+        }
+
+        /// <summary>
         /// Verifica stock disponible para lista de medicamentos
         /// </summary>
         public async Task<Dictionary<int, (bool Available, int Stock)>> CheckMedicinesStockAsync(List<int> medicineIds)
@@ -409,8 +498,12 @@ namespace FarmaciaSolidariaCristiana.Services
                     }
                 }
 
+                // Asignar fecha y hora automáticamente
+                turno.FechaPreferida = await GetNextAvailableSlotAsync();
+                _logger.LogInformation("Fecha asignada automáticamente: {Fecha}", turno.FechaPreferida.Value.ToString("dd/MM/yyyy HH:mm"));
+
                 // Generar número de turno
-                turno.NumeroTurno = await GenerateNumeroTurnoAsync(turno.FechaPreferida);
+                turno.NumeroTurno = await GenerateNumeroTurnoAsync(turno.FechaPreferida.Value);
 
                 // Actualizar estado del turno
                 turno.Estado = EstadoTurno.Aprobado;
@@ -426,15 +519,20 @@ namespace FarmaciaSolidariaCristiana.Services
 
                 await _context.SaveChangesAsync();
 
-                // Enviar email de aprobación
+                // Enviar email de aprobación con PDF adjunto
                 if (turno.User?.Email != null)
                 {
+                    // Convertir ruta relativa a ruta física completa para el adjunto
+                    var pdfPhysicalPath = Path.Combine(_environment.WebRootPath, pdfPath.Replace("/", Path.DirectorySeparatorChar.ToString()));
+                    
+                    _logger.LogInformation("Enviando email con PDF: {PhysicalPath}", pdfPhysicalPath);
+                    
                     var emailSent = await _emailService.SendTurnoAprobadoEmailAsync(
                         turno.User.Email,
                         turno.User.UserName ?? "Usuario",
                         turno.NumeroTurno.Value,
-                        turno.FechaPreferida,
-                        pdfPath
+                        turno.FechaPreferida.Value,
+                        pdfPhysicalPath
                     );
 
                     turno.EmailEnviado = emailSent;
@@ -678,8 +776,8 @@ namespace FarmaciaSolidariaCristiana.Services
 
                     AddInfoRow(infoTable, "Usuario:", turno.User?.UserName ?? "N/A", boldFont, normalFont);
                     AddInfoRow(infoTable, "Email:", turno.User?.Email ?? "N/A", boldFont, normalFont);
-                    AddInfoRow(infoTable, "Fecha del Turno:", turno.FechaPreferida.ToString("dddd, dd 'de' MMMM 'de' yyyy"), boldFont, normalFont);
-                    AddInfoRow(infoTable, "Hora del Turno:", turno.FechaPreferida.ToString("HH:mm"), boldFont, normalFont);
+                    AddInfoRow(infoTable, "Fecha del Turno:", turno.FechaPreferida?.ToString("dddd, dd 'de' MMMM 'de' yyyy") ?? "N/A", boldFont, normalFont);
+                    AddInfoRow(infoTable, "Hora del Turno:", turno.FechaPreferida?.ToString("HH:mm") ?? "N/A", boldFont, normalFont);
                     AddInfoRow(infoTable, "Fecha de Aprobación:", turno.FechaRevision?.ToString("dd/MM/yyyy HH:mm") ?? "N/A", boldFont, normalFont);
 
                     document.Add(infoTable);

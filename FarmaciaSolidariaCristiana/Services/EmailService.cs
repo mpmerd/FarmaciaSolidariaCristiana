@@ -16,6 +16,14 @@ namespace FarmaciaSolidariaCristiana.Services
 
         public async Task SendEmailAsync(string toEmail, string subject, string body)
         {
+            await SendEmailAsync(toEmail, subject, body, null);
+        }
+
+        /// <summary>
+        /// Envía email con soporte para adjuntos
+        /// </summary>
+        private async Task SendEmailAsync(string toEmail, string subject, string body, string? attachmentPath)
+        {
             try
             {
                 var smtpSettings = _configuration.GetSection("SmtpSettings");
@@ -42,6 +50,14 @@ namespace FarmaciaSolidariaCristiana.Services
                 };
 
                 mailMessage.To.Add(toEmail);
+
+                // Adjuntar archivo si existe
+                if (!string.IsNullOrEmpty(attachmentPath) && File.Exists(attachmentPath))
+                {
+                    var attachment = new Attachment(attachmentPath);
+                    mailMessage.Attachments.Add(attachment);
+                    _logger.LogInformation("Adjuntando archivo: {Path}", attachmentPath);
+                }
 
                 await client.SendMailAsync(mailMessage);
                 _logger.LogInformation($"Email sent successfully to {toEmail}");
@@ -198,7 +214,9 @@ namespace FarmaciaSolidariaCristiana.Services
                     </html>
                 ";
 
-                await SendEmailAsync(toEmail, subject, body);
+                // Llamar con el PDF adjunto
+                await SendEmailAsync(toEmail, subject, body, pdfPath);
+                _logger.LogInformation("Email de turno aprobado enviado a {Email} con PDF adjunto: {PdfPath}", toEmail, pdfPath);
                 return true;
             }
             catch (Exception ex)
@@ -325,6 +343,123 @@ namespace FarmaciaSolidariaCristiana.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error enviando email de turno solicitado a {Email}", toEmail);
+                return false;
+            }
+        }
+
+        public async Task<bool> SendTurnoNotificationToFarmaceuticosAsync(string userName, int turnoId)
+        {
+            try
+            {
+                // Obtener configuración de URL base
+                var baseUrl = _configuration["AppSettings:BaseUrl"] ?? "https://farmaciasolidaria.somee.com";
+                var turnoDetailsUrl = $"{baseUrl}/Turnos/Details/{turnoId}";
+
+                var subject = "⚕️ Nueva Solicitud de Turno - Revisión Pendiente";
+                var body = $@"
+                    <!DOCTYPE html>
+                    <html>
+                    <head>
+                        <style>
+                            body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+                            .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+                            .header {{ background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }}
+                            .content {{ background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }}
+                            .button {{ display: inline-block; padding: 12px 30px; background-color: #667eea; color: white !important; text-decoration: none; border-radius: 5px; margin: 20px 0; }}
+                            .footer {{ text-align: center; margin-top: 30px; font-size: 12px; color: #777; }}
+                            .highlight {{ background-color: #fff3cd; padding: 15px; border-left: 4px solid #ffc107; margin: 15px 0; }}
+                        </style>
+                    </head>
+                    <body>
+                        <div class='container'>
+                            <div class='header'>
+                                <h1>🔔 Nueva Solicitud de Turno</h1>
+                            </div>
+                            <div class='content'>
+                                <p>Estimado/a Farmacéutico/a,</p>
+                                <p>Se ha recibido una <strong>nueva solicitud de turno</strong> que requiere tu revisión y aprobación.</p>
+                                
+                                <div class='highlight'>
+                                    <strong>Detalles de la Solicitud:</strong><br/>
+                                    • <strong>Usuario:</strong> {userName}<br/>
+                                    • <strong>ID de Turno:</strong> #{turnoId}<br/>
+                                    • <strong>Fecha de Solicitud:</strong> {DateTime.Now:dd/MM/yyyy HH:mm}<br/>
+                                </div>
+
+                                <p>Por favor, revisa la solicitud cuando tengas un momento disponible. Recuerda que esto es voluntario y puedes revisar según tu disponibilidad.</p>
+
+                                <p style='text-align: center;'>
+                                    <a href='{turnoDetailsUrl}' class='button'>📋 Revisar Solicitud Ahora</a>
+                                </p>
+
+                                <p><strong>Acciones disponibles:</strong></p>
+                                <ul>
+                                    <li>✅ <strong>Aprobar:</strong> Se asignará automáticamente una fecha y hora (Martes/Viernes 1-4 PM)</li>
+                                    <li>❌ <strong>Rechazar:</strong> Se notificará al usuario el motivo</li>
+                                </ul>
+
+                                <p><small>💡 Al aprobar, el sistema asignará automáticamente el próximo slot disponible (cada 6 minutos, máximo 30 turnos/día).</small></p>
+                            </div>
+                            <div class='footer'>
+                                <p>Farmacia Solidaria Cristiana - Iglesia Metodista de Cárdenas</p>
+                                <p>© 2025 Todos los derechos reservados.</p>
+                                <p>Este es un mensaje automático de notificación para farmacéuticos.</p>
+                            </div>
+                        </div>
+                    </body>
+                    </html>
+                ";
+
+                // Obtener todos los emails de usuarios con rol Farmaceutico
+                // Necesitamos inyectar UserManager y RoleManager
+                var smtpSettings = _configuration.GetSection("SmtpSettings");
+                var host = smtpSettings["Host"];
+                var port = int.Parse(smtpSettings["Port"] ?? "587");
+                var username = smtpSettings["Username"];
+                var password = smtpSettings["Password"];
+                var fromEmail = smtpSettings["FromEmail"];
+                var fromName = smtpSettings["FromName"] ?? "Farmacia Solidaria Cristiana";
+                var enableSsl = bool.Parse(smtpSettings["EnableSsl"] ?? "true");
+
+                // Lista hardcodeada de emails de farmacéuticos (temporal)
+                // TODO: Obtener dinámicamente desde UserManager
+                var farmaceuticoEmails = _configuration.GetSection("Notifications:FarmaceuticoEmails").Get<string[]>() 
+                    ?? new[] { "admin@farmaciasolidaria.somee.com" }; // Fallback al admin
+
+                using var client = new SmtpClient(host, port)
+                {
+                    Credentials = new NetworkCredential(username, password),
+                    EnableSsl = enableSsl
+                };
+
+                foreach (var email in farmaceuticoEmails)
+                {
+                    try
+                    {
+                        var mailMessage = new MailMessage
+                        {
+                            From = new MailAddress(fromEmail!, fromName),
+                            Subject = subject,
+                            Body = body,
+                            IsBodyHtml = true
+                        };
+
+                        mailMessage.To.Add(email);
+                        await client.SendMailAsync(mailMessage);
+                        _logger.LogInformation("Notificación de turno enviada a farmacéutico: {Email}", email);
+                    }
+                    catch (Exception emailEx)
+                    {
+                        _logger.LogError(emailEx, "Error enviando notificación a {Email}", email);
+                        // Continuar con el siguiente email
+                    }
+                }
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error enviando notificaciones de turno a farmacéuticos");
                 return false;
             }
         }

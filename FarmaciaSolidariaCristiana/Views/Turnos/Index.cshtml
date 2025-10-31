@@ -157,7 +157,7 @@
                                                     }
                                                 </td>
                                                 <td>@turno.FechaSolicitud.ToString("dd/MM/yyyy HH:mm")</td>
-                                                <td>@turno.FechaPreferida.ToString("dd/MM/yyyy HH:mm")</td>
+                                                <td>@(turno.FechaPreferida?.ToString("dd/MM/yyyy HH:mm") ?? "Por asignar")</td>
                                                 <td>
                                                     <small>
                                                         @foreach (var med in turno.Medicamentos.Take(2))

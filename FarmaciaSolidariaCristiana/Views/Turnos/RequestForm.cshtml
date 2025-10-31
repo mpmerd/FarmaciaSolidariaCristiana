@@ -46,16 +46,12 @@
                                     </small>
                                 </div>
 
-                                <div class="mb-3">
-                                    <label asp-for="FechaPreferida" class="form-label">
-                                        Fecha y Hora Preferida del Turno <span class="text-danger">*</span>
-                                    </label>
-                                    <input asp-for="FechaPreferida" type="datetime-local" class="form-control" />
-                                    <span asp-validation-for="FechaPreferida" class="text-danger"></span>
-                                    <small class="form-text text-muted">
-                                        <i class="bi bi-info-circle"></i> Los turnos solo están disponibles <strong>Martes y Viernes</strong> de <strong>1:00 PM a 4:00 PM</strong>. 
-                                        Límite: 30 turnos por día. Debe ser al menos 24 horas en el futuro.
-                                    </small>
+                                @* Información sobre asignación automática *@
+                                <div class="alert alert-info" role="alert">
+                                    <i class="bi bi-calendar-check"></i> <strong>Asignación Automática de Turnos:</strong><br/>
+                                    Una vez que tu solicitud sea aprobada por un farmacéutico, se te asignará automáticamente 
+                                    una fecha y hora para retirar tus medicamentos. Los turnos son los <strong>Martes y Viernes 
+                                    de 1:00 PM a 4:00 PM</strong>. Recibirás un email con tu turno cuando sea aprobado.
                                 </div>
                             </div>
                         </div>
@@ -316,25 +312,6 @@
                     alert('Debes seleccionar al menos un medicamento');
                     return false;
                 }
-                
-                // Validar fecha y hora (Martes y Viernes 1-4 PM)
-                const fechaPreferida = new Date($('input[name="FechaPreferida"]').val());
-                const dayOfWeek = fechaPreferida.getDay(); // 0 = Domingo, 1 = Lunes, 2 = Martes, ..., 5 = Viernes
-                const hour = fechaPreferida.getHours();
-                
-                if (dayOfWeek !== 2 && dayOfWeek !== 5) {
-                    e.preventDefault();
-                    alert('Los turnos solo están disponibles los Martes y Viernes. Por favor selecciona una de estas fechas.');
-                    $('#submitBtn').prop('disabled', false).html('<i class="bi bi-send"></i> Enviar Solicitud');
-                    return false;
-                }
-                
-                if (hour < 13 || hour >= 16) {
-                    e.preventDefault();
-                    alert('Los turnos solo están disponibles de 1:00 PM a 4:00 PM. Por favor selecciona una hora en este rango.');
-                    $('#submitBtn').prop('disabled', false).html('<i class="bi bi-send"></i> Enviar Solicitud');
-                    return false;
-                }
 
                 // Deshabilitar botón para evitar doble envío
                 $('#submitBtn').prop('disabled', true).html('<i class="bi bi-hourglass-split"></i> Enviando...');
@@ -348,12 +325,6 @@
                     $(this).val('');
                 }
             });
-
-            // Establecer fecha mínima (24 horas desde ahora)
-            const now = new Date();
-            now.setHours(now.getHours() + 24);
-            const minDate = now.toISOString().slice(0, 16);
-            $('input[name="FechaPreferida"]').attr('min', minDate);
         });
     </script>
 }

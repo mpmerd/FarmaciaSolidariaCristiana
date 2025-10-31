@@ -75,7 +75,7 @@
                                         </tr>
                                         <tr>
                                             <td><strong>Fecha Preferida:</strong></td>
-                                            <td>@Model.FechaPreferida.ToString("dd/MM/yyyy HH:mm")</td>
+                                            <td>@(Model.FechaPreferida?.ToString("dd/MM/yyyy HH:mm") ?? "Por asignar (se asigna al aprobar)")</td>
                                         </tr>
                                         @if (Model.FechaRevision.HasValue)
                                         {
