@@ -23,17 +23,20 @@ namespace FarmaciaSolidariaCristiana.Services
         private readonly ApplicationDbContext _context;
         private readonly IEmailService _emailService;
         private readonly IWebHostEnvironment _environment;
+        private readonly IImageCompressionService _imageCompressionService;
         private readonly ILogger<TurnoService> _logger;
 
         public TurnoService(
             ApplicationDbContext context, 
             IEmailService emailService,
             IWebHostEnvironment environment,
+            IImageCompressionService imageCompressionService,
             ILogger<TurnoService> logger)
         {
             _context = context;
             _emailService = emailService;
             _environment = environment;
+            _imageCompressionService = imageCompressionService;
             _logger = logger;
         }
 
@@ -132,37 +135,135 @@ namespace FarmaciaSolidariaCristiana.Services
 
                 // Crear directorio para archivos del turno
                 var uploadsFolder = Path.Combine(_environment.WebRootPath, "uploads", "turnos");
-                if (!Directory.Exists(uploadsFolder))
+                
+                try
                 {
-                    Directory.CreateDirectory(uploadsFolder);
+                    if (!Directory.Exists(uploadsFolder))
+                    {
+                        Directory.CreateDirectory(uploadsFolder);
+                        _logger.LogInformation("Directorio creado: {Path}", uploadsFolder);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error creando directorio: {Path}", uploadsFolder);
+                    throw new InvalidOperationException($"No se pudo crear el directorio de uploads: {ex.Message}");
                 }
 
                 // Guardar receta médica
                 if (receta != null && receta.Length > 0)
                 {
-                    var recetaFileName = $"{Guid.NewGuid()}_{Path.GetFileName(receta.FileName)}";
-                    var recetaPath = Path.Combine(uploadsFolder, recetaFileName);
-                    
-                    using (var stream = new FileStream(recetaPath, FileMode.Create))
+                    try
                     {
-                        await receta.CopyToAsync(stream);
+                        var recetaFileName = $"{Guid.NewGuid()}_{Path.GetFileName(receta.FileName)}";
+                        var recetaPath = Path.Combine(uploadsFolder, recetaFileName);
+                        
+                        long fileSize = receta.Length;
+                        var originalSize = receta.Length;
+                        
+                        _logger.LogInformation("Guardando receta en: {Path}, tamaño original: {Size} bytes", recetaPath, originalSize);
+                        
+                        // Comprimir imagen si es una imagen
+                        if (_imageCompressionService.IsImage(receta.ContentType))
+                        {
+                            _logger.LogInformation("Comprimiendo imagen de receta: {FileName}", receta.FileName);
+                            
+                            using (var inputStream = receta.OpenReadStream())
+                            {
+                                using (var compressedStream = await _imageCompressionService.CompressImageAsync(
+                                    inputStream,
+                                    receta.ContentType,
+                                    maxWidth: 1920,
+                                    maxHeight: 1920,
+                                    quality: 85))
+                                {
+                                    using (var fileStream = new FileStream(recetaPath, FileMode.Create))
+                                    {
+                                        await compressedStream.CopyToAsync(fileStream);
+                                        fileSize = fileStream.Length;
+                                    }
+                                }
+                            }
+                            
+                            var compressionRatio = originalSize > 0 ? (1 - (double)fileSize / originalSize) * 100 : 0;
+                            _logger.LogInformation("Receta comprimida: {Size} bytes, compresión: {Ratio:F2}%", fileSize, compressionRatio);
+                        }
+                        else
+                        {
+                            // No es imagen, guardar como PDF sin compresión
+                            using (var stream = new FileStream(recetaPath, FileMode.Create))
+                            {
+                                await receta.CopyToAsync(stream);
+                            }
+                            _logger.LogInformation("Receta PDF guardada: {Size} bytes", fileSize);
+                        }
+                        
+                        turno.RecetaMedicaPath = $"/uploads/turnos/{recetaFileName}";
+                        _logger.LogInformation("Receta guardada exitosamente: {Path}", turno.RecetaMedicaPath);
                     }
-                    
-                    turno.RecetaMedicaPath = $"/uploads/turnos/{recetaFileName}";
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Error guardando receta médica");
+                        throw new InvalidOperationException($"Error al guardar la receta: {ex.Message}");
+                    }
                 }
 
                 // Guardar tarjetón
                 if (tarjeton != null && tarjeton.Length > 0)
                 {
-                    var tarjetonFileName = $"{Guid.NewGuid()}_{Path.GetFileName(tarjeton.FileName)}";
-                    var tarjetonPath = Path.Combine(uploadsFolder, tarjetonFileName);
-                    
-                    using (var stream = new FileStream(tarjetonPath, FileMode.Create))
+                    try
                     {
-                        await tarjeton.CopyToAsync(stream);
+                        var tarjetonFileName = $"{Guid.NewGuid()}_{Path.GetFileName(tarjeton.FileName)}";
+                        var tarjetonPath = Path.Combine(uploadsFolder, tarjetonFileName);
+                        
+                        long fileSize = tarjeton.Length;
+                        var originalSize = tarjeton.Length;
+                        
+                        _logger.LogInformation("Guardando tarjetón en: {Path}, tamaño original: {Size} bytes", tarjetonPath, originalSize);
+                        
+                        // Comprimir imagen si es una imagen
+                        if (_imageCompressionService.IsImage(tarjeton.ContentType))
+                        {
+                            _logger.LogInformation("Comprimiendo imagen de tarjetón: {FileName}", tarjeton.FileName);
+                            
+                            using (var inputStream = tarjeton.OpenReadStream())
+                            {
+                                using (var compressedStream = await _imageCompressionService.CompressImageAsync(
+                                    inputStream,
+                                    tarjeton.ContentType,
+                                    maxWidth: 1920,
+                                    maxHeight: 1920,
+                                    quality: 85))
+                                {
+                                    using (var fileStream = new FileStream(tarjetonPath, FileMode.Create))
+                                    {
+                                        await compressedStream.CopyToAsync(fileStream);
+                                        fileSize = fileStream.Length;
+                                    }
+                                }
+                            }
+                            
+                            var compressionRatio = originalSize > 0 ? (1 - (double)fileSize / originalSize) * 100 : 0;
+                            _logger.LogInformation("Tarjetón comprimido: {Size} bytes, compresión: {Ratio:F2}%", fileSize, compressionRatio);
+                        }
+                        else
+                        {
+                            // No es imagen, guardar como PDF sin compresión
+                            using (var stream = new FileStream(tarjetonPath, FileMode.Create))
+                            {
+                                await tarjeton.CopyToAsync(stream);
+                            }
+                            _logger.LogInformation("Tarjetón PDF guardado: {Size} bytes", fileSize);
+                        }
+                        
+                        turno.TarjetonPath = $"/uploads/turnos/{tarjetonFileName}";
+                        _logger.LogInformation("Tarjetón guardado exitosamente: {Path}", turno.TarjetonPath);
                     }
-                    
-                    turno.TarjetonPath = $"/uploads/turnos/{tarjetonFileName}";
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Error guardando tarjetón");
+                        throw new InvalidOperationException($"Error al guardar el tarjetón: {ex.Message}");
+                    }
                 }
 
                 // Guardar turno
