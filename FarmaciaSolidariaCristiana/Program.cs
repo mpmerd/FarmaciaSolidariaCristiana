@@ -18,6 +18,9 @@ builder.Services.AddScoped<IEmailService, EmailService>();
 // Register Image Compression Service
 builder.Services.AddScoped<IImageCompressionService, ImageCompressionService>();
 
+// Register Turno Service
+builder.Services.AddScoped<ITurnoService, TurnoService>();
+
 // Configure Identity
 builder.Services.AddIdentity<IdentityUser, IdentityRole>(options =>
 {

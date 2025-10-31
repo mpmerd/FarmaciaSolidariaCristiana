@@ -18,6 +18,8 @@ namespace FarmaciaSolidariaCristiana.Data
         public DbSet<Patient> Patients { get; set; }
         public DbSet<PatientDocument> PatientDocuments { get; set; }
         public DbSet<Sponsor> Sponsors { get; set; }
+        public DbSet<Turno> Turnos { get; set; }
+        public DbSet<TurnoMedicamento> TurnoMedicamentos { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -47,6 +49,32 @@ namespace FarmaciaSolidariaCristiana.Data
                 .WithMany(p => p.Documents)
                 .HasForeignKey(pd => pd.PatientId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            // Configure Turno relationships
+            modelBuilder.Entity<Turno>()
+                .HasOne(t => t.User)
+                .WithMany()
+                .HasForeignKey(t => t.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<Turno>()
+                .HasOne(t => t.RevisadoPor)
+                .WithMany()
+                .HasForeignKey(t => t.RevisadoPorId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Configure TurnoMedicamento relationships
+            modelBuilder.Entity<TurnoMedicamento>()
+                .HasOne(tm => tm.Turno)
+                .WithMany(t => t.Medicamentos)
+                .HasForeignKey(tm => tm.TurnoId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<TurnoMedicamento>()
+                .HasOne(tm => tm.Medicine)
+                .WithMany()
+                .HasForeignKey(tm => tm.MedicineId)
+                .OnDelete(DeleteBehavior.Restrict);
 
             // Configure decimal precision for Patient vitals
             modelBuilder.Entity<Patient>()
