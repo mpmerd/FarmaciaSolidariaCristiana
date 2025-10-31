@@ -438,8 +438,11 @@ namespace FarmaciaSolidariaCristiana.Controllers
     /// </summary>
     public class TurnoRequestViewModel
     {
-        [Required(ErrorMessage = "El documento de identidad es obligatorio")]
-        [StringLength(20, ErrorMessage = "El documento no puede tener más de 20 caracteres")]
+        [Required(ErrorMessage = "El Carnet de Identidad o Pasaporte es requerido")]
+        [Display(Name = "Carnet de Identidad o Pasaporte")]
+        [StringLength(20)]
+        [RegularExpression(@"^(\d{11}|[A-Za-z]\d{6,7})$", 
+            ErrorMessage = "Formato inválido. Use 11 dígitos para Carnet de Identidad o letra seguida de 6-7 dígitos para Pasaporte")]
         public string DocumentoIdentidad { get; set; } = string.Empty;
 
         [Required(ErrorMessage = "La fecha preferida es obligatoria")]
