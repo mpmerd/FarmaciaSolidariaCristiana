@@ -30,14 +30,27 @@
                     <div class="card mb-3">
                         <div class="card-body">
                             <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <strong><i class="bi bi-calendar"></i> Fecha Solicitada:</strong><br/>
-                                    <span class="text-muted">@Model.FechaPreferida.ToString("dddd, dd MMMM yyyy")</span>
-                                </div>
-                                <div class="col-md-6 mb-3">
-                                    <strong><i class="bi bi-clock"></i> Hora:</strong><br/>
-                                    <span class="text-muted">@Model.FechaPreferida.ToString("HH:mm")</span>
-                                </div>
+                                @if (Model.FechaPreferida.HasValue)
+                                {
+                                    <div class="col-md-6 mb-3">
+                                        <strong><i class="bi bi-calendar"></i> Fecha Asignada:</strong><br/>
+                                        <span class="text-muted">@Model.FechaPreferida.Value.ToString("dddd, dd MMMM yyyy")</span>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <strong><i class="bi bi-clock"></i> Hora:</strong><br/>
+                                        <span class="text-muted">@Model.FechaPreferida.Value.ToString("HH:mm")</span>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="col-12 mb-3">
+                                        <div class="alert alert-info">
+                                            <i class="bi bi-info-circle"></i> <strong>Fecha y Hora Por Asignar:</strong><br/>
+                                            Tu turno está pendiente de revisión. Una vez aprobado, se te asignará automáticamente 
+                                            una fecha y hora (Martes o Viernes, 1-4 PM). Recibirás un email con todos los detalles.
+                                        </div>
+                                    </div>
+                                }
                                 <div class="col-md-6 mb-3">
                                     <strong><i class="bi bi-hourglass-split"></i> Estado:</strong><br/>
                                     <span class="badge bg-warning text-dark">Pendiente de Revisión</span>
