@@ -208,6 +208,7 @@ namespace FarmaciaSolidariaCristiana.Services
         public async Task<Turno> CreateTurnoAsync(
             Turno turno, 
             List<(int MedicineId, int Quantity)> medicamentos,
+            List<(int SupplyId, int Quantity)> insumos,
             IFormFile? receta, 
             IFormFile? tarjeton)
         {
@@ -378,10 +379,27 @@ namespace FarmaciaSolidariaCristiana.Services
                     _context.TurnoMedicamentos.Add(turnoMed);
                 }
 
+                // Agregar insumos solicitados
+                foreach (var (supplyId, quantity) in insumos)
+                {
+                    var supply = await _context.Supplies.FindAsync(supplyId);
+                    
+                    var turnoIns = new TurnoInsumo
+                    {
+                        TurnoId = turno.Id,
+                        SupplyId = supplyId,
+                        CantidadSolicitada = quantity,
+                        DisponibleAlSolicitar = supply?.StockQuantity >= quantity
+                    };
+                    
+                    _context.TurnoInsumos.Add(turnoIns);
+                }
+
                 await _context.SaveChangesAsync();
                 await transaction.CommitAsync();
 
-                _logger.LogInformation("Turno #{Id} creado para usuario {UserId}", turno.Id, turno.UserId);
+                _logger.LogInformation("Turno #{Id} creado para usuario {UserId} con {MedCount} medicamentos y {InsCount} insumos", 
+                    turno.Id, turno.UserId, medicamentos.Count, insumos.Count);
 
                 return turno;
             }

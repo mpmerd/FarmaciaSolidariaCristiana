@@ -423,6 +423,42 @@ namespace FarmaciaSolidariaCristiana.Migrations
                     b.ToTable("Turnos");
                 });
 
+            modelBuilder.Entity("FarmaciaSolidariaCristiana.Models.TurnoInsumo", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int?>("CantidadAprobada")
+                        .HasColumnType("int");
+
+                    b.Property<int>("CantidadSolicitada")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("DisponibleAlSolicitar")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Notas")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int>("SupplyId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("TurnoId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SupplyId");
+
+                    b.HasIndex("TurnoId");
+
+                    b.ToTable("TurnoInsumos");
+                });
+
             modelBuilder.Entity("FarmaciaSolidariaCristiana.Models.TurnoMedicamento", b =>
                 {
                     b.Property<int>("Id")
@@ -725,6 +761,25 @@ namespace FarmaciaSolidariaCristiana.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("FarmaciaSolidariaCristiana.Models.TurnoInsumo", b =>
+                {
+                    b.HasOne("FarmaciaSolidariaCristiana.Models.Supply", "Supply")
+                        .WithMany()
+                        .HasForeignKey("SupplyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("FarmaciaSolidariaCristiana.Models.Turno", "Turno")
+                        .WithMany("Insumos")
+                        .HasForeignKey("TurnoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Supply");
+
+                    b.Navigation("Turno");
+                });
+
             modelBuilder.Entity("FarmaciaSolidariaCristiana.Models.TurnoMedicamento", b =>
                 {
                     b.HasOne("FarmaciaSolidariaCristiana.Models.Medicine", "Medicine")
@@ -811,6 +866,8 @@ namespace FarmaciaSolidariaCristiana.Migrations
 
             modelBuilder.Entity("FarmaciaSolidariaCristiana.Models.Turno", b =>
                 {
+                    b.Navigation("Insumos");
+
                     b.Navigation("Medicamentos");
                 });
 #pragma warning restore 612, 618
