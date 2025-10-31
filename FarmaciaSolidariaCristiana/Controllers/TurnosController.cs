@@ -544,6 +544,36 @@ namespace FarmaciaSolidariaCristiana.Controllers
 
             return Json(new { medicines });
         }
+
+        // GET: Turnos/SearchSupplies
+        /// <summary>
+        /// API endpoint para búsqueda de insumos médicos por texto (autocompletado)
+        /// </summary>
+        [HttpGet]
+        [Authorize]
+        public async Task<JsonResult> SearchSupplies(string query)
+        {
+            if (string.IsNullOrWhiteSpace(query) || query.Length < 2)
+            {
+                return Json(new { supplies = new List<object>() });
+            }
+
+            var supplies = await _context.Supplies
+                .Where(s => s.Name.Contains(query))
+                .OrderBy(s => s.Name)
+                .Take(10)
+                .Select(s => new
+                {
+                    id = s.Id,
+                    name = s.Name,
+                    stock = s.StockQuantity,
+                    unit = s.Unit,
+                    description = s.Description
+                })
+                .ToListAsync();
+
+            return Json(new { supplies });
+        }
     }
 
     /// <summary>
