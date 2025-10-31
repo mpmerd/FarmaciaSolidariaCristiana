@@ -7,9 +7,18 @@ Sistema web para la gestión de medicamentos, entregas y donaciones de la Farmac
 ## ✅ Características Implementadas
 
 ### Funcionalidades
-- ✅ Autenticación con ASP.NET Core Identity (3 roles: Admin, Farmaceutico, Viewer)
+- ✅ Autenticación con ASP.NET Core Identity (4 roles: Admin, Farmaceutico, Viewer, ViewerPublic)
+- ✅ **Sistema de Turnos** - Gestión completa de citas para retirar medicamentos
+  - Solicitud de turnos con selección múltiple de medicamentos
+  - Aprobación/rechazo por farmacéuticos con notificaciones email
+  - Verificación por documento de identidad (cifrado SHA-256)
+  - Anti-abuso: límite de 1 turno por mes por usuario
+  - Dashboard interactivo con DataTables y filtros avanzados
+  - Números de turno únicos secuenciales por día
 - ✅ CRUD Medicamentos con búsqueda CIMA API (código nacional español)
+- ✅ Gestión de Pacientes con documentos y fotos
 - ✅ Registro de Entregas y Donaciones con gestión automática de stock
+- ✅ Sistema de Patrocinadores con logos institucionales
 - ✅ Generación de reportes PDF con logos institucionales (iText7)
 - ✅ Datos de prueba precargados (12 medicamentos, 8 donaciones, 14 entregas)
 - ✅ Interfaz en español con Bootstrap 5 y logos institucionales
@@ -90,6 +99,7 @@ bash update-app.sh
 
 ## 📚 Documentación
 
+- **[TURNOS_SYSTEM.md](./TURNOS_SYSTEM.md)** - 🎯 **Documentación completa del Sistema de Turnos**
 - **[SECURITY.md](./SECURITY.md)** - ⚠️ **Guía de seguridad y manejo de credenciales** (LEER PRIMERO)
 - **[DEPLOYMENT_UBUNTU.md](./DEPLOYMENT_UBUNTU.md)** - Guía completa de despliegue en Ubuntu Server
 - **[QUICK_COMMANDS.md](./QUICK_COMMANDS.md)** - Comandos rápidos de referencia
@@ -132,9 +142,10 @@ FarmaciaSolidariaCristiana/
 
 | Rol | Permisos |
 |-----|----------|
-| **Admin** | Acceso completo (CRUD + Reportes + Gestión usuarios) |
-| **Farmaceutico** | CRUD Medicamentos, Entregas, Donaciones, Reportes |
+| **Admin** | Acceso completo (CRUD + Reportes + Gestión usuarios + Gestión turnos) |
+| **Farmaceutico** | CRUD Medicamentos, Entregas, Donaciones, Reportes, Gestión turnos |
 | **Viewer** | Solo lectura (ver medicamentos e inventario) |
+| **ViewerPublic** | Solicitar turnos, ver estado de sus turnos, ver medicamentos disponibles |
 
 ## 🔒 Seguridad
 

@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "dgSpecHash": "oDLzifjvT7k=",
+  "dgSpecHash": "cwDZmSqe1TU=",
   "success": true,
   "projectFilePath": "/Users/maikelpelaez/Documents/Proyectos/FarmaciaSolidariaCristiana/FarmaciaSolidariaCristiana/FarmaciaSolidariaCristiana.csproj",
   "expectedPackageFiles": [
@@ -8,10 +8,10 @@
     "/Users/maikelpelaez/.nuget/packages/azure.identity/1.11.4/azure.identity.1.11.4.nupkg.sha512",
     "/Users/maikelpelaez/.nuget/packages/bouncycastle.cryptography/2.6.2/bouncycastle.cryptography.2.6.2.nupkg.sha512",
     "/Users/maikelpelaez/.nuget/packages/humanizer.core/2.14.1/humanizer.core.2.14.1.nupkg.sha512",
-    "/Users/maikelpelaez/.nuget/packages/itext/9.3.0/itext.9.3.0.nupkg.sha512",
+    "/Users/maikelpelaez/.nuget/packages/itext/9.0.0/itext.9.0.0.nupkg.sha512",
     "/Users/maikelpelaez/.nuget/packages/itext.bouncy-castle-adapter/9.3.0/itext.bouncy-castle-adapter.9.3.0.nupkg.sha512",
     "/Users/maikelpelaez/.nuget/packages/itext.commons/9.3.0/itext.commons.9.3.0.nupkg.sha512",
-    "/Users/maikelpelaez/.nuget/packages/itext7/9.3.0/itext7.9.3.0.nupkg.sha512",
+    "/Users/maikelpelaez/.nuget/packages/itext7/9.0.0/itext7.9.0.0.nupkg.sha512",
     "/Users/maikelpelaez/.nuget/packages/itext7.bouncy-castle-adapter/9.3.0/itext7.bouncy-castle-adapter.9.3.0.nupkg.sha512",
     "/Users/maikelpelaez/.nuget/packages/microsoft.aspnetcore.cryptography.internal/8.0.11/microsoft.aspnetcore.cryptography.internal.8.0.11.nupkg.sha512",
     "/Users/maikelpelaez/.nuget/packages/microsoft.aspnetcore.cryptography.keyderivation/8.0.11/microsoft.aspnetcore.cryptography.keyderivation.8.0.11.nupkg.sha512",
@@ -127,10 +127,8 @@
     "/Users/maikelpelaez/.nuget/packages/system.security.cryptography.cng/5.0.0/system.security.cryptography.cng.5.0.0.nupkg.sha512",
     "/Users/maikelpelaez/.nuget/packages/system.security.cryptography.csp/4.3.0/system.security.cryptography.csp.4.3.0.nupkg.sha512",
     "/Users/maikelpelaez/.nuget/packages/system.security.cryptography.encoding/4.3.0/system.security.cryptography.encoding.4.3.0.nupkg.sha512",
-    "/Users/maikelpelaez/.nuget/packages/system.security.cryptography.pkcs/6.0.5/system.security.cryptography.pkcs.6.0.5.nupkg.sha512",
     "/Users/maikelpelaez/.nuget/packages/system.security.cryptography.primitives/4.3.0/system.security.cryptography.primitives.4.3.0.nupkg.sha512",
     "/Users/maikelpelaez/.nuget/packages/system.security.cryptography.protecteddata/6.0.0/system.security.cryptography.protecteddata.6.0.0.nupkg.sha512",
-    "/Users/maikelpelaez/.nuget/packages/system.security.cryptography.xml/6.0.2/system.security.cryptography.xml.6.0.2.nupkg.sha512",
     "/Users/maikelpelaez/.nuget/packages/system.security.permissions/6.0.0/system.security.permissions.6.0.0.nupkg.sha512",
     "/Users/maikelpelaez/.nuget/packages/system.security.principal.windows/5.0.0/system.security.principal.windows.5.0.0.nupkg.sha512",
     "/Users/maikelpelaez/.nuget/packages/system.text.encoding/4.3.0/system.text.encoding.4.3.0.nupkg.sha512",
@@ -148,9 +146,9 @@
     "/Users/maikelpelaez/.nuget/packages/system.windows.extensions/6.0.0/system.windows.extensions.6.0.0.nupkg.sha512",
     "/Users/maikelpelaez/.nuget/packages/system.xml.readerwriter/4.3.0/system.xml.readerwriter.4.3.0.nupkg.sha512",
     "/Users/maikelpelaez/.nuget/packages/system.xml.xmldocument/4.3.0/system.xml.xmldocument.4.3.0.nupkg.sha512",
-    "/Users/maikelpelaez/.nuget/packages/microsoft.netcore.app.ref/8.0.21/microsoft.netcore.app.ref.8.0.21.nupkg.sha512",
     "/Users/maikelpelaez/.nuget/packages/microsoft.aspnetcore.app.ref/8.0.21/microsoft.aspnetcore.app.ref.8.0.21.nupkg.sha512",
-    "/Users/maikelpelaez/.nuget/packages/microsoft.netcore.app.host.osx-arm64/8.0.21/microsoft.netcore.app.host.osx-arm64.8.0.21.nupkg.sha512"
+    "/Users/maikelpelaez/.nuget/packages/microsoft.netcore.app.host.osx-arm64/8.0.21/microsoft.netcore.app.host.osx-arm64.8.0.21.nupkg.sha512",
+    "/Users/maikelpelaez/.nuget/packages/microsoft.netcore.app.ref/8.0.21/microsoft.netcore.app.ref.8.0.21.nupkg.sha512"
   ],
   "logs": []
 }

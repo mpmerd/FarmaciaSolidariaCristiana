@@ -3,6 +3,14 @@ using System.Text;
 using Microsoft.EntityFrameworkCore;
 using FarmaciaSolidariaCristiana.Data;
 using FarmaciaSolidariaCristiana.Models;
+using iText.Kernel.Pdf;
+using iText.Layout;
+using iText.Layout.Element;
+using iText.Layout.Properties;
+using iText.Kernel.Colors;
+using iText.IO.Image;
+using iText.Kernel.Font;
+using iText.IO.Font.Constants;
 
 namespace FarmaciaSolidariaCristiana.Services
 {
@@ -284,8 +292,8 @@ namespace FarmaciaSolidariaCristiana.Services
 
                 await _context.SaveChangesAsync();
 
-                // TODO: Generar PDF con iText7 (implementar en próximo paso)
-                var pdfPath = $"/pdfs/turnos/turno_{turno.Id}_{turno.NumeroTurno}.pdf";
+                // Generar PDF con toda la información del turno
+                var pdfPath = await GenerateTurnoPdfAsync(turno);
                 turno.TurnoPdfPath = pdfPath;
 
                 await _context.SaveChangesAsync();
@@ -453,5 +461,186 @@ namespace FarmaciaSolidariaCristiana.Services
 
             return maxNumero + 1;
         }
+
+        /// <summary>
+        /// Genera PDF del turno con logos y detalles
+        /// </summary>
+        private async Task<string> GenerateTurnoPdfAsync(Turno turno)
+        {
+            try
+            {
+                // Crear directorio de PDFs si no existe
+                var pdfsDir = Path.Combine(_environment.WebRootPath, "pdfs", "turnos");
+                Directory.CreateDirectory(pdfsDir);
+
+                // Nombre del archivo PDF
+                var fileName = $"turno_{turno.Id}_{turno.NumeroTurno}.pdf";
+                var filePath = Path.Combine(pdfsDir, fileName);
+                var relativeP = $"pdfs/turnos/{fileName}";
+
+                // Crear PDF
+                using (var writer = new PdfWriter(filePath))
+                using (var pdf = new PdfDocument(writer))
+                {
+                    var document = new Document(pdf);
+                    var boldFont = PdfFontFactory.CreateFont(StandardFonts.HELVETICA_BOLD);
+                    var normalFont = PdfFontFactory.CreateFont(StandardFonts.HELVETICA);
+
+                    // === ENCABEZADO CON LOGOS ===
+                    var headerTable = new Table(UnitValue.CreatePercentArray(new float[] { 20, 60, 20 }))
+                        .UseAllAvailableWidth();
+
+                    // Logo Iglesia (izquierda)
+                    var logoIglesiaPath = Path.Combine(_environment.WebRootPath, "images", "logo-iglesia.png");
+                    if (File.Exists(logoIglesiaPath))
+                    {
+                        var logoIglesia = new Image(ImageDataFactory.Create(logoIglesiaPath))
+                            .SetWidth(60)
+                            .SetHeight(60);
+                        headerTable.AddCell(new Cell().Add(logoIglesia).SetBorder(iText.Layout.Borders.Border.NO_BORDER));
+                    }
+                    else
+                    {
+                        headerTable.AddCell(new Cell().Add(new Paragraph("")).SetBorder(iText.Layout.Borders.Border.NO_BORDER));
+                    }
+
+                    // Título central
+                    var titleCell = new Cell().Add(new Paragraph("Farmacia Solidaria Cristiana")
+                        .SetFont(boldFont)
+                        .SetFontSize(18)
+                        .SetTextAlignment(TextAlignment.CENTER))
+                        .Add(new Paragraph("Iglesia Metodista de Cárdenas")
+                            .SetFont(normalFont)
+                            .SetFontSize(12)
+                            .SetTextAlignment(TextAlignment.CENTER))
+                        .SetBorder(iText.Layout.Borders.Border.NO_BORDER)
+                        .SetVerticalAlignment(VerticalAlignment.MIDDLE);
+                    headerTable.AddCell(titleCell);
+
+                    // Logo Adriano (derecha)
+                    var logoAdrianoPath = Path.Combine(_environment.WebRootPath, "images", "logo-adriano.png");
+                    if (File.Exists(logoAdrianoPath))
+                    {
+                        var logoAdriano = new Image(ImageDataFactory.Create(logoAdrianoPath))
+                            .SetWidth(60)
+                            .SetHeight(60);
+                        headerTable.AddCell(new Cell().Add(logoAdriano).SetBorder(iText.Layout.Borders.Border.NO_BORDER));
+                    }
+                    else
+                    {
+                        headerTable.AddCell(new Cell().Add(new Paragraph("")).SetBorder(iText.Layout.Borders.Border.NO_BORDER));
+                    }
+
+                    document.Add(headerTable);
+                    document.Add(new Paragraph("\n"));
+
+                    // === NÚMERO DE TURNO DESTACADO ===
+                    var turnoNumero = new Paragraph($"TURNO #{turno.NumeroTurno:000}")
+                        .SetFont(boldFont)
+                        .SetFontSize(36)
+                        .SetTextAlignment(TextAlignment.CENTER)
+                        .SetFontColor(ColorConstants.BLUE);
+                    document.Add(turnoNumero);
+
+                    // === INFORMACIÓN DEL TURNO ===
+                    document.Add(new Paragraph("\n"));
+                    var infoTable = new Table(UnitValue.CreatePercentArray(new float[] { 30, 70 }))
+                        .UseAllAvailableWidth()
+                        .SetMarginBottom(10);
+
+                    AddInfoRow(infoTable, "Usuario:", turno.User?.UserName ?? "N/A", boldFont, normalFont);
+                    AddInfoRow(infoTable, "Email:", turno.User?.Email ?? "N/A", boldFont, normalFont);
+                    AddInfoRow(infoTable, "Fecha del Turno:", turno.FechaPreferida.ToString("dddd, dd 'de' MMMM 'de' yyyy"), boldFont, normalFont);
+                    AddInfoRow(infoTable, "Hora del Turno:", turno.FechaPreferida.ToString("HH:mm"), boldFont, normalFont);
+                    AddInfoRow(infoTable, "Fecha de Aprobación:", turno.FechaRevision?.ToString("dd/MM/yyyy HH:mm") ?? "N/A", boldFont, normalFont);
+
+                    document.Add(infoTable);
+
+                    // === MEDICAMENTOS APROBADOS ===
+                    document.Add(new Paragraph("\nMedicamentos Aprobados:")
+                        .SetFont(boldFont)
+                        .SetFontSize(14)
+                        .SetMarginTop(10));
+
+                    var medicTable = new Table(UnitValue.CreatePercentArray(new float[] { 60, 20, 20 }))
+                        .UseAllAvailableWidth()
+                        .SetMarginTop(10);
+
+                    // Encabezados
+                    medicTable.AddHeaderCell(new Cell().Add(new Paragraph("Medicamento").SetFont(boldFont)).SetBackgroundColor(ColorConstants.LIGHT_GRAY));
+                    medicTable.AddHeaderCell(new Cell().Add(new Paragraph("Cantidad").SetFont(boldFont)).SetBackgroundColor(ColorConstants.LIGHT_GRAY).SetTextAlignment(TextAlignment.CENTER));
+                    medicTable.AddHeaderCell(new Cell().Add(new Paragraph("Unidad").SetFont(boldFont)).SetBackgroundColor(ColorConstants.LIGHT_GRAY).SetTextAlignment(TextAlignment.CENTER));
+
+                    // Datos
+                    foreach (var tm in turno.Medicamentos)
+                    {
+                        medicTable.AddCell(new Cell().Add(new Paragraph(tm.Medicine?.Name ?? "N/A").SetFont(normalFont)));
+                        medicTable.AddCell(new Cell().Add(new Paragraph((tm.CantidadAprobada ?? tm.CantidadSolicitada).ToString()).SetFont(normalFont)).SetTextAlignment(TextAlignment.CENTER));
+                        medicTable.AddCell(new Cell().Add(new Paragraph(tm.Medicine?.Unit ?? "").SetFont(normalFont)).SetTextAlignment(TextAlignment.CENTER));
+                    }
+
+                    document.Add(medicTable);
+
+                    // === COMENTARIOS ===
+                    if (!string.IsNullOrEmpty(turno.ComentariosFarmaceutico))
+                    {
+                        document.Add(new Paragraph("\nComentarios del Farmacéutico:")
+                            .SetFont(boldFont)
+                            .SetFontSize(12)
+                            .SetMarginTop(15));
+                        document.Add(new Paragraph(turno.ComentariosFarmaceutico)
+                            .SetFont(normalFont)
+                            .SetFontSize(10)
+                            .SetBackgroundColor(ColorConstants.LIGHT_GRAY)
+                            .SetPadding(10));
+                    }
+
+                    // === INSTRUCCIONES ===
+                    document.Add(new Paragraph("\nInstrucciones Importantes:")
+                        .SetFont(boldFont)
+                        .SetFontSize(12)
+                        .SetMarginTop(15));
+
+                    var instrucciones = new List()
+                        .Add(new ListItem("Presente este documento junto con su documento de identidad original."))
+                        .Add(new ListItem("Llegue 10 minutos antes de la hora indicada."))
+                        .Add(new ListItem("Si no puede asistir, contacte a la farmacia con anticipación."))
+                        .Add(new ListItem("Los medicamentos no recogidos en 7 días serán liberados."))
+                        .SetFont(normalFont)
+                        .SetFontSize(10);
+
+                    document.Add(instrucciones);
+
+                    // === PIE DE PÁGINA ===
+                    document.Add(new Paragraph("\n"));
+                    var footer = new Paragraph("Generado el: " + DateTime.Now.ToString("dd/MM/yyyy HH:mm"))
+                        .SetFont(normalFont)
+                        .SetFontSize(8)
+                        .SetTextAlignment(TextAlignment.CENTER)
+                        .SetFontColor(ColorConstants.GRAY);
+                    document.Add(footer);
+
+                    document.Close();
+                }
+
+                _logger.LogInformation("PDF generado exitosamente para turno #{TurnoId}: {FilePath}", turno.Id, relativeP);
+                return relativeP;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al generar PDF para turno #{TurnoId}", turno.Id);
+                return string.Empty;
+            }
+        }
+
+        /// <summary>
+        /// Helper para agregar filas a tabla de información
+        /// </summary>
+        private void AddInfoRow(Table table, string label, string value, PdfFont boldFont, PdfFont normalFont)
+        {
+            table.AddCell(new Cell().Add(new Paragraph(label).SetFont(boldFont)).SetBorder(iText.Layout.Borders.Border.NO_BORDER));
+            table.AddCell(new Cell().Add(new Paragraph(value).SetFont(normalFont)).SetBorder(iText.Layout.Borders.Border.NO_BORDER));
+        }
     }
 }
+
