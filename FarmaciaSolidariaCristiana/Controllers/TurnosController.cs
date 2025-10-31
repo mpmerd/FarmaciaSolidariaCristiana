@@ -153,19 +153,15 @@ namespace FarmaciaSolidariaCristiana.Controllers
                     ModelState.AddModelError("FechaPreferida", $"No hay disponibilidad para ese día. Ya hay {currentCount} turnos programados (máximo: 30 por día). Por favor selecciona otro día.");
                 }
 
-                // Validar uploads
+                // Validar uploads (receta opcional, tarjeton opcional)
                 if (receta != null && receta.Length > 5 * 1024 * 1024)
                 {
                     ModelState.AddModelError("receta", "El archivo de receta no puede superar 5MB");
                 }
 
-                if (tarjeton == null || tarjeton.Length == 0)
+                if (tarjeton != null && tarjeton.Length > 5 * 1024 * 1024)
                 {
-                    ModelState.AddModelError("tarjeton", "El documento de identidad (tarjetón/cédula) es obligatorio");
-                }
-                else if (tarjeton.Length > 5 * 1024 * 1024)
-                {
-                    ModelState.AddModelError("tarjeton", "El archivo del documento no puede superar 5MB");
+                    ModelState.AddModelError("tarjeton", "El archivo del tarjetón no puede superar 5MB");
                 }
 
                 // Validar formatos de archivo
@@ -225,11 +221,30 @@ namespace FarmaciaSolidariaCristiana.Controllers
 
                 var createdTurno = await _turnoService.CreateTurnoAsync(turno, medicamentos, receta, tarjeton);
 
-                // Enviar email de confirmación
+                // Enviar email de confirmación (no bloqueante)
                 var user = await _userManager.GetUserAsync(User);
                 if (user?.Email != null)
                 {
-                    await _emailService.SendTurnoSolicitadoEmailAsync(user.Email, user.UserName ?? "Usuario");
+                    try
+                    {
+                        // Enviar email en segundo plano para no bloquear la respuesta
+                        _ = Task.Run(async () =>
+                        {
+                            try
+                            {
+                                await _emailService.SendTurnoSolicitadoEmailAsync(user.Email, user.UserName ?? "Usuario");
+                                _logger.LogInformation("Email de confirmación enviado a {Email} para turno {TurnoId}", user.Email, createdTurno.Id);
+                            }
+                            catch (Exception emailEx)
+                            {
+                                _logger.LogWarning(emailEx, "No se pudo enviar email de confirmación para turno {TurnoId}", createdTurno.Id);
+                            }
+                        });
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Error iniciando envío de email para turno {TurnoId}", createdTurno.Id);
+                    }
                 }
 
                 TempData["SuccessMessage"] = "Tu solicitud de turno ha sido enviada exitosamente. " +
