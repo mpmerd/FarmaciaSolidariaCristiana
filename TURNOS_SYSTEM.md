@@ -9,7 +9,7 @@ El **Sistema de Turnos** es una funcionalidad avanzada diseñada para gestionar 
 Cárdenas es una ciudad de más de 250,000 habitantes con alta demanda de medicamentos. El sistema de turnos fue implementado para:
 
 - **Organizar** el flujo de solicitudes de medicamentos
-- **Prevenir abusos** con mecanismos de control (1 turno por mes)
+- **Prevenir abusos** con mecanismos de control (2 turnos por mes)
 - **Garantizar transparencia** con números de turno únicos
 - **Facilitar verificación** mediante documentos de identidad cifrados
 - **Automatizar notificaciones** por email
@@ -86,9 +86,9 @@ Lógica de negocio centralizada para gestión de turnos.
 **Métodos principales:**
 
 1. **`CanUserRequestTurnoAsync(userId)`**
-   - Valida límite de 1 turno por mes
+   - Valida límite de 2 turnos por mes
    - Retorna `(bool canRequest, string reason)`
-   - Query: Busca turnos del usuario en últimos 30 días con estado != Rechazado
+   - Query: Busca turnos del usuario en el mes actual con estado != Rechazado
 
 2. **`CreateTurnoAsync(userId, documentoId, fechaPref, receta, tarjeton, medicineIds, quantities, notas)`**
    - Crea turno con transacción
@@ -162,7 +162,7 @@ Métodos agregados para turnos:
 - **Fecha preferida:** Mínimo 24h, máximo 1 mes futuro
 - **Medicamentos:** Al menos 1, cantidades válidas vs stock
 - **Archivos:** Tarjetón obligatorio, receta opcional, máx 5MB, formatos JPG/PNG/PDF
-- **Anti-abuso:** 1 turno por mes por usuario
+- **Anti-abuso:** 2 turnos por mes por usuario
 - **Estado:** Solo se puede aprobar/rechazar turnos "Pendiente"
 
 ### Vistas
@@ -257,16 +257,19 @@ Muestra:
 
 ## Mecanismos Anti-Abuso
 
-### 1. Límite de 1 Turno por Mes
+### 1. Límite de 2 Turnos por Mes
 
 **Implementación:** `TurnoService.CanUserRequestTurnoAsync()`
 
 ```csharp
-var thirtyDaysAgo = DateTime.Now.AddDays(-30);
-var hasTurnoInLastMonth = await _context.Turnos
-    .AnyAsync(t => t.UserId == userId 
-        && t.FechaSolicitud >= thirtyDaysAgo 
-        && t.Estado != "Rechazado");
+var startOfMonth = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
+var endOfMonth = startOfMonth.AddMonths(1).AddDays(-1);
+var turnosEsteMes = await _context.Turnos
+    .CountAsync(t => t.UserId == userId 
+        && t.FechaSolicitud >= startOfMonth 
+        && t.FechaSolicitud <= endOfMonth
+        && (t.Estado == "Pendiente" || t.Estado == "Aprobado" || t.Estado == "Completado"));
+return turnosEsteMes < 2;
 ```
 
 **Lógica:**
@@ -624,7 +627,7 @@ builder.Services.AddScoped<ITurnoService, TurnoService>();
    - ✅ Marca como completado correctamente
 
 4. **Anti-Abuso:**
-   - ✅ Límite de 1 turno por mes funciona
+   - ✅ Límite de 2 turnos por mes funciona
    - ✅ Rechazados pueden volver a solicitar
    - ✅ Documentos cifrados correctamente
 

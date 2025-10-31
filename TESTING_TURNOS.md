@@ -10,7 +10,7 @@ El **Sistema de Turnos** está completamente implementado y listo para pruebas:
 - ✅ **Emails automáticos** (3 templates: solicitud, aprobación, rechazo)
 - ✅ **SMTP configurado** (smtp.farmaciasolidaria.somee.com - funcionando)
 - ✅ **Seguridad SHA-256** para documentos de identidad
-- ✅ **Anti-abuso** (1 turno por mes)
+- ✅ **Anti-abuso** (2 turnos por mes)
 - ✅ **Documentación completa** (TURNOS_SYSTEM.md)
 - ✅ **Datos de prueba** (seed-turnos-test-data.sql)
 
@@ -235,13 +235,13 @@ Todos tienen password: **`Test123!`**
 
 ### 🔹 Escenario 7: Usuario sin Permiso para Solicitar (María)
 
-**Objetivo:** Verificar anti-abuso de 1 turno/mes
+**Objetivo:** Verificar anti-abuso de 2 turnos/mes
 
 1. Login como: `maria.garcia@example.com` / `Test123!`
 2. Ir a **"Turnos"**
 3. **Verificar:**
    - ✅ Botón "Solicitar Turno" DESHABILITADO
-   - ✅ Alerta amarilla: "Ya tienes un turno activo este mes. Límite: 1 turno por mes"
+   - ✅ Alerta amarilla: "Ya has alcanzado el límite de turnos este mes. Límite: 2 turnos por mes"
    - ✅ No se puede acceder a /Turnos/RequestForm (redirect)
 
 ---

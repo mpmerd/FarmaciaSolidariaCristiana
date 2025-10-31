@@ -38,7 +38,7 @@ namespace FarmaciaSolidariaCristiana.Services
         }
 
         /// <summary>
-        /// Valida si el usuario puede solicitar un turno (límite: 1 por mes)
+        /// Valida si el usuario puede solicitar un turno (límite: 2 por mes)
         /// </summary>
         public async Task<(bool CanRequest, string? Reason)> CanUserRequestTurnoAsync(string userId)
         {
@@ -55,9 +55,9 @@ namespace FarmaciaSolidariaCristiana.Services
                             t.Estado == EstadoTurno.Completado))
                 .CountAsync();
 
-            if (turnosEsteMes >= 1)
+            if (turnosEsteMes >= 2)
             {
-                return (false, "Ya has solicitado un turno este mes. Límite: 1 turno por mes.");
+                return (false, "Ya has alcanzado el límite de turnos este mes. Límite: 2 turnos por mes.");
             }
 
             return (true, null);
