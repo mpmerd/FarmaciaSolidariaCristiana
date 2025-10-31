@@ -350,6 +350,115 @@ namespace FarmaciaSolidariaCristiana.Migrations
                     b.ToTable("Supplies");
                 });
 
+            modelBuilder.Entity("FarmaciaSolidariaCristiana.Models.Turno", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("ComentariosFarmaceutico")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("DocumentoIdentidadHash")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<bool>("EmailEnviado")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Estado")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<DateTime?>("FechaEntrega")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("FechaPreferida")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("FechaRevision")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("FechaSolicitud")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("NotasSolicitante")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<int?>("NumeroTurno")
+                        .HasColumnType("int");
+
+                    b.Property<string>("RecetaMedicaPath")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("RevisadoPorId")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("TarjetonPath")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("TurnoPdfPath")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RevisadoPorId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("Turnos");
+                });
+
+            modelBuilder.Entity("FarmaciaSolidariaCristiana.Models.TurnoMedicamento", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int?>("CantidadAprobada")
+                        .HasColumnType("int");
+
+                    b.Property<int>("CantidadSolicitada")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("DisponibleAlSolicitar")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("MedicineId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Notas")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int>("TurnoId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MedicineId");
+
+                    b.HasIndex("TurnoId");
+
+                    b.ToTable("TurnoMedicamentos");
+                });
+
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
                 {
                     b.Property<string>("Id")
@@ -598,6 +707,43 @@ namespace FarmaciaSolidariaCristiana.Migrations
                     b.Navigation("Patient");
                 });
 
+            modelBuilder.Entity("FarmaciaSolidariaCristiana.Models.Turno", b =>
+                {
+                    b.HasOne("Microsoft.AspNetCore.Identity.IdentityUser", "RevisadoPor")
+                        .WithMany()
+                        .HasForeignKey("RevisadoPorId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Microsoft.AspNetCore.Identity.IdentityUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("RevisadoPor");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("FarmaciaSolidariaCristiana.Models.TurnoMedicamento", b =>
+                {
+                    b.HasOne("FarmaciaSolidariaCristiana.Models.Medicine", "Medicine")
+                        .WithMany()
+                        .HasForeignKey("MedicineId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("FarmaciaSolidariaCristiana.Models.Turno", "Turno")
+                        .WithMany("Medicamentos")
+                        .HasForeignKey("TurnoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Medicine");
+
+                    b.Navigation("Turno");
+                });
+
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
                 {
                     b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole", null)
@@ -661,6 +807,11 @@ namespace FarmaciaSolidariaCristiana.Migrations
                     b.Navigation("Deliveries");
 
                     b.Navigation("Documents");
+                });
+
+            modelBuilder.Entity("FarmaciaSolidariaCristiana.Models.Turno", b =>
+                {
+                    b.Navigation("Medicamentos");
                 });
 #pragma warning restore 612, 618
         }
