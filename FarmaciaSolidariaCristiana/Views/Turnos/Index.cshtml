@@ -42,6 +42,35 @@
 
                     @if (User.IsInRole("ViewerPublic"))
                     {
+                        <!-- Buscar Medicamentos Antes de Solicitar -->
+                        <div class="row mb-4">
+                            <div class="col-md-12">
+                                <div class="card border-info">
+                                    <div class="card-body">
+                                        <h5 class="card-title"><i class="bi bi-search"></i> Buscar Medicamentos Disponibles</h5>
+                                        <p class="text-muted small mb-3">
+                                            Verifica la disponibilidad antes de solicitar tu turno
+                                        </p>
+                                        <div class="input-group mb-3">
+                                            <span class="input-group-text"><i class="bi bi-capsule"></i></span>
+                                            <input type="text" 
+                                                   id="searchMedicineIndex" 
+                                                   class="form-control" 
+                                                   placeholder="Buscar por nombre de medicamento..."
+                                                   autocomplete="off">
+                                        </div>
+                                        <div id="searchResultsIndex" class="list-group"></div>
+                                        <div id="medicineInfoIndex" style="display: none;" class="alert alert-success mt-3">
+                                            <h6 class="alert-heading"><i class="bi bi-info-circle"></i> Información del Medicamento</h6>
+                                            <p class="mb-1"><strong>Nombre:</strong> <span id="medicineNameIndex"></span></p>
+                                            <p class="mb-1"><strong>Disponible:</strong> <span id="medicineStockIndex" class="badge bg-success"></span></p>
+                                            <p class="mb-0"><strong>Descripción:</strong> <span id="medicineDescIndex"></span></p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                         <div class="row mb-4">
                             <div class="col-md-12">
                                 <div class="card border-primary">
@@ -206,3 +235,76 @@
         </div>
     </div>
 </div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            // Autocomplete para buscar medicamentos en Index
+            $('#searchMedicineIndex').on('input', function() {
+                var query = $(this).val().trim();
+                
+                if (query.length < 2) {
+                    $('#searchResultsIndex').empty();
+                    $('#medicineInfoIndex').hide();
+                    return;
+                }
+                
+                $.ajax({
+                    url: '@Url.Action("CheckStock", "Turnos")',
+                    type: 'GET',
+                    data: { query: query },
+                    success: function(response) {
+                        $('#searchResultsIndex').empty();
+                        $('#medicineInfoIndex').hide();
+                        
+                        if (response.medicines && response.medicines.length > 0) {
+                            response.medicines.forEach(function(med) {
+                                var stockBadge = med.stock > 0 
+                                    ? '<span class="badge bg-success">Disponible: ' + med.stock + '</span>'
+                                    : '<span class="badge bg-danger">Sin stock</span>';
+                                
+                                var item = $('<a href="#" class="list-group-item list-group-item-action medicine-item-index"></a>')
+                                    .data('medicine', med)
+                                    .html('<strong>' + med.name + '</strong><br>' +
+                                          '<small class="text-muted">' + (med.description || 'Sin descripción') + '</small> ' +
+                                          stockBadge);
+                                
+                                $('#searchResultsIndex').append(item);
+                            });
+                        } else {
+                            $('#searchResultsIndex').html(
+                                '<div class="list-group-item text-muted">No se encontraron medicamentos</div>'
+                            );
+                        }
+                    },
+                    error: function() {
+                        $('#searchResultsIndex').html(
+                            '<div class="list-group-item text-danger">Error al buscar medicamentos</div>'
+                        );
+                    }
+                });
+            });
+            
+            // Mostrar información del medicamento seleccionado
+            $(document).on('click', '.medicine-item-index', function(e) {
+                e.preventDefault();
+                var med = $(this).data('medicine');
+                
+                $('#medicineNameIndex').text(med.name);
+                $('#medicineStockIndex').text(med.stock + ' unidades');
+                $('#medicineDescIndex').text(med.description || 'Sin descripción');
+                
+                if (med.stock > 0) {
+                    $('#medicineInfoIndex').removeClass('alert-danger').addClass('alert-success');
+                    $('#medicineStockIndex').removeClass('bg-danger').addClass('bg-success');
+                } else {
+                    $('#medicineInfoIndex').removeClass('alert-success').addClass('alert-danger');
+                    $('#medicineStockIndex').removeClass('bg-success').addClass('bg-danger');
+                }
+                
+                $('#medicineInfoIndex').show();
+                $('#searchResultsIndex').empty();
+            });
+        });
+    </script>
+}

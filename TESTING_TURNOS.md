@@ -10,7 +10,8 @@ El **Sistema de Turnos** está completamente implementado y listo para pruebas:
 - ✅ **Emails automáticos** (3 templates: solicitud, aprobación, rechazo)
 - ✅ **SMTP configurado** (smtp.farmaciasolidaria.somee.com - funcionando)
 - ✅ **Seguridad SHA-256** para documentos de identidad
-- ✅ **Anti-abuso** (2 turnos por mes)
+- ✅ **Anti-abuso** (2 turnos por mes, máximo 30 turnos por día)
+- ✅ **Horario restringido** (Martes y Viernes de 1:00 PM a 4:00 PM)
 - ✅ **Documentación completa** (TURNOS_SYSTEM.md)
 - ✅ **Datos de prueba** (seed-turnos-test-data.sql)
 

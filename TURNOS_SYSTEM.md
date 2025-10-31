@@ -9,10 +9,11 @@ El **Sistema de Turnos** es una funcionalidad avanzada diseñada para gestionar 
 Cárdenas es una ciudad de más de 250,000 habitantes con alta demanda de medicamentos. El sistema de turnos fue implementado para:
 
 - **Organizar** el flujo de solicitudes de medicamentos
-- **Prevenir abusos** con mecanismos de control (2 turnos por mes)
+- **Prevenir abusos** con mecanismos de control (2 turnos por mes, máximo 30 turnos por día)
 - **Garantizar transparencia** con números de turno únicos
 - **Facilitar verificación** mediante documentos de identidad cifrados
 - **Automatizar notificaciones** por email
+- **Horario de atención:** Martes y Viernes de 1:00 PM a 4:00 PM
 
 ## Arquitectura del Sistema
 
@@ -90,7 +91,12 @@ Lógica de negocio centralizada para gestión de turnos.
    - Retorna `(bool canRequest, string reason)`
    - Query: Busca turnos del usuario en el mes actual con estado != Rechazado
 
-2. **`CreateTurnoAsync(userId, documentoId, fechaPref, receta, tarjeton, medicineIds, quantities, notas)`**
+2. **`CheckDailyCapacityAsync(fecha)`**
+   - Valida límite de 30 turnos por día
+   - Retorna `(bool hasCapacity, int currentCount, string reason)`
+   - Query: Cuenta turnos del día específico con estado Pendiente/Aprobado/Completado
+
+3. **`CreateTurnoAsync(userId, documentoId, fechaPref, receta, tarjeton, medicineIds, quantities, notas)`**
    - Crea turno con transacción
    - Hashea documento con SHA-256
    - Guarda archivos en `wwwroot/uploads/turnos/`
@@ -159,10 +165,10 @@ Métodos agregados para turnos:
 
 **Validaciones implementadas:**
 
-- **Fecha preferida:** Mínimo 24h, máximo 1 mes futuro
+- **Fecha preferida:** Mínimo 24h, máximo 1 mes futuro, solo Martes y Viernes de 1:00 PM a 4:00 PM
 - **Medicamentos:** Al menos 1, cantidades válidas vs stock
 - **Archivos:** Tarjetón obligatorio, receta opcional, máx 5MB, formatos JPG/PNG/PDF
-- **Anti-abuso:** 2 turnos por mes por usuario
+- **Anti-abuso:** 2 turnos por mes por usuario, máximo 30 turnos por día
 - **Estado:** Solo se puede aprobar/rechazar turnos "Pendiente"
 
 ### Vistas
@@ -257,7 +263,7 @@ Muestra:
 
 ## Mecanismos Anti-Abuso
 
-### 1. Límite de 2 Turnos por Mes
+### 1. Límite de 2 Turnos por Mes por Usuario
 
 **Implementación:** `TurnoService.CanUserRequestTurnoAsync()`
 
@@ -277,7 +283,71 @@ return turnosEsteMes < 2;
 - Excluye turnos rechazados (pueden reintentar)
 - Validación en servidor + UI
 
-### 2. Documento de Identidad Cifrado
+### 2. Límite de 30 Turnos por Día
+
+**Implementación:** `TurnoService.CheckDailyCapacityAsync()`
+
+```csharp
+public async Task<(bool HasCapacity, int CurrentCount, string? Reason)> CheckDailyCapacityAsync(DateTime fecha)
+{
+    var fechaSolo = fecha.Date;
+    var siguienteDia = fechaSolo.AddDays(1);
+    
+    var turnosDelDia = await _context.Turnos
+        .Where(t => t.FechaPreferida >= fechaSolo && 
+                   t.FechaPreferida < siguienteDia &&
+                   (t.Estado == EstadoTurno.Pendiente || 
+                    t.Estado == EstadoTurno.Aprobado ||
+                    t.Estado == EstadoTurno.Completado))
+        .CountAsync();
+        
+    const int LIMITE_DIARIO = 30;
+    if (turnosDelDia >= LIMITE_DIARIO)
+        return (false, turnosDelDia, $"No hay disponibilidad para ese día. Límite alcanzado: {LIMITE_DIARIO} turnos por día.");
+        
+    return (true, turnosDelDia, null);
+}
+```
+
+**Lógica:**
+- Cuenta turnos del día específico (sin importar la hora)
+- Excluye solo turnos rechazados
+- Límite configurable (actualmente 30)
+- Validación en servidor antes de crear turno
+
+### 3. Horario de Atención Restringido
+
+**Días:** Solo Martes (DayOfWeek = 2) y Viernes (DayOfWeek = 5)
+**Horario:** 1:00 PM a 4:00 PM (13:00 - 16:00)
+
+**Validación frontend (JavaScript):**
+```javascript
+const dayOfWeek = fechaPreferida.getDay();
+const hour = fechaPreferida.getHours();
+
+if (dayOfWeek !== 2 && dayOfWeek !== 5) {
+    alert('Los turnos solo están disponibles los Martes y Viernes');
+    return false;
+}
+
+if (hour < 13 || hour >= 16) {
+    alert('Los turnos solo están disponibles de 1:00 PM a 4:00 PM');
+    return false;
+}
+```
+
+**Validación backend (C#):**
+```csharp
+var dayOfWeek = (int)model.FechaPreferida.DayOfWeek;
+if (dayOfWeek != 2 && dayOfWeek != 5)
+    ModelState.AddModelError("FechaPreferida", "Los turnos solo están disponibles los Martes y Viernes");
+
+var hour = model.FechaPreferida.Hour;
+if (hour < 13 || hour >= 16)
+    ModelState.AddModelError("FechaPreferida", "Los turnos solo están disponibles de 1:00 PM a 4:00 PM");
+```
+
+### 4. Documento de Identidad Cifrado
 
 **Hash SHA-256:**
 ```csharp

@@ -131,6 +131,27 @@ namespace FarmaciaSolidariaCristiana.Controllers
                 {
                     ModelState.AddModelError("FechaPreferida", "La fecha del turno no puede ser mayor a 1 mes");
                 }
+                
+                // Validar que sea Martes (2) o Viernes (5)
+                var dayOfWeek = (int)model.FechaPreferida.DayOfWeek;
+                if (dayOfWeek != 2 && dayOfWeek != 5)
+                {
+                    ModelState.AddModelError("FechaPreferida", "Los turnos solo están disponibles los Martes y Viernes");
+                }
+                
+                // Validar horario 1:00 PM a 4:00 PM (13:00 a 16:00)
+                var hour = model.FechaPreferida.Hour;
+                if (hour < 13 || hour >= 16)
+                {
+                    ModelState.AddModelError("FechaPreferida", "Los turnos solo están disponibles de 1:00 PM a 4:00 PM");
+                }
+                
+                // Validar capacidad diaria (30 turnos por día)
+                var (hasCapacity, currentCount, capacityReason) = await _turnoService.CheckDailyCapacityAsync(model.FechaPreferida);
+                if (!hasCapacity)
+                {
+                    ModelState.AddModelError("FechaPreferida", $"No hay disponibilidad para ese día. Ya hay {currentCount} turnos programados (máximo: 30 por día). Por favor selecciona otro día.");
+                }
 
                 // Validar uploads
                 if (receta != null && receta.Length > 5 * 1024 * 1024)
