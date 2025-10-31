@@ -64,6 +64,33 @@ namespace FarmaciaSolidariaCristiana.Services
         }
 
         /// <summary>
+        /// Valida si hay disponibilidad para un día específico (límite: 30 turnos por día)
+        /// </summary>
+        public async Task<(bool HasCapacity, int CurrentCount, string? Reason)> CheckDailyCapacityAsync(DateTime fecha)
+        {
+            // Obtener solo la fecha sin hora
+            var fechaSolo = fecha.Date;
+            var siguienteDia = fechaSolo.AddDays(1);
+
+            var turnosDelDia = await _context.Turnos
+                .Where(t => t.FechaPreferida >= fechaSolo && 
+                           t.FechaPreferida < siguienteDia &&
+                           (t.Estado == EstadoTurno.Pendiente || 
+                            t.Estado == EstadoTurno.Aprobado ||
+                            t.Estado == EstadoTurno.Completado))
+                .CountAsync();
+
+            const int LIMITE_DIARIO = 30;
+
+            if (turnosDelDia >= LIMITE_DIARIO)
+            {
+                return (false, turnosDelDia, $"No hay disponibilidad para ese día. Límite alcanzado: {LIMITE_DIARIO} turnos por día.");
+            }
+
+            return (true, turnosDelDia, null);
+        }
+
+        /// <summary>
         /// Verifica stock disponible para lista de medicamentos
         /// </summary>
         public async Task<Dictionary<int, (bool Available, int Stock)>> CheckMedicinesStockAsync(List<int> medicineIds)

@@ -52,7 +52,10 @@
                                     </label>
                                     <input asp-for="FechaPreferida" type="datetime-local" class="form-control" />
                                     <span asp-validation-for="FechaPreferida" class="text-danger"></span>
-                                    <small class="form-text text-muted">Debe ser al menos 24 horas en el futuro</small>
+                                    <small class="form-text text-muted">
+                                        <i class="bi bi-info-circle"></i> Los turnos solo están disponibles <strong>Martes y Viernes</strong> de <strong>1:00 PM a 4:00 PM</strong>. 
+                                        Límite: 30 turnos por día. Debe ser al menos 24 horas en el futuro.
+                                    </small>
                                 </div>
                             </div>
                         </div>
@@ -170,27 +173,57 @@
             const medicinesList = $('#medicinesList');
             const emptyMessage = $('#emptyMessage');
 
-            // Búsqueda de medicamentos
+            // Búsqueda de medicamentos con AJAX
             medicineSearch.on('input', function() {
-                const searchTerm = $(this).val().toLowerCase();
+                const query = $(this).val().trim();
                 
-                if (searchTerm.length >= 2) {
-                    medicineResults.show();
-                    $('.medicine-item').each(function() {
-                        const name = $(this).data('name').toLowerCase();
-                        if (name.includes(searchTerm)) {
-                            $(this).show();
-                        } else {
-                            $(this).hide();
-                        }
-                    });
-                } else {
-                    medicineResults.hide();
+                if (query.length < 2) {
+                    medicineResults.empty().hide();
+                    return;
                 }
+                
+                $.ajax({
+                    url: '@Url.Action("CheckStock", "Turnos")',
+                    type: 'GET',
+                    data: { query: query },
+                    success: function(response) {
+                        medicineResults.empty();
+                        
+                        if (response.medicines && response.medicines.length > 0) {
+                            response.medicines.forEach(function(med) {
+                                var stockBadgeClass = med.stock > 10 ? 'bg-success' : med.stock > 5 ? 'bg-warning text-dark' : 'bg-danger';
+                                
+                                var item = $('<a href="#" class="list-group-item list-group-item-action medicine-item"></a>')
+                                    .data('id', med.id)
+                                    .data('name', med.name)
+                                    .data('stock', med.stock)
+                                    .data('unit', med.unit || 'unidades')
+                                    .html(
+                                        '<div class="d-flex justify-content-between align-items-center">' +
+                                        '<div><strong>' + med.name + '</strong></div>' +
+                                        '<span class="badge ' + stockBadgeClass + '">Stock: ' + med.stock + ' ' + (med.unit || 'unidades') + '</span>' +
+                                        '</div>'
+                                    );
+                                
+                                medicineResults.append(item);
+                            });
+                            medicineResults.show();
+                        } else {
+                            medicineResults.html(
+                                '<div class="list-group-item text-muted">No se encontraron medicamentos</div>'
+                            ).show();
+                        }
+                    },
+                    error: function() {
+                        medicineResults.html(
+                            '<div class="list-group-item text-danger">Error al buscar medicamentos</div>'
+                        ).show();
+                    }
+                });
             });
 
-            // Seleccionar medicamento
-            $('.medicine-item').on('click', function(e) {
+            // Seleccionar medicamento (delegated event para elementos dinámicos)
+            medicineResults.on('click', '.medicine-item', function(e) {
                 e.preventDefault();
                 
                 const id = $(this).data('id');
@@ -208,6 +241,8 @@
                 addMedicine(id, name, stock, unit);
                 
                 // Limpiar búsqueda
+                medicineSearch.val('');
+                medicineResults.empty().hide();
                 medicineSearch.val('');
                 medicineResults.hide();
             });
@@ -275,6 +310,25 @@
                 if (selectedMedicines.length === 0) {
                     e.preventDefault();
                     alert('Debes seleccionar al menos un medicamento');
+                    return false;
+                }
+                
+                // Validar fecha y hora (Martes y Viernes 1-4 PM)
+                const fechaPreferida = new Date($('input[name="FechaPreferida"]').val());
+                const dayOfWeek = fechaPreferida.getDay(); // 0 = Domingo, 1 = Lunes, 2 = Martes, ..., 5 = Viernes
+                const hour = fechaPreferida.getHours();
+                
+                if (dayOfWeek !== 2 && dayOfWeek !== 5) {
+                    e.preventDefault();
+                    alert('Los turnos solo están disponibles los Martes y Viernes. Por favor selecciona una de estas fechas.');
+                    $('#submitBtn').prop('disabled', false).html('<i class="bi bi-send"></i> Enviar Solicitud');
+                    return false;
+                }
+                
+                if (hour < 13 || hour >= 16) {
+                    e.preventDefault();
+                    alert('Los turnos solo están disponibles de 1:00 PM a 4:00 PM. Por favor selecciona una hora en este rango.');
+                    $('#submitBtn').prop('disabled', false).html('<i class="bi bi-send"></i> Enviar Solicitud');
                     return false;
                 }
 

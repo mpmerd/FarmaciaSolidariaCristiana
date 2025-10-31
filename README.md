@@ -12,7 +12,8 @@ Sistema web para la gestión de medicamentos, entregas y donaciones de la Farmac
   - Solicitud de turnos con selección múltiple de medicamentos
   - Aprobación/rechazo por farmacéuticos con notificaciones email
   - Verificación por documento de identidad (cifrado SHA-256)
-  - Anti-abuso: límite de 2 turnos por mes por usuario
+  - Anti-abuso: límite de 2 turnos por mes por usuario y 30 turnos por día
+  - Horario de atención: Martes y Viernes de 1:00 PM a 4:00 PM
   - Dashboard interactivo con DataTables y filtros avanzados
   - Números de turno únicos secuenciales por día
 - ✅ CRUD Medicamentos con búsqueda CIMA API (código nacional español)
