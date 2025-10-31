@@ -95,12 +95,12 @@ namespace FarmaciaSolidariaCristiana.Services
 
         /// <summary>
         /// Obtiene el próximo slot disponible para turnos
-        /// Martes/Viernes, 1-4 PM, slots cada 6 minutos (30 turnos/día)
+        /// Martes/Jueves, 1-4 PM, slots cada 6 minutos (30 turnos/día)
         /// </summary>
         public async Task<DateTime> GetNextAvailableSlotAsync()
         {
             var now = DateTime.Now;
-            var startDate = now.Date.AddDays(7); // Empezar desde la próxima semana
+            var startDate = now.Date.AddDays(1); // Empezar desde mañana
             
             // Slots por día: De 1 PM (13:00) a 4 PM (16:00) = 3 horas = 180 minutos
             // 180 minutos / 6 minutos por slot = 30 slots por día
@@ -113,7 +113,7 @@ namespace FarmaciaSolidariaCristiana.Services
             {
                 var checkDate = startDate.AddDays(week * 7);
                 
-                // Obtener los martes y viernes de esta semana
+                // Obtener los MARTES y JUEVES de esta semana
                 var daysToCheck = new List<DateTime>();
                 
                 // Martes (2)
@@ -123,11 +123,11 @@ namespace FarmaciaSolidariaCristiana.Services
                     daysToCheck.Add(tuesday);
                 }
                 
-                // Viernes (5)
-                var friday = checkDate.AddDays((DayOfWeek.Friday - checkDate.DayOfWeek + 7) % 7);
-                if (friday >= startDate)
+                // Jueves (4)
+                var thursday = checkDate.AddDays((DayOfWeek.Thursday - checkDate.DayOfWeek + 7) % 7);
+                if (thursday >= startDate)
                 {
-                    daysToCheck.Add(friday);
+                    daysToCheck.Add(thursday);
                 }
 
                 daysToCheck = daysToCheck.OrderBy(d => d).ToList();
@@ -163,7 +163,7 @@ namespace FarmaciaSolidariaCristiana.Services
                             {
                                 _logger.LogInformation("Slot disponible encontrado: {Slot} ({Day})", 
                                     slot.ToString("dd/MM/yyyy HH:mm"), 
-                                    slot.DayOfWeek == DayOfWeek.Tuesday ? "Martes" : "Viernes");
+                                    slot.DayOfWeek == DayOfWeek.Tuesday ? "Martes" : "Jueves");
                                 return slot;
                             }
                         }
@@ -830,8 +830,7 @@ namespace FarmaciaSolidariaCristiana.Services
                     var instrucciones = new List()
                         .Add(new ListItem("Presente este documento junto con su documento de identidad original."))
                         .Add(new ListItem("Llegue 10 minutos antes de la hora indicada."))
-                        .Add(new ListItem("Si no puede asistir, contacte a la farmacia con anticipación."))
-                        .Add(new ListItem("Los medicamentos no recogidos en 7 días serán liberados."))
+                        .Add(new ListItem("Si no puede asistir el día de su turno lo perderá. Tendrá que solicitar uno nuevo."))
                         .SetFont(normalFont)
                         .SetFontSize(10);
 

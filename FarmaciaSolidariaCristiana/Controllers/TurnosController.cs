@@ -215,27 +215,26 @@ namespace FarmaciaSolidariaCristiana.Controllers
                     }
                 }
 
-                // Enviar notificación a farmacéuticos (no bloqueante)
+                // Enviar notificación a farmacéuticos (NO en segundo plano para mantener contexto de BD)
                 try
                 {
-                    _ = Task.Run(async () =>
+                    _logger.LogInformation("Iniciando envío de notificaciones a farmacéuticos para turno {TurnoId}", createdTurno.Id);
+                    var notificationSent = await _emailService.SendTurnoNotificationToFarmaceuticosAsync(
+                        user?.UserName ?? "Usuario", 
+                        createdTurno.Id);
+                    
+                    if (notificationSent)
                     {
-                        try
-                        {
-                            await _emailService.SendTurnoNotificationToFarmaceuticosAsync(
-                                user?.UserName ?? "Usuario", 
-                                createdTurno.Id);
-                            _logger.LogInformation("Notificaciones enviadas a farmacéuticos para turno {TurnoId}", createdTurno.Id);
-                        }
-                        catch (Exception emailEx)
-                        {
-                            _logger.LogWarning(emailEx, "No se pudo enviar notificaciones a farmacéuticos para turno {TurnoId}", createdTurno.Id);
-                        }
-                    });
+                        _logger.LogInformation("✓ Notificaciones enviadas a farmacéuticos para turno {TurnoId}", createdTurno.Id);
+                    }
+                    else
+                    {
+                        _logger.LogWarning("⚠ No se pudieron enviar notificaciones a farmacéuticos para turno {TurnoId}", createdTurno.Id);
+                    }
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogWarning(ex, "Error iniciando envío de notificaciones a farmacéuticos para turno {TurnoId}", createdTurno.Id);
+                    _logger.LogError(ex, "✗ Error enviando notificaciones a farmacéuticos para turno {TurnoId}", createdTurno.Id);
                 }
 
                 TempData["SuccessMessage"] = "Tu solicitud de turno ha sido enviada exitosamente. " +
