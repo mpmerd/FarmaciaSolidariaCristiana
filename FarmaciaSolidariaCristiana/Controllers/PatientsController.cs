@@ -156,87 +156,67 @@ namespace FarmaciaSolidariaCristiana.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize(Roles = "Admin,Farmaceutico")]
-        public async Task<IActionResult> Edit(int id, List<IFormFile>? documents, List<string>? documentTypes, List<string>? documentDescriptions)
+        public async Task<IActionResult> Edit(int id, Patient patient, List<IFormFile>? documents, List<string>? documentTypes, List<string>? documentDescriptions)
         {
+            if (id != patient.Id)
+            {
+                return NotFound();
+            }
+
+            // Validar solo los campos importantes (ModelState puede tener errores de campos opcionales)
+            if (string.IsNullOrWhiteSpace(patient.FullName))
+            {
+                TempData["ErrorMessage"] = "El nombre completo es obligatorio.";
+                return RedirectToAction(nameof(Edit), new { id = id });
+            }
+
+            if (patient.Age < 0 || patient.Age > 150)
+            {
+                TempData["ErrorMessage"] = "La edad debe estar entre 0 y 150.";
+                return RedirectToAction(nameof(Edit), new { id = id });
+            }
+
+            if (string.IsNullOrEmpty(patient.Gender) || (patient.Gender != "M" && patient.Gender != "F"))
+            {
+                TempData["ErrorMessage"] = "Debe seleccionar un género válido.";
+                return RedirectToAction(nameof(Edit), new { id = id });
+            }
+
             try
             {
-                // Actualizar campos desde Request.Form
-                var fullName = Request.Form["FullName"].ToString().Trim();
-                var ageStr = Request.Form["Age"].ToString().Trim();
-                var gender = Request.Form["Gender"].ToString().Trim();
-                
-                _logger.LogInformation("Editing patient ID: {Id}, FullName: {FullName}, Age: {Age}", id, fullName, ageStr);
-                
-                // Validaciones básicas
-                if (string.IsNullOrEmpty(fullName))
-                {
-                    TempData["ErrorMessage"] = "El nombre completo es obligatorio.";
-                    return RedirectToAction(nameof(Edit), new { id = id });
-                }
-                
-                if (!int.TryParse(ageStr, out int age) || age < 0 || age > 150)
-                {
-                    TempData["ErrorMessage"] = "La edad debe ser un número válido entre 0 y 150.";
-                    return RedirectToAction(nameof(Edit), new { id = id });
-                }
-                
-                if (string.IsNullOrEmpty(gender) || (gender != "M" && gender != "F"))
-                {
-                    TempData["ErrorMessage"] = "Debe seleccionar un género válido.";
-                    return RedirectToAction(nameof(Edit), new { id = id });
-                }
-
-                // Crear nuevo objeto Patient con los datos actualizados
-                var patient = await _context.Patients.FindAsync(id);
-                if (patient == null)
+                // Obtener el paciente existente
+                var existingPatient = await _context.Patients.FindAsync(id);
+                if (existingPatient == null)
                 {
                     _logger.LogWarning("Patient not found: {Id}", id);
                     return NotFound();
                 }
-                
-                // Actualizar propiedades
-                patient.FullName = fullName;
-                patient.Age = age;
-                patient.Gender = gender;
-                patient.Address = Request.Form["Address"].ToString().Trim();
-                patient.Phone = Request.Form["Phone"].ToString().Trim();
-                patient.Municipality = Request.Form["Municipality"].ToString().Trim();
-                patient.Province = Request.Form["Province"].ToString().Trim();
-                patient.MainDiagnosis = Request.Form["MainDiagnosis"].ToString().Trim();
-                patient.AssociatedPathologies = Request.Form["AssociatedPathologies"].ToString().Trim();
-                patient.KnownAllergies = Request.Form["KnownAllergies"].ToString().Trim();
-                patient.CurrentTreatments = Request.Form["CurrentTreatments"].ToString().Trim();
-                patient.Observations = Request.Form["Observations"].ToString().Trim();
-                
-                // Campos numéricos opcionales
-                var systolicStr = Request.Form["BloodPressureSystolic"].ToString().Trim();
-                if (!string.IsNullOrEmpty(systolicStr) && int.TryParse(systolicStr, out int systolic))
-                    patient.BloodPressureSystolic = systolic;
-                else
-                    patient.BloodPressureSystolic = null;
-                    
-                var diastolicStr = Request.Form["BloodPressureDiastolic"].ToString().Trim();
-                if (!string.IsNullOrEmpty(diastolicStr) && int.TryParse(diastolicStr, out int diastolic))
-                    patient.BloodPressureDiastolic = diastolic;
-                else
-                    patient.BloodPressureDiastolic = null;
-                    
-                var weightStr = Request.Form["Weight"].ToString().Trim();
-                if (!string.IsNullOrEmpty(weightStr) && decimal.TryParse(weightStr, out decimal weight))
-                    patient.Weight = weight;
-                else
-                    patient.Weight = null;
-                    
-                var heightStr = Request.Form["Height"].ToString().Trim();
-                if (!string.IsNullOrEmpty(heightStr) && decimal.TryParse(heightStr, out decimal height))
-                    patient.Height = height;
-                else
-                    patient.Height = null;
+
+                // Actualizar solo las propiedades editables (preservar campos como RegistrationDate)
+                existingPatient.FullName = patient.FullName.Trim();
+                existingPatient.Age = patient.Age;
+                existingPatient.Gender = patient.Gender;
+                existingPatient.Address = patient.Address?.Trim();
+                existingPatient.Phone = patient.Phone?.Trim();
+                existingPatient.Municipality = patient.Municipality?.Trim();
+                existingPatient.Province = patient.Province?.Trim();
+                existingPatient.MainDiagnosis = patient.MainDiagnosis?.Trim();
+                existingPatient.AssociatedPathologies = patient.AssociatedPathologies?.Trim();
+                existingPatient.KnownAllergies = patient.KnownAllergies?.Trim();
+                existingPatient.CurrentTreatments = patient.CurrentTreatments?.Trim();
+                existingPatient.BloodPressureSystolic = patient.BloodPressureSystolic;
+                existingPatient.BloodPressureDiastolic = patient.BloodPressureDiastolic;
+                existingPatient.Weight = patient.Weight;
+                existingPatient.Height = patient.Height;
+                existingPatient.Observations = patient.Observations?.Trim();
+
+                _logger.LogInformation("Updating patient ID: {Id}, FullName: {FullName}, Age: {Age}", 
+                    id, existingPatient.FullName, existingPatient.Age);
 
                 // Guardar cambios
                 var changes = await _context.SaveChangesAsync();
                 _logger.LogInformation("Patient updated successfully: {PatientName} (ID: {Id}), {Changes} changes saved", 
-                    patient.FullName, id, changes);
+                    existingPatient.FullName, id, changes);
 
                 // Handle new document uploads
                 if (documents != null && documents.Count > 0)
