@@ -666,6 +666,10 @@ namespace FarmaciaSolidariaCristiana.Services
             return await _context.Turnos
                 .Include(t => t.Medicamentos)
                     .ThenInclude(tm => tm.Medicine)
+                .Include(t => t.Insumos)
+                    .ThenInclude(ti => ti.Supply)
+                .Include(t => t.User)
+                .Include(t => t.RevisadoPor)
                 .FirstOrDefaultAsync(t => t.DocumentoIdentidadHash == documentHash &&
                                          (t.Estado == EstadoTurno.Aprobado || t.Estado == EstadoTurno.Pendiente));
         }
