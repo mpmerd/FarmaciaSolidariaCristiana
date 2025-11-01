@@ -659,10 +659,28 @@ namespace FarmaciaSolidariaCristiana.Services
         }
 
         /// <summary>
-        /// Busca turno por documento hasheado
+        /// Busca turno por documento hasheado (prioriza Aprobado, luego Pendiente)
         /// </summary>
         public async Task<Turno?> FindTurnoByDocumentHashAsync(string documentHash)
         {
+            // Buscar primero turnos aprobados
+            var turnoAprobado = await _context.Turnos
+                .Include(t => t.Medicamentos)
+                    .ThenInclude(tm => tm.Medicine)
+                .Include(t => t.Insumos)
+                    .ThenInclude(ti => ti.Supply)
+                .Include(t => t.User)
+                .Include(t => t.RevisadoPor)
+                .Where(t => t.DocumentoIdentidadHash == documentHash && t.Estado == EstadoTurno.Aprobado)
+                .OrderByDescending(t => t.FechaPreferida)
+                .FirstOrDefaultAsync();
+            
+            if (turnoAprobado != null)
+            {
+                return turnoAprobado;
+            }
+            
+            // Si no hay aprobado, buscar pendiente
             return await _context.Turnos
                 .Include(t => t.Medicamentos)
                     .ThenInclude(tm => tm.Medicine)
@@ -670,8 +688,9 @@ namespace FarmaciaSolidariaCristiana.Services
                     .ThenInclude(ti => ti.Supply)
                 .Include(t => t.User)
                 .Include(t => t.RevisadoPor)
-                .FirstOrDefaultAsync(t => t.DocumentoIdentidadHash == documentHash &&
-                                         (t.Estado == EstadoTurno.Aprobado || t.Estado == EstadoTurno.Pendiente));
+                .Where(t => t.DocumentoIdentidadHash == documentHash && t.Estado == EstadoTurno.Pendiente)
+                .OrderByDescending(t => t.FechaSolicitud)
+                .FirstOrDefaultAsync();
         }
 
         /// <summary>
