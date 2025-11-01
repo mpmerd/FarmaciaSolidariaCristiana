@@ -884,6 +884,7 @@ namespace FarmaciaSolidariaCristiana.Services
 
                     var instrucciones = new List()
                         .Add(new ListItem("Presente este documento junto con su documento de identidad original."))
+                        .Add(new ListItem("Debe traer los comprobantes de recetas médicas o documentos médicos necesarios."))
                         .Add(new ListItem("Llegue 10 minutos antes de la hora indicada."))
                         .Add(new ListItem("Si no puede asistir el día de su turno lo perderá. Tendrá que solicitar uno nuevo."))
                         .SetFont(normalFont)
