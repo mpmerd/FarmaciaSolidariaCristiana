@@ -343,11 +343,25 @@ namespace FarmaciaSolidariaCristiana.Controllers
         /// Dashboard para farmacéuticos - gestión de turnos
         /// </summary>
         [Authorize(Roles = "Admin,Farmaceutico")]
-        public async Task<IActionResult> Dashboard(string? estado, DateTime? desde, DateTime? hasta)
+        public async Task<IActionResult> Dashboard(string? estado, string? tipo, DateTime? desde, DateTime? hasta)
         {
             var turnos = await _turnoService.GetTurnosAsync(estado, desde, hasta);
             
+            // Filtrar por tipo si se especificó
+            if (!string.IsNullOrEmpty(tipo))
+            {
+                if (tipo == "Medicamentos")
+                {
+                    turnos = turnos.Where(t => t.Medicamentos != null && t.Medicamentos.Any()).ToList();
+                }
+                else if (tipo == "Insumos")
+                {
+                    turnos = turnos.Where(t => t.Insumos != null && t.Insumos.Any()).ToList();
+                }
+            }
+            
             ViewData["EstadoFiltro"] = estado;
+            ViewData["TipoFiltro"] = tipo;
             ViewData["DesdeFiltro"] = desde;
             ViewData["HastaFiltro"] = hasta;
 
