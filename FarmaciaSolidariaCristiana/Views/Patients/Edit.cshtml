@@ -285,20 +285,16 @@
 @section Scripts {
     @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
     <script>
-        // Submit button feedback - SOLO deshabilitar DESPUÉS de validación exitosa
+        // Submit button feedback - Versión simplificada sin validación previa
         document.getElementById('editPatientForm').addEventListener('submit', function(e) {
-            // Verificar validación HTML5 primero
-            const form = e.target;
-            if (!form.checkValidity()) {
-                // Si falla validación HTML5, mostrar errores nativos
-                form.reportValidity();
-                return; // NO deshabilitar botón
-            }
-            
-            // Solo si pasa validación, deshabilitar botón
-            const submitBtn = document.getElementById('submitBtn');
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Guardando...';
+            // Deshabilitar botón para evitar doble submit
+            setTimeout(function() {
+                const submitBtn = document.getElementById('submitBtn');
+                if (submitBtn) {
+                    submitBtn.disabled = true;
+                    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Guardando...';
+                }
+            }, 100);
         });
 
         document.getElementById('addDocumentBtn').addEventListener('click', function() {
