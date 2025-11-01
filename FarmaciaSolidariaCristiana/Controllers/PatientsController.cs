@@ -132,6 +132,7 @@ namespace FarmaciaSolidariaCristiana.Controllers
         }
 
         // GET: Patients/Edit/5
+        [Authorize(Roles = "Admin,Farmaceutico")]
         public async Task<IActionResult> Edit(int? id)
         {
             if (id == null)
@@ -140,6 +141,7 @@ namespace FarmaciaSolidariaCristiana.Controllers
             }
 
             var patient = await _context.Patients
+                .AsNoTracking() // No track on GET to avoid conflicts
                 .Include(p => p.Documents)
                 .FirstOrDefaultAsync(p => p.Id == id);
 
@@ -156,19 +158,14 @@ namespace FarmaciaSolidariaCristiana.Controllers
         [Authorize(Roles = "Admin,Farmaceutico")]
         public async Task<IActionResult> Edit(int id, List<IFormFile>? documents, List<string>? documentTypes, List<string>? documentDescriptions)
         {
-            // Obtener el paciente existente
-            var existingPatient = await _context.Patients.FindAsync(id);
-            if (existingPatient == null)
-            {
-                return NotFound();
-            }
-
             try
             {
                 // Actualizar campos desde Request.Form
                 var fullName = Request.Form["FullName"].ToString().Trim();
                 var ageStr = Request.Form["Age"].ToString().Trim();
                 var gender = Request.Form["Gender"].ToString().Trim();
+                
+                _logger.LogInformation("Editing patient ID: {Id}, FullName: {FullName}, Age: {Age}", id, fullName, ageStr);
                 
                 // Validaciones básicas
                 if (string.IsNullOrEmpty(fullName))
@@ -188,51 +185,58 @@ namespace FarmaciaSolidariaCristiana.Controllers
                     TempData["ErrorMessage"] = "Debe seleccionar un género válido.";
                     return RedirectToAction(nameof(Edit), new { id = id });
                 }
+
+                // Crear nuevo objeto Patient con los datos actualizados
+                var patient = await _context.Patients.FindAsync(id);
+                if (patient == null)
+                {
+                    _logger.LogWarning("Patient not found: {Id}", id);
+                    return NotFound();
+                }
                 
-                existingPatient.FullName = fullName;
-                existingPatient.Age = age;
-                existingPatient.Gender = gender;
-                existingPatient.Address = Request.Form["Address"].ToString().Trim();
-                existingPatient.Phone = Request.Form["Phone"].ToString().Trim();
-                existingPatient.Municipality = Request.Form["Municipality"].ToString().Trim();
-                existingPatient.Province = Request.Form["Province"].ToString().Trim();
-                existingPatient.MainDiagnosis = Request.Form["MainDiagnosis"].ToString().Trim();
-                existingPatient.AssociatedPathologies = Request.Form["AssociatedPathologies"].ToString().Trim();
-                existingPatient.KnownAllergies = Request.Form["KnownAllergies"].ToString().Trim();
-                existingPatient.CurrentTreatments = Request.Form["CurrentTreatments"].ToString().Trim();
-                existingPatient.Observations = Request.Form["Observations"].ToString().Trim();
+                // Actualizar propiedades
+                patient.FullName = fullName;
+                patient.Age = age;
+                patient.Gender = gender;
+                patient.Address = Request.Form["Address"].ToString().Trim();
+                patient.Phone = Request.Form["Phone"].ToString().Trim();
+                patient.Municipality = Request.Form["Municipality"].ToString().Trim();
+                patient.Province = Request.Form["Province"].ToString().Trim();
+                patient.MainDiagnosis = Request.Form["MainDiagnosis"].ToString().Trim();
+                patient.AssociatedPathologies = Request.Form["AssociatedPathologies"].ToString().Trim();
+                patient.KnownAllergies = Request.Form["KnownAllergies"].ToString().Trim();
+                patient.CurrentTreatments = Request.Form["CurrentTreatments"].ToString().Trim();
+                patient.Observations = Request.Form["Observations"].ToString().Trim();
                 
                 // Campos numéricos opcionales
                 var systolicStr = Request.Form["BloodPressureSystolic"].ToString().Trim();
                 if (!string.IsNullOrEmpty(systolicStr) && int.TryParse(systolicStr, out int systolic))
-                    existingPatient.BloodPressureSystolic = systolic;
+                    patient.BloodPressureSystolic = systolic;
                 else
-                    existingPatient.BloodPressureSystolic = null;
+                    patient.BloodPressureSystolic = null;
                     
                 var diastolicStr = Request.Form["BloodPressureDiastolic"].ToString().Trim();
                 if (!string.IsNullOrEmpty(diastolicStr) && int.TryParse(diastolicStr, out int diastolic))
-                    existingPatient.BloodPressureDiastolic = diastolic;
+                    patient.BloodPressureDiastolic = diastolic;
                 else
-                    existingPatient.BloodPressureDiastolic = null;
+                    patient.BloodPressureDiastolic = null;
                     
                 var weightStr = Request.Form["Weight"].ToString().Trim();
                 if (!string.IsNullOrEmpty(weightStr) && decimal.TryParse(weightStr, out decimal weight))
-                    existingPatient.Weight = weight;
+                    patient.Weight = weight;
                 else
-                    existingPatient.Weight = null;
+                    patient.Weight = null;
                     
                 var heightStr = Request.Form["Height"].ToString().Trim();
                 if (!string.IsNullOrEmpty(heightStr) && decimal.TryParse(heightStr, out decimal height))
-                    existingPatient.Height = height;
+                    patient.Height = height;
                 else
-                    existingPatient.Height = null;
+                    patient.Height = null;
 
-                // Marcar explícitamente la entidad como modificada
-                _context.Entry(existingPatient).State = EntityState.Modified;
-                
+                // Guardar cambios
                 var changes = await _context.SaveChangesAsync();
-                _logger.LogInformation("Patient updated: {PatientName} (ID: {Id}), {Changes} changes saved", 
-                    existingPatient.FullName, id, changes);
+                _logger.LogInformation("Patient updated successfully: {PatientName} (ID: {Id}), {Changes} changes saved", 
+                    patient.FullName, id, changes);
 
                 // Handle new document uploads
                 if (documents != null && documents.Count > 0)
@@ -257,8 +261,8 @@ namespace FarmaciaSolidariaCristiana.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error updating patient ID: {Id}", id);
-                TempData["ErrorMessage"] = "Error al actualizar el paciente: " + ex.Message;
+                _logger.LogError(ex, "Error updating patient ID: {Id}, Message: {Message}", id, ex.Message);
+                TempData["ErrorMessage"] = $"Error al actualizar el paciente: {ex.Message}";
                 return RedirectToAction(nameof(Edit), new { id = id });
             }
         }

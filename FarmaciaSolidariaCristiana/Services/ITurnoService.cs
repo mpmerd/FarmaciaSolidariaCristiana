@@ -72,6 +72,11 @@ namespace FarmaciaSolidariaCristiana.Services
         Task<Turno?> FindTurnoByDocumentHashAsync(string documentHash);
 
         /// <summary>
+        /// Busca TODOS los turnos activos por documento de identidad hasheado
+        /// </summary>
+        Task<List<Turno>> FindAllTurnosByDocumentHashAsync(string documentHash);
+
+        /// <summary>
         /// Obtiene historial de turnos de un usuario
         /// </summary>
         Task<List<Turno>> GetUserTurnosAsync(string userId);

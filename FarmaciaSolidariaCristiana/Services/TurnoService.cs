@@ -694,6 +694,25 @@ namespace FarmaciaSolidariaCristiana.Services
         }
 
         /// <summary>
+        /// Busca TODOS los turnos activos por documento hasheado
+        /// </summary>
+        public async Task<List<Turno>> FindAllTurnosByDocumentHashAsync(string documentHash)
+        {
+            return await _context.Turnos
+                .Include(t => t.Medicamentos)
+                    .ThenInclude(tm => tm.Medicine)
+                .Include(t => t.Insumos)
+                    .ThenInclude(ti => ti.Supply)
+                .Include(t => t.User)
+                .Include(t => t.RevisadoPor)
+                .Where(t => t.DocumentoIdentidadHash == documentHash && 
+                           (t.Estado == EstadoTurno.Aprobado || t.Estado == EstadoTurno.Pendiente))
+                .OrderByDescending(t => t.Estado == EstadoTurno.Aprobado ? 1 : 0) // Aprobados primero
+                .ThenByDescending(t => t.FechaPreferida ?? t.FechaSolicitud)
+                .ToListAsync();
+        }
+
+        /// <summary>
         /// Obtiene historial de turnos de un usuario
         /// </summary>
         public async Task<List<Turno>> GetUserTurnosAsync(string userId)
