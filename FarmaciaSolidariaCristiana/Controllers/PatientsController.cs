@@ -153,6 +153,7 @@ namespace FarmaciaSolidariaCristiana.Controllers
         // POST: Patients/Edit/5
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Admin,Farmaceutico")]
         public async Task<IActionResult> Edit(int id, List<IFormFile>? documents, List<string>? documentTypes, List<string>? documentDescriptions)
         {
             // Obtener el paciente existente
@@ -226,8 +227,12 @@ namespace FarmaciaSolidariaCristiana.Controllers
                 else
                     existingPatient.Height = null;
 
-                await _context.SaveChangesAsync();
-                _logger.LogInformation("Patient updated: {PatientName} (ID: {Id})", existingPatient.FullName, id);
+                // Marcar explícitamente la entidad como modificada
+                _context.Entry(existingPatient).State = EntityState.Modified;
+                
+                var changes = await _context.SaveChangesAsync();
+                _logger.LogInformation("Patient updated: {PatientName} (ID: {Id}), {Changes} changes saved", 
+                    existingPatient.FullName, id, changes);
 
                 // Handle new document uploads
                 if (documents != null && documents.Count > 0)
@@ -235,7 +240,7 @@ namespace FarmaciaSolidariaCristiana.Controllers
                     await UploadDocuments(id, documents, documentTypes ?? new List<string>(), documentDescriptions ?? new List<string>());
                 }
 
-                TempData["SuccessMessage"] = "Paciente actualizado exitosamente.";
+                TempData["SuccessMessage"] = $"Paciente actualizado exitosamente. {changes} cambios guardados.";
                 return RedirectToAction(nameof(Details), new { id = id });
             }
             catch (DbUpdateConcurrencyException ex)
