@@ -457,7 +457,7 @@ namespace FarmaciaSolidariaCristiana.Controllers
 
         // POST: Turnos/Verify
         /// <summary>
-        /// Busca turno por documento
+        /// Busca turnos por documento
         /// </summary>
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -471,17 +471,18 @@ namespace FarmaciaSolidariaCristiana.Controllers
             }
 
             var documentHash = _turnoService.HashDocument(documento);
-            var turno = await _turnoService.FindTurnoByDocumentHashAsync(documentHash);
+            var turnos = await _turnoService.FindAllTurnosByDocumentHashAsync(documentHash);
 
-            if (turno == null)
+            if (turnos == null || !turnos.Any())
             {
                 TempData["ErrorMessage"] = $"No se encontró ningún turno activo con el documento: {documento}";
                 _logger.LogInformation("Turno search failed for document hash (not logging actual document for privacy)");
                 return View();
             }
 
-            // Redirigir a la vista con el turno encontrado
-            return View(turno);
+            // Pasar lista de turnos a la vista
+            ViewData["Documento"] = documento;
+            return View("VerifyResults", turnos);
         }
 
         // POST: Turnos/Complete/5
