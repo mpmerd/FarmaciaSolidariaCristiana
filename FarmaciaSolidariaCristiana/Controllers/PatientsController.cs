@@ -153,7 +153,7 @@ namespace FarmaciaSolidariaCristiana.Controllers
         // POST: Patients/Edit/5
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, Patient patient, List<IFormFile> documents, List<string> documentTypes, List<string> documentDescriptions)
+        public async Task<IActionResult> Edit(int id, Patient patient, List<IFormFile>? documents, List<string>? documentTypes, List<string>? documentDescriptions)
         {
             if (id != patient.Id)
             {
@@ -164,19 +164,46 @@ namespace FarmaciaSolidariaCristiana.Controllers
             {
                 try
                 {
-                    _context.Update(patient);
+                    // Obtener el paciente existente
+                    var existingPatient = await _context.Patients.FindAsync(id);
+                    if (existingPatient == null)
+                    {
+                        return NotFound();
+                    }
+
+                    // Actualizar solo los campos editables
+                    existingPatient.FullName = patient.FullName;
+                    existingPatient.Age = patient.Age;
+                    existingPatient.Gender = patient.Gender;
+                    existingPatient.Address = patient.Address;
+                    existingPatient.Phone = patient.Phone;
+                    existingPatient.Municipality = patient.Municipality;
+                    existingPatient.Province = patient.Province;
+                    existingPatient.MainDiagnosis = patient.MainDiagnosis;
+                    existingPatient.AssociatedPathologies = patient.AssociatedPathologies;
+                    existingPatient.KnownAllergies = patient.KnownAllergies;
+                    existingPatient.CurrentTreatments = patient.CurrentTreatments;
+                    existingPatient.BloodPressureSystolic = patient.BloodPressureSystolic;
+                    existingPatient.BloodPressureDiastolic = patient.BloodPressureDiastolic;
+                    existingPatient.Weight = patient.Weight;
+                    existingPatient.Height = patient.Height;
+                    existingPatient.Observations = patient.Observations;
+
                     await _context.SaveChangesAsync();
+                    _logger.LogInformation("Patient updated: {PatientName} (ID: {Id})", existingPatient.FullName, id);
 
                     // Handle new document uploads
                     if (documents != null && documents.Count > 0)
                     {
-                        await UploadDocuments(patient.Id, documents, documentTypes, documentDescriptions);
+                        await UploadDocuments(patient.Id, documents, documentTypes ?? new List<string>(), documentDescriptions ?? new List<string>());
                     }
 
                     TempData["SuccessMessage"] = "Paciente actualizado exitosamente.";
+                    return RedirectToAction(nameof(Details), new { id = patient.Id });
                 }
-                catch (DbUpdateConcurrencyException)
+                catch (DbUpdateConcurrencyException ex)
                 {
+                    _logger.LogError(ex, "Concurrency error updating patient ID: {Id}", id);
                     if (!PatientExists(patient.Id))
                     {
                         return NotFound();
@@ -186,8 +213,22 @@ namespace FarmaciaSolidariaCristiana.Controllers
                         throw;
                     }
                 }
-                return RedirectToAction(nameof(Details), new { id = patient.Id });
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error updating patient ID: {Id}", id);
+                    TempData["ErrorMessage"] = "Error al actualizar el paciente: " + ex.Message;
+                    return View(patient);
+                }
             }
+            
+            // Log model state errors
+            _logger.LogWarning("Model state invalid when editing patient ID: {Id}", id);
+            foreach (var error in ModelState.Values.SelectMany(v => v.Errors))
+            {
+                _logger.LogWarning("Validation error: {ErrorMessage}", error.ErrorMessage);
+            }
+            
+            TempData["ErrorMessage"] = "Por favor, corrija los errores en el formulario.";
             return View(patient);
         }
 

@@ -10,7 +10,23 @@
     </h2>
     <hr />
 
-    <form asp-action="Edit" method="post" enctype="multipart/form-data">
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle-fill"></i> @TempData["SuccessMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle-fill"></i> @TempData["ErrorMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    <form asp-action="Edit" method="post" enctype="multipart/form-data" id="editPatientForm">
         <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
         <input type="hidden" asp-for="Id" />
         <input type="hidden" asp-for="RegistrationDate" />
@@ -259,7 +275,7 @@
             <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-secondary">
                 <i class="bi bi-x-circle"></i> Cancelar
             </a>
-            <button type="submit" class="btn btn-primary">
+            <button type="submit" class="btn btn-primary" id="submitBtn">
                 <i class="bi bi-save"></i> Guardar Cambios
             </button>
         </div>
@@ -269,6 +285,13 @@
 @section Scripts {
     @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
     <script>
+        // Submit button feedback
+        document.getElementById('editPatientForm').addEventListener('submit', function(e) {
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Guardando...';
+        });
+
         document.getElementById('addDocumentBtn').addEventListener('click', function() {
             const documentFields = document.getElementById('documentFields');
             const newRow = document.createElement('div');
