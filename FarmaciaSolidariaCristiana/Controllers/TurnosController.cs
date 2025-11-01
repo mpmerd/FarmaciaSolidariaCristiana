@@ -462,11 +462,11 @@ namespace FarmaciaSolidariaCristiana.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize(Roles = "Admin,Farmaceutico")]
-        public async Task<IActionResult> Verify(string documento)
+        public async Task<IActionResult> Verify(string? documento)
         {
             if (string.IsNullOrWhiteSpace(documento))
             {
-                ModelState.AddModelError("documento", "Debe ingresar un número de documento");
+                TempData["ErrorMessage"] = "Debe ingresar un número de documento";
                 return View();
             }
 
@@ -475,11 +475,13 @@ namespace FarmaciaSolidariaCristiana.Controllers
 
             if (turno == null)
             {
-                ViewData["NoFound"] = "No se encontró ningún turno activo con ese documento";
+                TempData["ErrorMessage"] = $"No se encontró ningún turno activo con el documento: {documento}";
+                _logger.LogInformation("Turno search failed for document hash (not logging actual document for privacy)");
                 return View();
             }
 
-            return RedirectToAction(nameof(Details), new { id = turno.Id });
+            // Redirigir a la vista con el turno encontrado
+            return View(turno);
         }
 
         // POST: Turnos/Complete/5
