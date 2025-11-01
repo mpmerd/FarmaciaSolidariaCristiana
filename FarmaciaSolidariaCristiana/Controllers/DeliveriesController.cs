@@ -171,6 +171,9 @@ namespace FarmaciaSolidariaCristiana.Controllers
                 _context.Add(delivery);
                 await _context.SaveChangesAsync();
                 
+                // ✅ NUEVO: Marcar turno como completado automáticamente si existe
+                await CompleteTurnoIfExistsAsync(patient.IdentificationDocument);
+                
                 _logger.LogInformation("Delivery created for patient: {PatientName}, item: {ItemName}, Quantity: {Quantity}", 
                     patient.FullName, itemName, delivery.Quantity);
                 TempData["SuccessMessage"] = $"Entrega registrada exitosamente para {patient.FullName}.";
@@ -262,6 +265,40 @@ namespace FarmaciaSolidariaCristiana.Controllers
             TempData["SuccessMessage"] = "Entrega eliminada exitosamente. El stock ha sido restaurado.";
 
             return RedirectToAction(nameof(Index));
+        }
+
+        /// <summary>
+        /// Marca automáticamente un turno como completado si existe uno aprobado para el documento dado
+        /// </summary>
+        private async Task CompleteTurnoIfExistsAsync(string documentoIdentidad)
+        {
+            try
+            {
+                // Calcular hash del documento (mismo método que usa TurnoService)
+                using var sha256 = System.Security.Cryptography.SHA256.Create();
+                var hashBytes = sha256.ComputeHash(System.Text.Encoding.UTF8.GetBytes(documentoIdentidad));
+                var documentHash = Convert.ToBase64String(hashBytes);
+
+                // Buscar turno aprobado con ese documento
+                var turno = await _context.Turnos
+                    .FirstOrDefaultAsync(t => 
+                        t.DocumentoIdentidadHash == documentHash && 
+                        t.Estado == "Aprobado");
+
+                if (turno != null)
+                {
+                    turno.Estado = "Completado";
+                    turno.FechaEntrega = DateTime.Now;
+                    await _context.SaveChangesAsync();
+                    
+                    _logger.LogInformation("Turno #{TurnoId} marcado automáticamente como completado tras registrar entrega", turno.Id);
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log error pero no fallar la entrega
+                _logger.LogError(ex, "Error al intentar completar turno automáticamente para documento");
+            }
         }
     }
 }

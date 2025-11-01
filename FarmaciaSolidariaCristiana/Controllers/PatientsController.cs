@@ -165,36 +165,63 @@ namespace FarmaciaSolidariaCristiana.Controllers
             try
             {
                 // Actualizar campos desde Request.Form
-                existingPatient.FullName = Request.Form["FullName"].ToString();
-                existingPatient.Age = int.Parse(Request.Form["Age"].ToString());
-                existingPatient.Gender = Request.Form["Gender"].ToString();
-                existingPatient.Address = Request.Form["Address"].ToString();
-                existingPatient.Phone = Request.Form["Phone"].ToString();
-                existingPatient.Municipality = Request.Form["Municipality"].ToString();
-                existingPatient.Province = Request.Form["Province"].ToString();
-                existingPatient.MainDiagnosis = Request.Form["MainDiagnosis"].ToString();
-                existingPatient.AssociatedPathologies = Request.Form["AssociatedPathologies"].ToString();
-                existingPatient.KnownAllergies = Request.Form["KnownAllergies"].ToString();
-                existingPatient.CurrentTreatments = Request.Form["CurrentTreatments"].ToString();
-                existingPatient.Observations = Request.Form["Observations"].ToString();
+                var fullName = Request.Form["FullName"].ToString().Trim();
+                var ageStr = Request.Form["Age"].ToString().Trim();
+                var gender = Request.Form["Gender"].ToString().Trim();
+                
+                // Validaciones básicas
+                if (string.IsNullOrEmpty(fullName))
+                {
+                    TempData["ErrorMessage"] = "El nombre completo es obligatorio.";
+                    return RedirectToAction(nameof(Edit), new { id = id });
+                }
+                
+                if (!int.TryParse(ageStr, out int age) || age < 0 || age > 150)
+                {
+                    TempData["ErrorMessage"] = "La edad debe ser un número válido entre 0 y 150.";
+                    return RedirectToAction(nameof(Edit), new { id = id });
+                }
+                
+                if (string.IsNullOrEmpty(gender) || (gender != "M" && gender != "F"))
+                {
+                    TempData["ErrorMessage"] = "Debe seleccionar un género válido.";
+                    return RedirectToAction(nameof(Edit), new { id = id });
+                }
+                
+                existingPatient.FullName = fullName;
+                existingPatient.Age = age;
+                existingPatient.Gender = gender;
+                existingPatient.Address = Request.Form["Address"].ToString().Trim();
+                existingPatient.Phone = Request.Form["Phone"].ToString().Trim();
+                existingPatient.Municipality = Request.Form["Municipality"].ToString().Trim();
+                existingPatient.Province = Request.Form["Province"].ToString().Trim();
+                existingPatient.MainDiagnosis = Request.Form["MainDiagnosis"].ToString().Trim();
+                existingPatient.AssociatedPathologies = Request.Form["AssociatedPathologies"].ToString().Trim();
+                existingPatient.KnownAllergies = Request.Form["KnownAllergies"].ToString().Trim();
+                existingPatient.CurrentTreatments = Request.Form["CurrentTreatments"].ToString().Trim();
+                existingPatient.Observations = Request.Form["Observations"].ToString().Trim();
                 
                 // Campos numéricos opcionales
-                if (int.TryParse(Request.Form["BloodPressureSystolic"].ToString(), out int systolic))
+                var systolicStr = Request.Form["BloodPressureSystolic"].ToString().Trim();
+                if (!string.IsNullOrEmpty(systolicStr) && int.TryParse(systolicStr, out int systolic))
                     existingPatient.BloodPressureSystolic = systolic;
                 else
                     existingPatient.BloodPressureSystolic = null;
                     
-                if (int.TryParse(Request.Form["BloodPressureDiastolic"].ToString(), out int diastolic))
+                var diastolicStr = Request.Form["BloodPressureDiastolic"].ToString().Trim();
+                if (!string.IsNullOrEmpty(diastolicStr) && int.TryParse(diastolicStr, out int diastolic))
                     existingPatient.BloodPressureDiastolic = diastolic;
                 else
                     existingPatient.BloodPressureDiastolic = null;
                     
-                if (decimal.TryParse(Request.Form["Weight"].ToString(), out decimal weight))
+                var weightStr = Request.Form["Weight"].ToString().Trim();
+                if (!string.IsNullOrEmpty(weightStr) && decimal.TryParse(weightStr, out decimal weight))
                     existingPatient.Weight = weight;
                 else
                     existingPatient.Weight = null;
                     
-                if (decimal.TryParse(Request.Form["Height"].ToString(), out decimal height))
+                var heightStr = Request.Form["Height"].ToString().Trim();
+                if (!string.IsNullOrEmpty(heightStr) && decimal.TryParse(heightStr, out decimal height))
                     existingPatient.Height = height;
                 else
                     existingPatient.Height = null;
