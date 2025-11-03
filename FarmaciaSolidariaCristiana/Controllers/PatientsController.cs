@@ -321,11 +321,14 @@ namespace FarmaciaSolidariaCristiana.Controllers
                 var file = documents[i];
                 if (file.Length > 0)
                 {
-                    // Convert .heic extension to .jpg since browsers don't support HEIC
                     var fileExtension = Path.GetExtension(file.FileName).ToLower();
+                    
+                    // Rechazar archivos HEIC ya que no son compatibles con navegadores web
                     if (fileExtension == ".heic" || fileExtension == ".heif")
                     {
-                        fileExtension = ".jpg";
+                        _logger.LogWarning("HEIC file rejected: {FileName}. User must convert to JPG/PNG first.", file.FileName);
+                        TempData["ErrorMessage"] = $"El archivo '{file.FileName}' tiene formato HEIC que no es compatible con navegadores web. Por favor, conviértelo a JPG o PNG antes de subirlo. En iOS/Mac puedes exportar la foto como JPG desde la app de Fotos.";
+                        continue; // Saltar este archivo
                     }
                     
                     var fileName = $"{patientId}_{Guid.NewGuid()}{fileExtension}";
@@ -335,17 +338,11 @@ namespace FarmaciaSolidariaCristiana.Controllers
                     var originalSize = file.Length;
                     string contentType = file.ContentType;
 
-                    // Check if file is an image (including HEIC) and compress it
-                    if (_imageCompressionService.IsImage(file.ContentType) || fileExtension == ".jpg" || fileExtension == ".jpeg" || fileExtension == ".png")
+                    // Check if file is an image and compress it
+                    if (_imageCompressionService.IsImage(file.ContentType))
                     {
                         _logger.LogInformation("Compressing image: {FileName}, Original size: {Size} bytes", 
                             file.FileName, originalSize);
-
-                        // Force content type for HEIC files
-                        if (file.ContentType == "image/heic" || file.ContentType == "image/heif" || fileExtension == ".jpg")
-                        {
-                            contentType = "image/jpeg";
-                        }
 
                         using (var inputStream = file.OpenReadStream())
                         {

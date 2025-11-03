@@ -92,7 +92,9 @@ namespace FarmaciaSolidariaCristiana.Services
                 "image/gif",
                 "image/bmp",
                 "image/webp",
-                "image/tiff"
+                "image/tiff",
+                "image/heic",
+                "image/heif"
             };
 
             return imageTypes.Any(type => contentType.Contains(type, StringComparison.OrdinalIgnoreCase));
