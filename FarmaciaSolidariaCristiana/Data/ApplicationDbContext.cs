@@ -21,6 +21,7 @@ namespace FarmaciaSolidariaCristiana.Data
         public DbSet<Turno> Turnos { get; set; }
         public DbSet<TurnoMedicamento> TurnoMedicamentos { get; set; }
         public DbSet<TurnoInsumo> TurnoInsumos { get; set; }
+        public DbSet<FechaBloqueada> FechasBloqueadas { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -98,6 +99,17 @@ namespace FarmaciaSolidariaCristiana.Data
             modelBuilder.Entity<Patient>()
                 .Property(p => p.Height)
                 .HasPrecision(5, 2); // Max 999.99 cm
+
+            // Configure FechaBloqueada
+            modelBuilder.Entity<FechaBloqueada>()
+                .HasIndex(f => f.Fecha)
+                .IsUnique();
+
+            modelBuilder.Entity<FechaBloqueada>()
+                .HasOne(f => f.Usuario)
+                .WithMany()
+                .HasForeignKey(f => f.UsuarioId)
+                .OnDelete(DeleteBehavior.Restrict);
         }
     }
 }

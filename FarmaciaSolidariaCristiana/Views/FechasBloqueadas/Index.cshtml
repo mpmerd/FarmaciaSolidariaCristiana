@@ -1,0 +1,221 @@
+@model List<FarmaciaSolidariaCristiana.Models.FechaBloqueada>
+
+@{
+    ViewData["Title"] = "Gestión de Fechas Bloqueadas";
+    var hoy = DateTime.Now.Date;
+    var fechasFuturas = Model.Where(f => f.Fecha >= hoy).OrderBy(f => f.Fecha).ToList();
+    var fechasPasadas = Model.Where(f => f.Fecha < hoy).OrderByDescending(f => f.Fecha).ToList();
+}
+
+<div class="container mt-4">
+    <h2 class="mb-4">
+        <i class="bi bi-calendar-x"></i> Gestión de Fechas Bloqueadas
+    </h2>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show">
+            <i class="bi bi-check-circle"></i> @TempData["SuccessMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show">
+            <i class="bi bi-exclamation-triangle"></i> @TempData["ErrorMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    @if (TempData["InfoMessage"] != null)
+    {
+        <div class="alert alert-info alert-dismissible fade show">
+            <i class="bi bi-info-circle"></i> @TempData["InfoMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle"></i>
+        <strong>Importante:</strong> Las fechas bloqueadas impedirán que los usuarios soliciten turnos en esos días.
+        Útil para días festivos, emergencias o mantenimiento.
+    </div>
+
+    <div class="row mb-4">
+        <!-- Bloquear fecha individual -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-warning">
+                    <h5 class="mb-0"><i class="bi bi-calendar-x"></i> Bloquear Fecha Individual</h5>
+                </div>
+                <div class="card-body">
+                    <form asp-action="Create" method="post">
+                        <div class="mb-3">
+                            <label class="form-label">Fecha a Bloquear</label>
+                            <input type="date" name="fecha" class="form-control" 
+                                   min="@DateTime.Now.ToString("yyyy-MM-dd")" required />
+                            <small class="text-muted">Solo se pueden bloquear fechas futuras</small>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Motivo del Bloqueo</label>
+                            <textarea name="motivo" class="form-control" rows="3" required
+                                      placeholder="Ej: Día festivo, Emergencia, Mantenimiento..."></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-warning w-100">
+                            <i class="bi bi-lock"></i> Bloquear Fecha
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bloquear rango de fechas -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0"><i class="bi bi-calendar-range"></i> Bloquear Rango de Fechas</h5>
+                </div>
+                <div class="card-body">
+                    <form asp-action="CreateRange" method="post">
+                        <div class="mb-3">
+                            <label class="form-label">Fecha Inicio</label>
+                            <input type="date" name="fechaInicio" class="form-control" 
+                                   min="@DateTime.Now.ToString("yyyy-MM-dd")" required />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Fecha Fin</label>
+                            <input type="date" name="fechaFin" class="form-control" 
+                                   min="@DateTime.Now.ToString("yyyy-MM-dd")" required />
+                            <small class="text-muted">Máximo 30 días</small>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Motivo del Bloqueo</label>
+                            <textarea name="motivo" class="form-control" rows="2" required
+                                      placeholder="Ej: Vacaciones, Cierre temporal..."></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-danger w-100">
+                            <i class="bi bi-lock-fill"></i> Bloquear Rango
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Fechas futuras bloqueadas -->
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="bi bi-calendar-check"></i> Fechas Futuras Bloqueadas</h5>
+            <span class="badge bg-light text-dark">@fechasFuturas.Count</span>
+        </div>
+        <div class="card-body">
+            @if (fechasFuturas.Any())
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Fecha</th>
+                                <th>Día</th>
+                                <th>Motivo</th>
+                                <th>Bloqueado Por</th>
+                                <th>Fecha Creación</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var fecha in fechasFuturas)
+                            {
+                                var diasRestantes = (fecha.Fecha - hoy).Days;
+                                <tr>
+                                    <td>
+                                        <strong>@fecha.Fecha.ToString("dd/MM/yyyy")</strong>
+                                        @if (diasRestantes <= 7)
+                                        {
+                                            <span class="badge bg-warning text-dark ms-2">Próxima</span>
+                                        }
+                                    </td>
+                                    <td>@fecha.Fecha.ToString("dddd", new System.Globalization.CultureInfo("es-ES"))</td>
+                                    <td>@fecha.Motivo</td>
+                                    <td>@(fecha.Usuario?.UserName ?? "Sistema")</td>
+                                    <td>@fecha.FechaCreacion.ToString("dd/MM/yyyy HH:mm")</td>
+                                    <td>
+                                        <form asp-action="Delete" method="post" class="d-inline"
+                                              onsubmit="return confirm('¿Está seguro de desbloquear esta fecha?');">
+                                            <input type="hidden" name="id" value="@fecha.Id" />
+                                            <button type="submit" class="btn btn-sm btn-success" 
+                                                    title="Desbloquear">
+                                                <i class="bi bi-unlock"></i> Desbloquear
+                                            </button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            else
+            {
+                <div class="alert alert-light mb-0">
+                    <i class="bi bi-info-circle"></i> No hay fechas futuras bloqueadas.
+                </div>
+            }
+        </div>
+    </div>
+
+    <!-- Fechas pasadas bloqueadas (historial) -->
+    @if (fechasPasadas.Any())
+    {
+        <div class="card">
+            <div class="card-header bg-secondary text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="bi bi-archive"></i> Historial de Fechas Pasadas</h5>
+                <div>
+                    <span class="badge bg-light text-dark me-2">@fechasPasadas.Count</span>
+                    <form asp-action="DeletePast" method="post" class="d-inline"
+                          onsubmit="return confirm('¿Eliminar todas las fechas pasadas? Esta acción no se puede deshacer.');">
+                        <button type="submit" class="btn btn-sm btn-outline-light">
+                            <i class="bi bi-trash"></i> Limpiar Historial
+                        </button>
+                    </form>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Fecha</th>
+                                <th>Motivo</th>
+                                <th>Bloqueado Por</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var fecha in fechasPasadas.Take(10))
+                            {
+                                <tr class="text-muted">
+                                    <td>@fecha.Fecha.ToString("dd/MM/yyyy")</td>
+                                    <td>@fecha.Motivo</td>
+                                    <td>@(fecha.Usuario?.UserName ?? "Sistema")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                    @if (fechasPasadas.Count > 10)
+                    {
+                        <p class="text-center text-muted mb-0">
+                            <small>Mostrando 10 de @fechasPasadas.Count fechas pasadas</small>
+                        </p>
+                    }
+                </div>
+            </div>
+        </div>
+    }
+
+    <div class="mt-4">
+        <a asp-controller="Home" asp-action="Dashboard" class="btn btn-secondary">
+            <i class="bi bi-arrow-left"></i> Volver al Dashboard
+        </a>
+    </div>
+</div>

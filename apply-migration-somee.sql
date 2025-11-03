@@ -2,7 +2,7 @@
 -- SCRIPT DE MIGRACIÓN COMPLETO PARA SOMEE
 -- Farmacia Solidaria Cristiana
 -- =====================================================================================
--- Fecha: 31 de octubre de 2025
+-- Última actualización: 03 de noviembre de 2025
 -- 
 -- INCLUYE TODAS LAS MIGRACIONES:
 -- ✅ 20251023213325_AddPatientIdentificationRequired
@@ -13,6 +13,7 @@
 -- ✅ 20251027171452_AddSupplyToDonations
 -- ✅ 20251028000000_AddTurnosSystem
 -- ✅ 20251031224145_AddTurnoInsumos
+-- ✅ 20251103000000_AddFechasBloqueadas
 -- 
 -- IMPORTANTE: Ejecutar en el panel SQL de Somee.com
 -- =====================================================================================
@@ -517,6 +518,66 @@ END
 PRINT ''
 
 -- =====================================================================================
+-- MIGRACIÓN 9: AddFechasBloqueadas (03/11/2025)
+-- =====================================================================================
+
+PRINT '-- MIGRACIÓN 9: Sistema de Bloqueo de Fechas...'
+PRINT ''
+
+-- Verificar si la tabla FechasBloqueadas ya existe
+IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'FechasBloqueadas')
+BEGIN
+    BEGIN TRY
+        -- Crear tabla FechasBloqueadas
+        CREATE TABLE [FechasBloqueadas] (
+            [Id] int IDENTITY(1,1) NOT NULL,
+            [Fecha] date NOT NULL,
+            [Motivo] nvarchar(500) NOT NULL,
+            [UsuarioId] nvarchar(450) NOT NULL,
+            [FechaCreacion] datetime2 NOT NULL DEFAULT GETDATE(),
+            CONSTRAINT [PK_FechasBloqueadas] PRIMARY KEY ([Id])
+        );
+        PRINT '✓ Tabla FechasBloqueadas creada'
+        
+        -- Crear índice único en Fecha
+        CREATE UNIQUE NONCLUSTERED INDEX [IX_FechasBloqueadas_Fecha] 
+            ON [FechasBloqueadas]([Fecha] ASC);
+        PRINT '✓ Índice único IX_FechasBloqueadas_Fecha creado'
+        
+        -- Crear índice en UsuarioId
+        CREATE NONCLUSTERED INDEX [IX_FechasBloqueadas_UsuarioId] 
+            ON [FechasBloqueadas]([UsuarioId] ASC);
+        PRINT '✓ Índice IX_FechasBloqueadas_UsuarioId creado'
+        
+        -- Crear foreign key hacia AspNetUsers (RESTRICT)
+        ALTER TABLE [FechasBloqueadas] ADD CONSTRAINT [FK_FechasBloqueadas_AspNetUsers_UsuarioId] 
+            FOREIGN KEY ([UsuarioId]) REFERENCES [AspNetUsers] ([Id]);
+        PRINT '✓ Foreign key FechasBloqueadas -> AspNetUsers creada (RESTRICT)'
+        
+        PRINT ''
+        PRINT '✅ Migración AddFechasBloqueadas completada exitosamente'
+    END TRY
+    BEGIN CATCH
+        PRINT '✗ ERROR en AddFechasBloqueadas: ' + ERROR_MESSAGE()
+    END CATCH
+END
+ELSE
+BEGIN
+    PRINT '⚠ Tabla FechasBloqueadas ya existe, omitiendo migración'
+END
+
+-- Registrar migración
+IF NOT EXISTS (SELECT * FROM __EFMigrationsHistory 
+               WHERE MigrationId = '20251103000000_AddFechasBloqueadas')
+BEGIN
+    INSERT INTO __EFMigrationsHistory (MigrationId, ProductVersion)
+    VALUES ('20251103000000_AddFechasBloqueadas', '8.0.11');
+    PRINT '✓ Migración 9 registrada en historial'
+END
+
+PRINT ''
+
+-- =====================================================================================
 -- VERIFICACIONES Y ESTADÍSTICAS FINALES
 -- =====================================================================================
 
@@ -545,7 +606,10 @@ SELECT
                  ELSE 0 END) AS TotalTurnoMedicamentos,
     (SELECT CASE WHEN EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'TurnoInsumos') 
                  THEN (SELECT COUNT(*) FROM TurnoInsumos) 
-                 ELSE 0 END) AS TotalTurnoInsumos;
+                 ELSE 0 END) AS TotalTurnoInsumos,
+    (SELECT CASE WHEN EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'FechasBloqueadas') 
+                 THEN (SELECT COUNT(*) FROM FechasBloqueadas) 
+                 ELSE 0 END) AS TotalFechasBloqueadas;
 
 -- Estadísticas adicionales solo si las columnas existen (SQL dinámico)
 IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'Deliveries' AND COLUMN_NAME = 'SupplyId')
@@ -574,6 +638,7 @@ PRINT '  • Entregas ahora soportan medicamentos E insumos'
 PRINT '  • Donaciones ahora soportan medicamentos E insumos'
 PRINT '  • Sistema de Turnos implementado (Martes/Jueves 1-4 PM)'
 PRINT '  • Turnos ahora soportan medicamentos E insumos médicos'
+PRINT '  • Sistema de Bloqueo de Fechas para días sin turnos'
 PRINT ''
 PRINT '📌 IMPORTANTE:'
 PRINT '  • Entregas antiguas tienen CreatedAt = NULL (usan DeliveryDate)'
@@ -587,6 +652,8 @@ PRINT '  • Donaciones existentes mantienen sus medicamentos (MedicineId)'
 PRINT '  • Nuevas entregas/donaciones pueden ser de medicamentos O insumos'
 PRINT '  • Turnos permiten solicitar medicamentos O insumos (no ambos a la vez)'
 PRINT '  • Límite: 30 turnos por día, horario Martes/Jueves 1-4 PM (slots de 6 min)'
+PRINT '  • Fechas bloqueadas impiden solicitar turnos (días festivos, emergencias)'
+PRINT '  • Admins pueden bloquear fechas individuales o rangos de hasta 30 días'
 PRINT ''
 PRINT 'Finalizado: ' + CONVERT(VARCHAR, GETDATE(), 120)
 PRINT '========================================================================='

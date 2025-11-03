@@ -134,6 +134,16 @@ namespace FarmaciaSolidariaCristiana.Services
 
                 foreach (var day in daysToCheck)
                 {
+                    // Verificar si la fecha está bloqueada
+                    var fechaBloqueada = await _context.FechasBloqueadas
+                        .AnyAsync(f => f.Fecha.Date == day.Date);
+                    
+                    if (fechaBloqueada)
+                    {
+                        _logger.LogInformation("Fecha bloqueada saltada: {Date}", day.Date.ToString("dd/MM/yyyy"));
+                        continue; // Saltar esta fecha
+                    }
+
                     // Obtener todos los turnos aprobados/completados para este día
                     var turnosDelDia = await _context.Turnos
                         .Where(t => t.FechaPreferida.HasValue &&
