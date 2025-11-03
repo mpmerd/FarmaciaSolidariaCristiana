@@ -964,6 +964,76 @@ namespace FarmaciaSolidariaCristiana.Services
             table.AddCell(new Cell().Add(new Paragraph(label).SetFont(boldFont)).SetBorder(iText.Layout.Borders.Border.NO_BORDER));
             table.AddCell(new Cell().Add(new Paragraph(value).SetFont(normalFont)).SetBorder(iText.Layout.Borders.Border.NO_BORDER));
         }
+
+        /// <summary>
+        /// Valida si un usuario puede cancelar su turno aprobado
+        /// Solo permitido si faltan más de 7 días para la fecha del turno
+        /// </summary>
+        public bool CanUserCancelTurno(Turno turno)
+        {
+            // Solo turnos Aprobados pueden ser cancelados por usuario
+            if (turno.Estado != EstadoTurno.Aprobado)
+                return false;
+            
+            // Debe tener fecha asignada
+            if (!turno.FechaPreferida.HasValue)
+                return false;
+            
+            // Calcular días restantes
+            var diasRestantes = (turno.FechaPreferida.Value.Date - DateTime.Now.Date).Days;
+            
+            // Permitir cancelar solo si faltan más de 7 días
+            return diasRestantes > 7;
+        }
+
+        /// <summary>
+        /// Obtiene mensaje explicando por qué no se puede cancelar
+        /// </summary>
+        public string GetCancelReasonMessage(Turno turno)
+        {
+            if (turno.Estado != EstadoTurno.Aprobado)
+                return "Solo se pueden cancelar turnos aprobados.";
+            
+            if (!turno.FechaPreferida.HasValue)
+                return "El turno no tiene fecha asignada.";
+            
+            var diasRestantes = (turno.FechaPreferida.Value.Date - DateTime.Now.Date).Days;
+            
+            if (diasRestantes <= 7)
+                return $"No se puede cancelar. Faltan solo {diasRestantes} día(s). Debe cancelar con al menos 7 días de anticipación.";
+            
+            return string.Empty;
+        }
+
+        /// <summary>
+        /// Cancela un turno por solicitud del usuario
+        /// </summary>
+        public async Task<bool> CancelTurnoByUserAsync(int turnoId, string userId, string motivoCancelacion)
+        {
+            var turno = await _context.Turnos
+                .Include(t => t.Medicamentos).ThenInclude(tm => tm.Medicine)
+                .Include(t => t.Insumos).ThenInclude(ti => ti.Supply)
+                .FirstOrDefaultAsync(t => t.Id == turnoId && t.UserId == userId);
+            
+            if (turno == null)
+                return false;
+            
+            // Validar que se puede cancelar
+            if (!CanUserCancelTurno(turno))
+                return false;
+            
+            // Cambiar estado a Rechazado (usamos este estado para cancelaciones)
+            turno.Estado = EstadoTurno.Rechazado;
+            turno.FechaRevision = DateTime.Now;
+            turno.ComentariosFarmaceutico += $"\n[CANCELADO POR USUARIO - {DateTime.Now:dd/MM/yyyy HH:mm}]";
+            turno.ComentariosFarmaceutico += $"\nMotivo: {motivoCancelacion}";
+            
+            await _context.SaveChangesAsync();
+            
+            _logger.LogInformation("Turno {TurnoId} cancelado por usuario {UserId}", turnoId, userId);
+            
+            return true;
+        }
     }
 }
 

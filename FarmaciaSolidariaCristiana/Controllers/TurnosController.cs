@@ -591,6 +591,104 @@ namespace FarmaciaSolidariaCristiana.Controllers
 
             return Json(new { supplies });
         }
+
+        // POST: Turnos/Cancel/5
+        /// <summary>
+        /// Permite a un usuario cancelar su turno aprobado (si faltan más de 7 días)
+        /// </summary>
+        [HttpPost]
+        [Authorize(Roles = "ViewerPublic")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Cancel(int id, string motivoCancelacion)
+        {
+            var userId = _userManager.GetUserId(User);
+            
+            var turno = await _context.Turnos
+                .FirstOrDefaultAsync(t => t.Id == id && t.UserId == userId);
+            
+            if (turno == null)
+            {
+                return NotFound();
+            }
+            
+            // Validar que se puede cancelar
+            if (!_turnoService.CanUserCancelTurno(turno))
+            {
+                var reason = _turnoService.GetCancelReasonMessage(turno);
+                TempData["ErrorMessage"] = reason;
+                return RedirectToAction(nameof(Index));
+            }
+            
+            // Validar que se proporcione motivo
+            if (string.IsNullOrWhiteSpace(motivoCancelacion))
+            {
+                TempData["ErrorMessage"] = "Debe proporcionar un motivo para la cancelación.";
+                return RedirectToAction(nameof(Index));
+            }
+            
+            // Cancelar turno
+            var success = await _turnoService.CancelTurnoByUserAsync(id, userId!, motivoCancelacion);
+            
+            if (success)
+            {
+                // Enviar email de confirmación al usuario
+                var user = await _userManager.GetUserAsync(User);
+                if (user?.Email != null)
+                {
+                    try
+                    {
+                        await _emailService.SendTurnoCanceladoByUserEmailAsync(
+                            user.Email, 
+                            user.UserName ?? "Usuario",
+                            turno.NumeroTurno ?? 0,
+                            turno.FechaPreferida ?? DateTime.Now,
+                            motivoCancelacion);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "No se pudo enviar email de cancelación");
+                    }
+                }
+                
+                // Notificar a farmacéuticos y admins
+                await NotificarFarmaceuticosTurnoCancelado(turno, motivoCancelacion);
+                
+                TempData["SuccessMessage"] = "Tu turno ha sido cancelado exitosamente.";
+            }
+            else
+            {
+                TempData["ErrorMessage"] = "No se pudo cancelar el turno.";
+            }
+            
+            return RedirectToAction(nameof(Index));
+        }
+
+        /// <summary>
+        /// Notifica a farmacéuticos y admins cuando un usuario cancela su turno
+        /// </summary>
+        private async Task NotificarFarmaceuticosTurnoCancelado(Turno turno, string motivo)
+        {
+            var farmaceuticos = await _userManager.GetUsersInRoleAsync("Farmaceutico");
+            var admins = await _userManager.GetUsersInRoleAsync("Admin");
+            var destinatarios = farmaceuticos.Union(admins).Where(u => u.Email != null);
+            
+            foreach (var user in destinatarios)
+            {
+                try
+                {
+                    await _emailService.SendNotificacionTurnoCanceladoAsync(
+                        user.Email!,
+                        user.UserName ?? "Farmacéutico",
+                        turno.NumeroTurno ?? 0,
+                        turno.FechaPreferida ?? DateTime.Now,
+                        motivo);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Error enviando notificación a {Email}", user.Email);
+                }
+            }
+        }
     }
 
     /// <summary>

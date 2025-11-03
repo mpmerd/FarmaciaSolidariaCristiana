@@ -110,6 +110,7 @@
                                             <th>Fecha Solicitud</th>
                                             <th>Fecha Turno</th>
                                             <th>Items</th>
+                                            <th>Acciones</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -205,10 +206,87 @@
                                                         }
                                                     </small>
                                                 </td>
+                                                <td>
+                                                    @if (turno.Estado == "Aprobado" && turno.FechaPreferida.HasValue)
+                                                    {
+                                                        var diasRestantes = (turno.FechaPreferida.Value.Date - DateTime.Now.Date).Days;
+                                                        
+                                                        if (diasRestantes > 7)
+                                                        {
+                                                            <button type="button" class="btn btn-sm btn-warning" 
+                                                                    data-bs-toggle="modal" 
+                                                                    data-bs-target="#cancelModal"
+                                                                    data-turno-id="@turno.Id"
+                                                                    data-turno-numero="@turno.NumeroTurno"
+                                                                    data-turno-fecha="@turno.FechaPreferida?.ToString("dd/MM/yyyy HH:mm")">
+                                                                <i class="bi bi-x-circle"></i> Cancelar
+                                                            </button>
+                                                            <small class="text-muted d-block mt-1">Faltan @diasRestantes días</small>
+                                                        }
+                                                        else
+                                                        {
+                                                            <small class="text-muted">
+                                                                <i class="bi bi-info-circle"></i> 
+                                                                No cancelable<br/>
+                                                                (menos de 7 días)
+                                                            </small>
+                                                        }
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="text-muted">-</span>
+                                                    }
+                                                </td>
                                             </tr>
                                         }
                                     </tbody>
                                 </table>
+                            </div>
+                            
+                            @* Modal de confirmación de cancelación *@
+                            <div class="modal fade" id="cancelModal" tabindex="-1">
+                                <div class="modal-dialog">
+                                    <div class="modal-content">
+                                        <form asp-action="Cancel" method="post">
+                                            @Html.AntiForgeryToken()
+                                            <div class="modal-header bg-warning">
+                                                <h5 class="modal-title">Cancelar Turno</h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                            </div>
+                                            <div class="modal-body">
+                                                <input type="hidden" name="id" id="turnoId" />
+                                                
+                                                <div class="alert alert-warning">
+                                                    <i class="bi bi-exclamation-triangle"></i>
+                                                    <strong>¿Estás seguro?</strong><br/>
+                                                    Vas a cancelar el turno <strong>#<span id="turnoNumero"></span></strong><br/>
+                                                    Fecha: <strong><span id="turnoFecha"></span></strong>
+                                                </div>
+                                                
+                                                <div class="mb-3">
+                                                    <label class="form-label">
+                                                        <strong>Motivo de la cancelación:</strong>
+                                                        <span class="text-danger">*</span>
+                                                    </label>
+                                                    <textarea name="motivoCancelacion" 
+                                                              class="form-control" 
+                                                              rows="3" 
+                                                              required
+                                                              placeholder="Por favor, explica por qué necesitas cancelar el turno..."></textarea>
+                                                    <small class="text-muted">Este campo es obligatorio</small>
+                                                </div>
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                                    No, mantener turno
+                                                </button>
+                                                <button type="submit" class="btn btn-warning">
+                                                    <i class="bi bi-x-circle"></i> Sí, cancelar turno
+                                                </button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
                             </div>
                         }
                         else
@@ -335,6 +413,21 @@
                 $('#medicineInfoIndex').show();
                 $('#searchResultsIndex').empty();
             });
+            
+            // Script para pasar datos al modal de cancelación
+            var cancelModal = document.getElementById('cancelModal');
+            if (cancelModal) {
+                cancelModal.addEventListener('show.bs.modal', function (event) {
+                    var button = event.relatedTarget;
+                    var turnoId = button.getAttribute('data-turno-id');
+                    var turnoNumero = button.getAttribute('data-turno-numero');
+                    var turnoFecha = button.getAttribute('data-turno-fecha');
+                    
+                    document.getElementById('turnoId').value = turnoId;
+                    document.getElementById('turnoNumero').textContent = turnoNumero;
+                    document.getElementById('turnoFecha').textContent = turnoFecha;
+                });
+            }
         });
     </script>
 }
