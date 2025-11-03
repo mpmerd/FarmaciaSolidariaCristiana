@@ -48,18 +48,20 @@
                 </div>
                 
                 <div class="form-group mb-3" id="medicineSelect">
-                    <label asp-for="MedicineId" class="form-label"></label>
-                    <select asp-for="MedicineId" class="form-select" asp-items="ViewBag.MedicineId">
-                        <option value="">-- Seleccione un Medicamento --</option>
-                    </select>
+                    <label class="form-label">Buscar Medicamento</label>
+                    <input type="text" id="medicineSearch" class="form-control" placeholder="Escribe para buscar medicamento..." autocomplete="off" />
+                    <div class="list-group" id="medicineResults" style="max-height: 300px; overflow-y: auto; display: none; position: absolute; z-index: 1000; width: calc(100% - 30px);"></div>
+                    <input type="hidden" asp-for="MedicineId" id="medicineIdInput" />
+                    <div id="selectedMedicine" class="mt-2"></div>
                     <span asp-validation-for="MedicineId" class="text-danger"></span>
                 </div>
 
                 <div class="form-group mb-3" id="supplySelect" style="display: none;">
-                    <label asp-for="SupplyId" class="form-label"></label>
-                    <select asp-for="SupplyId" class="form-select" asp-items="ViewBag.SupplyId">
-                        <option value="">-- Seleccione un Insumo --</option>
-                    </select>
+                    <label class="form-label">Buscar Insumo</label>
+                    <input type="text" id="supplySearch" class="form-control" placeholder="Escribe para buscar insumo..." autocomplete="off" />
+                    <div class="list-group" id="supplyResults" style="max-height: 300px; overflow-y: auto; display: none; position: absolute; z-index: 1000; width: calc(100% - 30px);"></div>
+                    <input type="hidden" asp-for="SupplyId" id="supplyIdInput" />
+                    <div id="selectedSupply" class="mt-2"></div>
                     <span asp-validation-for="SupplyId" class="text-danger"></span>
                 </div>
                 
@@ -193,14 +195,22 @@
         const supplyRadio = document.getElementById('supplyType');
         const medicineSelectDiv = document.getElementById('medicineSelect');
         const supplySelectDiv = document.getElementById('supplySelect');
-        const medicineSelect = document.getElementById('MedicineId');
-        const supplySelect = document.getElementById('SupplyId');
+        const medicineIdInput = document.getElementById('medicineIdInput');
+        const supplyIdInput = document.getElementById('supplyIdInput');
+        const medicineSearch = document.getElementById('medicineSearch');
+        const supplySearch = document.getElementById('supplySearch');
+        const medicineResults = document.getElementById('medicineResults');
+        const supplyResults = document.getElementById('supplyResults');
+        const selectedMedicine = document.getElementById('selectedMedicine');
+        const selectedSupply = document.getElementById('selectedSupply');
 
         medicineRadio.addEventListener('change', function() {
             if (this.checked) {
                 medicineSelectDiv.style.display = 'block';
                 supplySelectDiv.style.display = 'none';
-                supplySelect.value = ''; // Limpiar selección de insumo
+                supplyIdInput.value = ''; // Limpiar selección de insumo
+                selectedSupply.innerHTML = '';
+                supplySearch.value = '';
             }
         });
 
@@ -208,7 +218,162 @@
             if (this.checked) {
                 medicineSelectDiv.style.display = 'none';
                 supplySelectDiv.style.display = 'block';
-                medicineSelect.value = ''; // Limpiar selección de medicamento
+                medicineIdInput.value = ''; // Limpiar selección de medicamento
+                selectedMedicine.innerHTML = '';
+                medicineSearch.value = '';
+            }
+        });
+
+        // ========== BÚSQUEDA DE MEDICAMENTOS CON AJAX ==========
+        let searchTimeout;
+        medicineSearch.addEventListener('input', function() {
+            const query = this.value.trim();
+            
+            clearTimeout(searchTimeout);
+            
+            if (query.length < 2) {
+                medicineResults.style.display = 'none';
+                medicineResults.innerHTML = '';
+                return;
+            }
+            
+            searchTimeout = setTimeout(() => {
+                fetch(`/Turnos/SearchMedicines?query=${encodeURIComponent(query)}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        medicineResults.innerHTML = '';
+                        
+                        if (data.medicines && data.medicines.length > 0) {
+                            data.medicines.forEach(med => {
+                                const stockBadgeClass = med.stock > 10 ? 'bg-success' : med.stock > 5 ? 'bg-warning text-dark' : 'bg-danger';
+                                
+                                const item = document.createElement('a');
+                                item.href = '#';
+                                item.className = 'list-group-item list-group-item-action';
+                                item.innerHTML = `
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div><strong>${med.name}</strong></div>
+                                        <span class="badge ${stockBadgeClass}">Stock: ${med.stock} ${med.unit || 'unidades'}</span>
+                                    </div>
+                                `;
+                                
+                                item.addEventListener('click', function(e) {
+                                    e.preventDefault();
+                                    medicineIdInput.value = med.id;
+                                    medicineSearch.value = '';
+                                    medicineResults.style.display = 'none';
+                                    selectedMedicine.innerHTML = `
+                                        <div class="alert alert-success py-2">
+                                            <i class="bi bi-check-circle"></i> <strong>${med.name}</strong> seleccionado
+                                            <button type="button" class="btn btn-sm btn-danger float-end" onclick="clearMedicineSelection()">
+                                                <i class="bi bi-x"></i> Cambiar
+                                            </button>
+                                        </div>
+                                    `;
+                                });
+                                
+                                medicineResults.appendChild(item);
+                            });
+                            medicineResults.style.display = 'block';
+                        } else {
+                            medicineResults.innerHTML = '<div class="list-group-item text-muted">No se encontraron medicamentos</div>';
+                            medicineResults.style.display = 'block';
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        medicineResults.innerHTML = '<div class="list-group-item text-danger">Error al buscar medicamentos</div>';
+                        medicineResults.style.display = 'block';
+                    });
+            }, 300);
+        });
+
+        // ========== BÚSQUEDA DE INSUMOS CON AJAX ==========
+        supplySearch.addEventListener('input', function() {
+            const query = this.value.trim();
+            
+            clearTimeout(searchTimeout);
+            
+            if (query.length < 2) {
+                supplyResults.style.display = 'none';
+                supplyResults.innerHTML = '';
+                return;
+            }
+            
+            searchTimeout = setTimeout(() => {
+                fetch(`/Turnos/SearchSupplies?query=${encodeURIComponent(query)}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        supplyResults.innerHTML = '';
+                        
+                        if (data.supplies && data.supplies.length > 0) {
+                            data.supplies.forEach(supply => {
+                                const stockBadge = supply.stock > 0 
+                                    ? `<span class="badge bg-success">Stock: ${supply.stock} ${supply.unit}</span>`
+                                    : '<span class="badge bg-danger">Sin stock</span>';
+                                
+                                const item = document.createElement('a');
+                                item.href = '#';
+                                item.className = 'list-group-item list-group-item-action';
+                                item.innerHTML = `
+                                    <div class="d-flex w-100 justify-content-between">
+                                        <h6 class="mb-1">${supply.name}</h6>
+                                        ${stockBadge}
+                                    </div>
+                                    <small class="text-muted">${supply.description || 'Sin descripción'}</small>
+                                `;
+                                
+                                item.addEventListener('click', function(e) {
+                                    e.preventDefault();
+                                    supplyIdInput.value = supply.id;
+                                    supplySearch.value = '';
+                                    supplyResults.style.display = 'none';
+                                    selectedSupply.innerHTML = `
+                                        <div class="alert alert-success py-2">
+                                            <i class="bi bi-check-circle"></i> <strong>${supply.name}</strong> seleccionado
+                                            <button type="button" class="btn btn-sm btn-danger float-end" onclick="clearSupplySelection()">
+                                                <i class="bi bi-x"></i> Cambiar
+                                            </button>
+                                        </div>
+                                    `;
+                                });
+                                
+                                supplyResults.appendChild(item);
+                            });
+                            supplyResults.style.display = 'block';
+                        } else {
+                            supplyResults.innerHTML = '<div class="list-group-item text-muted">No se encontraron insumos</div>';
+                            supplyResults.style.display = 'block';
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        supplyResults.innerHTML = '<div class="list-group-item text-danger">Error al buscar insumos</div>';
+                        supplyResults.style.display = 'block';
+                    });
+            }, 300);
+        });
+
+        // Funciones para limpiar selecciones
+        window.clearMedicineSelection = function() {
+            medicineIdInput.value = '';
+            selectedMedicine.innerHTML = '';
+            medicineSearch.focus();
+        };
+
+        window.clearSupplySelection = function() {
+            supplyIdInput.value = '';
+            selectedSupply.innerHTML = '';
+            supplySearch.focus();
+        };
+
+        // Cerrar resultados al hacer clic fuera
+        document.addEventListener('click', function(e) {
+            if (!medicineSearch.contains(e.target) && !medicineResults.contains(e.target)) {
+                medicineResults.style.display = 'none';
+            }
+            if (!supplySearch.contains(e.target) && !supplyResults.contains(e.target)) {
+                supplyResults.style.display = 'none';
             }
         });
     </script>
