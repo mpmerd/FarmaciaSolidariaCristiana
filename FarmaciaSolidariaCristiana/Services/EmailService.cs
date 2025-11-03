@@ -497,5 +497,119 @@ namespace FarmaciaSolidariaCristiana.Services
                 return false;
             }
         }
+
+        public async Task SendTurnoCanceladoByUserEmailAsync(
+            string destinatario, 
+            string nombreUsuario, 
+            int numeroTurno, 
+            DateTime fechaTurno,
+            string motivo)
+        {
+            var subject = $"Turno #{numeroTurno:000} Cancelado";
+            
+            var body = $@"
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <style>
+                        body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+                        .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+                        .header {{ background-color: #dc3545; color: white; padding: 20px; text-align: center; border-radius: 10px 10px 0 0; }}
+                        .content {{ background-color: #f8d7da; padding: 30px; border-radius: 0 0 10px 10px; }}
+                        .info-box {{ background-color: white; padding: 15px; margin: 20px 0; border-left: 4px solid #dc3545; }}
+                        .footer {{ text-align: center; margin-top: 20px; font-size: 12px; color: #6c757d; }}
+                    </style>
+                </head>
+                <body>
+                    <div class='container'>
+                        <div class='header'>
+                            <h1>❌ Turno Cancelado</h1>
+                        </div>
+                        <div class='content'>
+                            <p>Estimado/a <strong>{nombreUsuario}</strong>,</p>
+                            
+                            <p>Tu turno ha sido cancelado según tu solicitud.</p>
+                            
+                            <div class='info-box'>
+                                <p><strong>Número de Turno:</strong> #{numeroTurno:000}</p>
+                                <p><strong>Fecha del Turno:</strong> {fechaTurno:dd/MM/yyyy HH:mm}</p>
+                                <p><strong>Motivo:</strong> {motivo}</p>
+                                <p><strong>Cancelado el:</strong> {DateTime.Now:dd/MM/yyyy HH:mm}</p>
+                            </div>
+                            
+                            <p>Si necesitas solicitar un nuevo turno, puedes hacerlo desde nuestra plataforma.</p>
+                            
+                            <p><strong>Recuerda:</strong> Puedes solicitar hasta 2 turnos por mes.</p>
+                            
+                            <div class='footer'>
+                                <p>Saludos,<br/>
+                                <strong>Farmacia Solidaria Cristiana</strong><br/>
+                                Iglesia Metodista de Cárdenas</p>
+                                <p>© 2025 Todos los derechos reservados.</p>
+                            </div>
+                        </div>
+                    </div>
+                </body>
+                </html>";
+            
+            await SendEmailAsync(destinatario, subject, body);
+        }
+
+        public async Task SendNotificacionTurnoCanceladoAsync(
+            string destinatario,
+            string nombreFarmaceutico,
+            int numeroTurno,
+            DateTime fechaTurno,
+            string motivo)
+        {
+            var subject = $"Usuario canceló Turno #{numeroTurno:000}";
+            
+            var body = $@"
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <style>
+                        body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+                        .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+                        .header {{ background-color: #ffc107; color: #000; padding: 20px; text-align: center; border-radius: 10px 10px 0 0; }}
+                        .content {{ background-color: #fff3cd; padding: 30px; border-radius: 0 0 10px 10px; }}
+                        .info-box {{ background-color: white; padding: 15px; margin: 20px 0; border-left: 4px solid #ffc107; }}
+                        .footer {{ text-align: center; margin-top: 20px; font-size: 12px; color: #6c757d; }}
+                    </style>
+                </head>
+                <body>
+                    <div class='container'>
+                        <div class='header'>
+                            <h1>⚠️ Turno Cancelado por Usuario</h1>
+                        </div>
+                        <div class='content'>
+                            <p>Hola <strong>{nombreFarmaceutico}</strong>,</p>
+                            
+                            <p>Un usuario ha cancelado su turno aprobado:</p>
+                            
+                            <div class='info-box'>
+                                <p><strong>Número de Turno:</strong> #{numeroTurno:000}</p>
+                                <p><strong>Fecha del Turno:</strong> {fechaTurno:dd/MM/yyyy HH:mm}</p>
+                                <p><strong>Motivo de cancelación:</strong> {motivo}</p>
+                                <p><strong>Cancelado el:</strong> {DateTime.Now:dd/MM/yyyy HH:mm}</p>
+                            </div>
+                            
+                            <p>✅ El slot de tiempo ha quedado disponible para otros usuarios.</p>
+                            
+                            <p><em>Este es un mensaje informativo. No requiere acción por tu parte.</em></p>
+                            
+                            <div class='footer'>
+                                <p>Sistema Automático<br/>
+                                <strong>Farmacia Solidaria Cristiana</strong><br/>
+                                Iglesia Metodista de Cárdenas</p>
+                                <p>© 2025 Todos los derechos reservados.</p>
+                            </div>
+                        </div>
+                    </div>
+                </body>
+                </html>";
+            
+            await SendEmailAsync(destinatario, subject, body);
+        }
     }
 }

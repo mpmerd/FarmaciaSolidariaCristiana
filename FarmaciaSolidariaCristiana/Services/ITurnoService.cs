@@ -90,5 +90,20 @@ namespace FarmaciaSolidariaCristiana.Services
         /// Genera el número de turno del día
         /// </summary>
         Task<int> GenerateNumeroTurnoAsync(DateTime fecha);
+
+        /// <summary>
+        /// Valida si un usuario puede cancelar su turno (debe ser Aprobado y faltar más de 7 días)
+        /// </summary>
+        bool CanUserCancelTurno(Turno turno);
+
+        /// <summary>
+        /// Obtiene el mensaje de razón por la cual no se puede cancelar
+        /// </summary>
+        string GetCancelReasonMessage(Turno turno);
+
+        /// <summary>
+        /// Cancela un turno por solicitud del usuario
+        /// </summary>
+        Task<bool> CancelTurnoByUserAsync(int turnoId, string userId, string motivoCancelacion);
     }
 }
