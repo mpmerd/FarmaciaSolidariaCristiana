@@ -103,16 +103,38 @@ namespace FarmaciaSolidariaCristiana.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> DeliveriesPDF(int? medicineId, DateTime? startDate, DateTime? endDate)
+        public async Task<IActionResult> DeliveriesPDF(int? medicineId, int? supplyId, DateTime? startDate, DateTime? endDate, string? tipoFiltro)
         {
             var deliveries = _context.Deliveries
                 .Include(d => d.Medicine)
                 .Include(d => d.Supply)
+                .Include(d => d.Patient)
                 .AsQueryable();
 
+            // Filtrar por tipo (Medicamentos o Insumos)
+            if (!string.IsNullOrEmpty(tipoFiltro))
+            {
+                if (tipoFiltro == "Medicamentos")
+                {
+                    deliveries = deliveries.Where(d => d.MedicineId != null);
+                }
+                else if (tipoFiltro == "Insumos")
+                {
+                    deliveries = deliveries.Where(d => d.SupplyId != null);
+                }
+                // Si es "Todos" o null, no filtramos
+            }
+
+            // Filtrar por medicamento específico
             if (medicineId.HasValue)
             {
                 deliveries = deliveries.Where(d => d.MedicineId == medicineId.Value);
+            }
+
+            // Filtrar por insumo específico
+            if (supplyId.HasValue)
+            {
+                deliveries = deliveries.Where(d => d.SupplyId == supplyId.Value);
             }
 
             if (startDate.HasValue)
@@ -158,7 +180,14 @@ namespace FarmaciaSolidariaCristiana.Controllers
                 }
 
                 document.Add(table);
+                
+                // Totales separados por tipo
+                var totalMedicamentos = data.Where(d => d.MedicineId != null).Sum(d => d.Quantity);
+                var totalInsumos = data.Where(d => d.SupplyId != null).Sum(d => d.Quantity);
+                
                 document.Add(new Paragraph($"\nTotal entregas: {data.Sum(d => d.Quantity)}"));
+                document.Add(new Paragraph($"Total Medicamentos: {totalMedicamentos}"));
+                document.Add(new Paragraph($"Total Insumos: {totalInsumos}"));
                 
                 document.Close();
 
@@ -168,16 +197,37 @@ namespace FarmaciaSolidariaCristiana.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> DonationsPDF(int? medicineId, DateTime? startDate, DateTime? endDate)
+        public async Task<IActionResult> DonationsPDF(int? medicineId, int? supplyId, DateTime? startDate, DateTime? endDate, string? tipoFiltro)
         {
             var donations = _context.Donations
                 .Include(d => d.Medicine)
                 .Include(d => d.Supply)
                 .AsQueryable();
 
+            // Filtrar por tipo (Medicamentos o Insumos)
+            if (!string.IsNullOrEmpty(tipoFiltro))
+            {
+                if (tipoFiltro == "Medicamentos")
+                {
+                    donations = donations.Where(d => d.MedicineId != null);
+                }
+                else if (tipoFiltro == "Insumos")
+                {
+                    donations = donations.Where(d => d.SupplyId != null);
+                }
+                // Si es "Todos" o null, no filtramos
+            }
+
+            // Filtrar por medicamento específico
             if (medicineId.HasValue)
             {
                 donations = donations.Where(d => d.MedicineId == medicineId.Value);
+            }
+
+            // Filtrar por insumo específico
+            if (supplyId.HasValue)
+            {
+                donations = donations.Where(d => d.SupplyId == supplyId.Value);
             }
 
             if (startDate.HasValue)
@@ -223,7 +273,14 @@ namespace FarmaciaSolidariaCristiana.Controllers
                 }
 
                 document.Add(table);
+                
+                // Totales separados por tipo
+                var totalMedicamentos = data.Where(d => d.MedicineId != null).Sum(d => d.Quantity);
+                var totalInsumos = data.Where(d => d.SupplyId != null).Sum(d => d.Quantity);
+                
                 document.Add(new Paragraph($"\nTotal donaciones: {data.Sum(d => d.Quantity)}"));
+                document.Add(new Paragraph($"Total Medicamentos: {totalMedicamentos}"));
+                document.Add(new Paragraph($"Total Insumos: {totalInsumos}"));
                 
                 document.Close();
 

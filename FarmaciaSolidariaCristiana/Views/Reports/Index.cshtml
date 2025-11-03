@@ -14,8 +14,22 @@
                 <div class="card-body">
                     <form asp-action="DeliveriesPDF" method="post">
                         <div class="mb-3">
-                            <label class="form-label">Medicamento (Opcional)</label>
+                            <label class="form-label">Tipo</label>
+                            <select name="tipoFiltro" class="form-select">
+                                <option value="">-- Todos --</option>
+                                <option value="Medicamentos">Solo Medicamentos</option>
+                                <option value="Insumos">Solo Insumos</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Medicamento Específico (Opcional)</label>
                             <select name="medicineId" class="form-select" asp-items="ViewBag.MedicineId">
+                                <option value="">-- Todos --</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Insumo Específico (Opcional)</label>
+                            <select name="supplyId" class="form-select" asp-items="ViewBag.SupplyId">
                                 <option value="">-- Todos --</option>
                             </select>
                         </div>
@@ -43,8 +57,22 @@
                 <div class="card-body">
                     <form asp-action="DonationsPDF" method="post">
                         <div class="mb-3">
-                            <label class="form-label">Medicamento (Opcional)</label>
+                            <label class="form-label">Tipo</label>
+                            <select name="tipoFiltro" class="form-select">
+                                <option value="">-- Todos --</option>
+                                <option value="Medicamentos">Solo Medicamentos</option>
+                                <option value="Insumos">Solo Insumos</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Medicamento Específico (Opcional)</label>
                             <select name="medicineId" class="form-select" asp-items="ViewBag.MedicineId">
+                                <option value="">-- Todos --</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Insumo Específico (Opcional)</label>
+                            <select name="supplyId" class="form-select" asp-items="ViewBag.SupplyId">
                                 <option value="">-- Todos --</option>
                             </select>
                         </div>
