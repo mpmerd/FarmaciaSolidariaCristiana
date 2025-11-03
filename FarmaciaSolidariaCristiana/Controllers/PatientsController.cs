@@ -321,24 +321,38 @@ namespace FarmaciaSolidariaCristiana.Controllers
                 var file = documents[i];
                 if (file.Length > 0)
                 {
-                    var fileName = $"{patientId}_{Guid.NewGuid()}{Path.GetExtension(file.FileName)}";
+                    // Convert .heic extension to .jpg since browsers don't support HEIC
+                    var fileExtension = Path.GetExtension(file.FileName).ToLower();
+                    if (fileExtension == ".heic" || fileExtension == ".heif")
+                    {
+                        fileExtension = ".jpg";
+                    }
+                    
+                    var fileName = $"{patientId}_{Guid.NewGuid()}{fileExtension}";
                     var filePath = Path.Combine(uploadFolder, fileName);
 
                     long fileSize = file.Length;
                     var originalSize = file.Length;
+                    string contentType = file.ContentType;
 
-                    // Check if file is an image and compress it
-                    if (_imageCompressionService.IsImage(file.ContentType))
+                    // Check if file is an image (including HEIC) and compress it
+                    if (_imageCompressionService.IsImage(file.ContentType) || fileExtension == ".jpg" || fileExtension == ".jpeg" || fileExtension == ".png")
                     {
                         _logger.LogInformation("Compressing image: {FileName}, Original size: {Size} bytes", 
                             file.FileName, originalSize);
+
+                        // Force content type for HEIC files
+                        if (file.ContentType == "image/heic" || file.ContentType == "image/heif" || fileExtension == ".jpg")
+                        {
+                            contentType = "image/jpeg";
+                        }
 
                         using (var inputStream = file.OpenReadStream())
                         {
                             // Compress the image
                             using (var compressedStream = await _imageCompressionService.CompressImageAsync(
                                 inputStream, 
-                                file.ContentType,
+                                contentType,
                                 maxWidth: 1920,    // Max width for documents
                                 maxHeight: 1920,   // Max height for documents
                                 quality: 85))      // Quality: 85% is a good balance
@@ -375,7 +389,7 @@ namespace FarmaciaSolidariaCristiana.Controllers
                         FileName = file.FileName,
                         FilePath = $"/uploads/patient-documents/{fileName}",
                         FileSize = fileSize,
-                        ContentType = file.ContentType,
+                        ContentType = contentType,
                         Description = documentDescriptions != null && i < documentDescriptions.Count ? documentDescriptions[i] : null,
                         UploadDate = DateTime.Now
                     };
