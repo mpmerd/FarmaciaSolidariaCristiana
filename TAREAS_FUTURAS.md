@@ -96,13 +96,419 @@ public async Task<IActionResult> EntregasReport(
 
 ---
 #### 2. Agregar nuevas funcionalidades el sistema de entrega de turnos
-**Descripción**: Que los usuarios con el rol de seguridad Admin puedan bloquear fechas futuras donde no se permitan dar turnos. Esto es prever desastres naturales, días festivos o acontecimientos desconocidos que se presenten e impidan a la farmacia hacer su función en un momento determinado.
+**Descripción**: 
+
+Dar la posibilidad a un usuario que tiene turno aprobado que lo cancele, el periodo de tiempo permitido será hasta que falte una semana para la fecha del turno.
+
+Que los usuarios con el rol de seguridad Admin puedan bloquear fechas futuras donde no se permitan dar turnos. Esto es prever desastres naturales, días festivos o acontecimientos desconocidos que se presenten e impidan a la farmacia hacer su función en un momento determinado.
 
 También en situaciones excepcionales que los usuarios con role admin puedan reprogramar los turnos de un día determinado o de varios días y que automáticamente la aplicación busque los espacios de tiempo en los días venideros que no están bloqueados. Esta función requerirá el envío de emails automáticos a los pacientes afectados, explicando la causa de la reprogramación del turno.
 
 **Estado**: 📋 Análisis técnico completado
 
 **Análisis de Implementación:**
+
+**PARTE 0: Cancelación de Turnos por Usuario (ViewerPublic)**
+
+**Descripción**: Permitir que usuarios con turno aprobado puedan cancelarlo hasta 7 días antes de la fecha del turno.
+
+**Lógica de validación:**
+```csharp
+// En TurnoService.cs
+public bool CanUserCancelTurno(Turno turno)
+{
+    // Solo turnos Aprobados pueden ser cancelados por usuario
+    if (turno.Estado != EstadoTurno.Aprobado)
+        return false;
+    
+    // Debe tener fecha asignada
+    if (!turno.FechaPreferida.HasValue)
+        return false;
+    
+    // Calcular días restantes
+    var diasRestantes = (turno.FechaPreferida.Value.Date - DateTime.Now.Date).Days;
+    
+    // Permitir cancelar solo si faltan más de 7 días
+    return diasRestantes > 7;
+}
+
+public string GetCancelReasonMessage(Turno turno)
+{
+    if (turno.Estado != EstadoTurno.Aprobado)
+        return "Solo se pueden cancelar turnos aprobados.";
+    
+    if (!turno.FechaPreferida.HasValue)
+        return "El turno no tiene fecha asignada.";
+    
+    var diasRestantes = (turno.FechaPreferida.Value.Date - DateTime.Now.Date).Days;
+    
+    if (diasRestantes <= 7)
+        return $"No se puede cancelar. Faltan solo {diasRestantes} día(s). Debe cancelar con al menos 7 días de anticipación.";
+    
+    return string.Empty;
+}
+```
+
+**Agregar a ITurnoService.cs:**
+```csharp
+bool CanUserCancelTurno(Turno turno);
+string GetCancelReasonMessage(Turno turno);
+Task<bool> CancelTurnoByUserAsync(int turnoId, string userId, string motivoCancelacion);
+```
+
+**Implementar en TurnoService.cs:**
+```csharp
+public async Task<bool> CancelTurnoByUserAsync(int turnoId, string userId, string motivoCancelacion)
+{
+    var turno = await _context.Turnos
+        .Include(t => t.Medicamentos).ThenInclude(tm => tm.Medicine)
+        .Include(t => t.Insumos).ThenInclude(ti => ti.Supply)
+        .FirstOrDefaultAsync(t => t.Id == turnoId && t.UserId == userId);
+    
+    if (turno == null)
+        return false;
+    
+    // Validar que se puede cancelar
+    if (!CanUserCancelTurno(turno))
+        return false;
+    
+    // Cambiar estado a Cancelado (o Rechazado con nota)
+    turno.Estado = EstadoTurno.Rechazado;
+    turno.FechaRevision = DateTime.Now;
+    turno.Comentarios += $"\n[CANCELADO POR USUARIO - {DateTime.Now:dd/MM/yyyy HH:mm}]";
+    turno.Comentarios += $"\nMotivo: {motivoCancelacion}";
+    
+    // Liberar slot (la fecha queda disponible para otros)
+    // No es necesario hacer nada, el slot se libera automáticamente
+    
+    await _context.SaveChangesAsync();
+    
+    _logger.LogInformation("Turno {TurnoId} cancelado por usuario {UserId}", turnoId, userId);
+    
+    return true;
+}
+```
+
+**Actualizar enum EstadoTurno (si no existe):**
+```csharp
+public static class EstadoTurno
+{
+    public const string Pendiente = "Pendiente";
+    public const string Aprobado = "Aprobado";
+    public const string Rechazado = "Rechazado";
+    public const string Completado = "Completado";
+    public const string Cancelado = "Cancelado"; // NUEVO (opcional, o usar Rechazado)
+}
+```
+
+**Nuevo método en TurnosController:**
+```csharp
+// POST: Turnos/Cancel/5
+[HttpPost]
+[Authorize(Roles = "ViewerPublic")]
+[ValidateAntiForgeryToken]
+public async Task<IActionResult> Cancel(int id, string motivoCancelacion)
+{
+    var userId = _userManager.GetUserId(User);
+    
+    var turno = await _context.Turnos
+        .FirstOrDefaultAsync(t => t.Id == id && t.UserId == userId);
+    
+    if (turno == null)
+    {
+        return NotFound();
+    }
+    
+    // Validar que se puede cancelar
+    if (!_turnoService.CanUserCancelTurno(turno))
+    {
+        var reason = _turnoService.GetCancelReasonMessage(turno);
+        TempData["ErrorMessage"] = reason;
+        return RedirectToAction(nameof(Index));
+    }
+    
+    // Validar que se proporcione motivo
+    if (string.IsNullOrWhiteSpace(motivoCancelacion))
+    {
+        TempData["ErrorMessage"] = "Debe proporcionar un motivo para la cancelación.";
+        return RedirectToAction(nameof(Index));
+    }
+    
+    // Cancelar turno
+    var success = await _turnoService.CancelTurnoByUserAsync(id, userId!, motivoCancelacion);
+    
+    if (success)
+    {
+        // Enviar email de confirmación al usuario
+        var user = await _userManager.GetUserAsync(User);
+        if (user?.Email != null)
+        {
+            try
+            {
+                await _emailService.SendTurnoCanceladoByUserEmailAsync(
+                    user.Email, 
+                    user.UserName ?? "Usuario",
+                    turno.NumeroTurno ?? 0,
+                    turno.FechaPreferida ?? DateTime.Now,
+                    motivoCancelacion);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "No se pudo enviar email de cancelación");
+            }
+        }
+        
+        // Notificar a farmacéuticos
+        await NotificarFarmaceuticosTurnoCancelado(turno, motivoCancelacion);
+        
+        TempData["SuccessMessage"] = "Tu turno ha sido cancelado exitosamente.";
+    }
+    else
+    {
+        TempData["ErrorMessage"] = "No se pudo cancelar el turno.";
+    }
+    
+    return RedirectToAction(nameof(Index));
+}
+
+private async Task NotificarFarmaceuticosTurnoCancelado(Turno turno, string motivo)
+{
+    var farmaceuticos = await _userManager.GetUsersInRoleAsync("Farmaceutico");
+    var admins = await _userManager.GetUsersInRoleAsync("Admin");
+    var destinatarios = farmaceuticos.Union(admins).Where(u => u.Email != null);
+    
+    foreach (var user in destinatarios)
+    {
+        try
+        {
+            await _emailService.SendNotificacionTurnoCanceladoAsync(
+                user.Email!,
+                user.UserName ?? "Farmacéutico",
+                turno.NumeroTurno ?? 0,
+                turno.FechaPreferida ?? DateTime.Now,
+                motivo);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Error enviando notificación a {Email}", user.Email);
+        }
+    }
+}
+```
+
+**Agregar métodos de email a IEmailService.cs:**
+```csharp
+Task SendTurnoCanceladoByUserEmailAsync(
+    string destinatario, 
+    string nombreUsuario, 
+    int numeroTurno, 
+    DateTime fechaTurno,
+    string motivo);
+
+Task SendNotificacionTurnoCanceladoAsync(
+    string destinatario,
+    string nombreFarmaceutico,
+    int numeroTurno,
+    DateTime fechaTurno,
+    string motivo);
+```
+
+**Implementar en EmailService.cs:**
+```csharp
+public async Task SendTurnoCanceladoByUserEmailAsync(
+    string destinatario, 
+    string nombreUsuario, 
+    int numeroTurno, 
+    DateTime fechaTurno,
+    string motivo)
+{
+    var subject = $"Turno #{numeroTurno:000} Cancelado";
+    
+    var body = $@"
+        <html>
+        <body style='font-family: Arial, sans-serif;'>
+            <div style='background-color: #f8d7da; padding: 20px; border-radius: 5px;'>
+                <h2 style='color: #721c24;'>Turno Cancelado</h2>
+                <p>Estimado/a <strong>{nombreUsuario}</strong>,</p>
+                
+                <p>Tu turno ha sido cancelado según tu solicitud.</p>
+                
+                <div style='background-color: white; padding: 15px; margin: 20px 0; border-left: 4px solid #dc3545;'>
+                    <p><strong>Número de Turno:</strong> #{numeroTurno:000}</p>
+                    <p><strong>Fecha del Turno:</strong> {fechaTurno:dd/MM/yyyy HH:mm}</p>
+                    <p><strong>Motivo:</strong> {motivo}</p>
+                </div>
+                
+                <p>Si necesitas solicitar un nuevo turno, puedes hacerlo desde nuestra plataforma.</p>
+                
+                <p style='margin-top: 20px;'>
+                    Saludos,<br/>
+                    <strong>Farmacia Solidaria Cristiana</strong>
+                </p>
+            </div>
+        </body>
+        </html>";
+    
+    await SendEmailAsync(destinatario, subject, body);
+}
+
+public async Task SendNotificacionTurnoCanceladoAsync(
+    string destinatario,
+    string nombreFarmaceutico,
+    int numeroTurno,
+    DateTime fechaTurno,
+    string motivo)
+{
+    var subject = $"Usuario canceló Turno #{numeroTurno:000}";
+    
+    var body = $@"
+        <html>
+        <body style='font-family: Arial, sans-serif;'>
+            <div style='background-color: #fff3cd; padding: 20px; border-radius: 5px;'>
+                <h2 style='color: #856404;'>Turno Cancelado por Usuario</h2>
+                <p>Hola <strong>{nombreFarmaceutico}</strong>,</p>
+                
+                <p>Un usuario ha cancelado su turno aprobado:</p>
+                
+                <div style='background-color: white; padding: 15px; margin: 20px 0; border-left: 4px solid #ffc107;'>
+                    <p><strong>Número de Turno:</strong> #{numeroTurno:000}</p>
+                    <p><strong>Fecha del Turno:</strong> {fechaTurno:dd/MM/yyyy HH:mm}</p>
+                    <p><strong>Motivo de cancelación:</strong> {motivo}</p>
+                </div>
+                
+                <p>El slot de tiempo quedó disponible para otros usuarios.</p>
+                
+                <p style='margin-top: 20px;'>
+                    Sistema Automático<br/>
+                    <strong>Farmacia Solidaria Cristiana</strong>
+                </p>
+            </div>
+        </body>
+        </html>";
+    
+    await SendEmailAsync(destinatario, subject, body);
+}
+```
+
+**Modificar Vista Index.cshtml (Mis Turnos):**
+```html
+@* Agregar columna "Acciones" (si se eliminó antes, volver a agregar solo para Aprobados) *@
+<th>Acciones</th>
+
+@* En el cuerpo de la tabla, dentro del foreach *@
+<td>
+    @if (turno.Estado == "Aprobado")
+    {
+        var diasRestantes = turno.FechaPreferida.HasValue ? 
+            (turno.FechaPreferida.Value.Date - DateTime.Now.Date).Days : 0;
+        
+        if (diasRestantes > 7)
+        {
+            <button type="button" class="btn btn-sm btn-warning" 
+                    data-bs-toggle="modal" 
+                    data-bs-target="#cancelModal"
+                    data-turno-id="@turno.Id"
+                    data-turno-numero="@turno.NumeroTurno"
+                    data-turno-fecha="@turno.FechaPreferida?.ToString("dd/MM/yyyy HH:mm")">
+                <i class="bi bi-x-circle"></i> Cancelar
+            </button>
+            <small class="text-muted d-block">Faltan @diasRestantes días</small>
+        }
+        else
+        {
+            <small class="text-muted">
+                <i class="bi bi-info-circle"></i> 
+                No cancelable<br/>
+                (menos de 7 días)
+            </small>
+        }
+    }
+    else
+    {
+        <span class="text-muted">-</span>
+    }
+</td>
+
+@* Modal de confirmación al final de la vista *@
+<div class="modal fade" id="cancelModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form asp-action="Cancel" method="post">
+                <div class="modal-header bg-warning">
+                    <h5 class="modal-title">Cancelar Turno</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" name="id" id="turnoId" />
+                    
+                    <div class="alert alert-warning">
+                        <i class="bi bi-exclamation-triangle"></i>
+                        <strong>¿Estás seguro?</strong><br/>
+                        Vas a cancelar el turno <strong>#<span id="turnoNumero"></span></strong><br/>
+                        Fecha: <strong><span id="turnoFecha"></span></strong>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">
+                            <strong>Motivo de la cancelación:</strong>
+                            <span class="text-danger">*</span>
+                        </label>
+                        <textarea name="motivoCancelacion" 
+                                  class="form-control" 
+                                  rows="3" 
+                                  required
+                                  placeholder="Por favor, explica por qué necesitas cancelar el turno..."></textarea>
+                        <small class="text-muted">Este campo es obligatorio</small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        No, mantener turno
+                    </button>
+                    <button type="submit" class="btn btn-warning">
+                        <i class="bi bi-x-circle"></i> Sí, cancelar turno
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+// Script para pasar datos al modal
+document.addEventListener('DOMContentLoaded', function() {
+    var cancelModal = document.getElementById('cancelModal');
+    cancelModal.addEventListener('show.bs.modal', function (event) {
+        var button = event.relatedTarget;
+        var turnoId = button.getAttribute('data-turno-id');
+        var turnoNumero = button.getAttribute('data-turno-numero');
+        var turnoFecha = button.getAttribute('data-turno-fecha');
+        
+        document.getElementById('turnoId').value = turnoId;
+        document.getElementById('turnoNumero').textContent = turnoNumero;
+        document.getElementById('turnoFecha').textContent = turnoFecha;
+    });
+});
+</script>
+```
+
+**Pasos de implementación:**
+1. Agregar métodos de validación a `TurnoService.cs`
+2. Implementar método `CancelTurnoByUserAsync` en servicio
+3. Agregar action `Cancel` en `TurnosController`
+4. Implementar métodos de email en `EmailService`
+5. Modificar vista `Index.cshtml` con botón cancelar y modal
+6. Testing:
+   - Cancelar turno con más de 7 días → Exitoso
+   - Intentar cancelar con menos de 7 días → Rechazado
+   - Verificar emails enviados (usuario y farmacéuticos)
+   - Verificar que slot queda disponible
+7. Documentar en CHANGELOG
+8. Commit y deploy
+
+**Tiempo estimado:** 3-4 horas
+
+---
 
 **PARTE 1: Sistema de Bloqueo de Fechas**
 
@@ -429,7 +835,12 @@ public async Task EnviarEmailReprogramacion(
 10. Documentar en CHANGELOG
 11. Commit y deploy
 
-**Tiempo estimado:** 10-14 horas (función compleja)
+**Tiempo estimado total (Tarea 2 completa):** 
+- PARTE 0 (Cancelación por usuario): 3-4 horas
+- PARTE 1 (Bloqueo de fechas): 3-4 horas
+- PARTE 2 (Reprogramación): 4-6 horas
+- PARTE 3 (Emails): 2-3 horas
+- **Total: 12-17 horas**
 
 **Consideraciones adicionales:**
 - Manejo de errores si email falla (guardar en log)
