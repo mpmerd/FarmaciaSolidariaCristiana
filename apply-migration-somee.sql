@@ -563,16 +563,25 @@ BEGIN
 END
 ELSE
 BEGIN
-    PRINT '⚠ Tabla FechasBloqueadas ya existe, omitiendo migración'
+    PRINT '⚠ Tabla FechasBloqueadas ya existe, omitiendo creación'
 END
 
--- Registrar migración
+-- Registrar migración (SIEMPRE, independientemente de si la tabla ya existía)
 IF NOT EXISTS (SELECT * FROM __EFMigrationsHistory 
                WHERE MigrationId = '20251103000000_AddFechasBloqueadas')
 BEGIN
-    INSERT INTO __EFMigrationsHistory (MigrationId, ProductVersion)
-    VALUES ('20251103000000_AddFechasBloqueadas', '8.0.11');
-    PRINT '✓ Migración 9 registrada en historial'
+    BEGIN TRY
+        INSERT INTO __EFMigrationsHistory (MigrationId, ProductVersion)
+        VALUES ('20251103000000_AddFechasBloqueadas', '8.0.11');
+        PRINT '✓ Migración 9 registrada en __EFMigrationsHistory'
+    END TRY
+    BEGIN CATCH
+        PRINT '✗ ERROR al registrar migración: ' + ERROR_MESSAGE()
+    END CATCH
+END
+ELSE
+BEGIN
+    PRINT '✓ Migración 9 ya estaba registrada en historial'
 END
 
 PRINT ''
