@@ -269,6 +269,7 @@ namespace FarmaciaSolidariaCristiana.Controllers
 
         /// <summary>
         /// Marca automáticamente un turno como completado si existe uno aprobado para el documento dado
+        /// También actualiza las cantidades aprobadas si no estaban establecidas
         /// </summary>
         private async Task CompleteTurnoIfExistsAsync(string documentoIdentidad)
         {
@@ -279,14 +280,33 @@ namespace FarmaciaSolidariaCristiana.Controllers
                 var hashBytes = sha256.ComputeHash(System.Text.Encoding.UTF8.GetBytes(documentoIdentidad));
                 var documentHash = Convert.ToBase64String(hashBytes);
 
-                // Buscar turno aprobado con ese documento
+                // Buscar turno aprobado con ese documento (incluir medicamentos e insumos)
                 var turno = await _context.Turnos
+                    .Include(t => t.Medicamentos)
+                    .Include(t => t.Insumos)
                     .FirstOrDefaultAsync(t => 
                         t.DocumentoIdentidadHash == documentHash && 
                         t.Estado == "Aprobado");
 
                 if (turno != null)
                 {
+                    // ✅ CORREGIDO: Asegurar que las cantidades aprobadas estén establecidas
+                    foreach (var tm in turno.Medicamentos)
+                    {
+                        if (!tm.CantidadAprobada.HasValue)
+                        {
+                            tm.CantidadAprobada = tm.CantidadSolicitada;
+                        }
+                    }
+                    
+                    foreach (var ti in turno.Insumos)
+                    {
+                        if (!ti.CantidadAprobada.HasValue)
+                        {
+                            ti.CantidadAprobada = ti.CantidadSolicitada;
+                        }
+                    }
+                    
                     turno.Estado = "Completado";
                     turno.FechaEntrega = DateTime.Now;
                     await _context.SaveChangesAsync();
