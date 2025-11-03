@@ -201,7 +201,7 @@ namespace FarmaciaSolidariaCristiana.Services
                                 <ul>
                                     <li>Llega 10 minutos antes de tu hora asignada</li>
                                     <li>Trae tu documento de identidad original</li>
-                                    <li>Si tienes receta médica, tráela impresa</li>
+                                    <li>Trae tu receta médica y/o documentos médicos que evidencien la necesidad del medicamento</li>
                                     <li>El PDF adjunto contiene los detalles de tu turno</li>
                                 </ul>
 
