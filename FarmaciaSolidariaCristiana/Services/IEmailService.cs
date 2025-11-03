@@ -46,5 +46,16 @@ namespace FarmaciaSolidariaCristiana.Services
             int numeroTurno,
             DateTime fechaTurno,
             string motivo);
+
+        /// <summary>
+        /// Envía email al paciente cuando su turno es reprogramado
+        /// </summary>
+        Task SendTurnoReprogramadoEmailAsync(
+            string destinatario,
+            string nombreUsuario,
+            int numeroTurno,
+            DateTime fechaOriginal,
+            DateTime fechaNueva,
+            string motivo);
     }
 }

@@ -611,5 +611,79 @@ namespace FarmaciaSolidariaCristiana.Services
             
             await SendEmailAsync(destinatario, subject, body);
         }
+
+        public async Task SendTurnoReprogramadoEmailAsync(
+            string destinatario,
+            string nombreUsuario,
+            int numeroTurno,
+            DateTime fechaOriginal,
+            DateTime fechaNueva,
+            string motivo)
+        {
+            var subject = $"Turno #{numeroTurno:000} Reprogramado";
+            
+            var body = $@"
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <style>
+                        body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+                        .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+                        .header {{ background-color: #0dcaf0; color: #000; padding: 20px; text-align: center; border-radius: 10px 10px 0 0; }}
+                        .content {{ background-color: #cff4fc; padding: 30px; border-radius: 0 0 10px 10px; }}
+                        .info-box {{ background-color: white; padding: 15px; margin: 20px 0; border-left: 4px solid #0dcaf0; }}
+                        .highlight {{ background-color: #fff3cd; padding: 10px; border-radius: 5px; margin: 10px 0; }}
+                        .footer {{ text-align: center; margin-top: 20px; font-size: 12px; color: #6c757d; }}
+                    </style>
+                </head>
+                <body>
+                    <div class='container'>
+                        <div class='header'>
+                            <h1>📅 Turno Reprogramado</h1>
+                        </div>
+                        <div class='content'>
+                            <p>Estimado/a <strong>{nombreUsuario}</strong>,</p>
+                            
+                            <p>Tu turno ha sido <strong>reprogramado</strong> debido a circunstancias excepcionales.</p>
+                            
+                            <div class='info-box'>
+                                <p><strong>Número de Turno:</strong> #{numeroTurno:000}</p>
+                                <p><strong>Fecha Original:</strong> <s>{fechaOriginal:dd/MM/yyyy HH:mm}</s></p>
+                                <p><strong>Nueva Fecha:</strong> <span style='color: #0d6efd; font-size: 1.2em;'>{fechaNueva:dd/MM/yyyy HH:mm}</span></p>
+                                <p><strong>Día:</strong> {fechaNueva:dddd, dd 'de' MMMM 'de' yyyy}</p>
+                            </div>
+                            
+                            <div class='highlight'>
+                                <p><strong>Motivo de la reprogramación:</strong></p>
+                                <p>{motivo}</p>
+                            </div>
+                            
+                            <p><strong>⚠️ Importante:</strong></p>
+                            <ul>
+                                <li>Tu turno sigue siendo <strong>válido</strong></li>
+                                <li>No necesitas hacer nada adicional</li>
+                                <li>Llega 10 minutos antes de la nueva hora</li>
+                                <li>Trae tu documento de identidad original</li>
+                                <li>Presenta las recetas médicas correspondientes</li>
+                            </ul>
+                            
+                            <p>Lamentamos las molestias que esto pueda ocasionar. Nuestro equipo está trabajando para brindarte el mejor servicio.</p>
+                            
+                            <p><strong>Si no puedes asistir en la nueva fecha:</strong></p>
+                            <p>Puedes cancelar tu turno desde la plataforma (con al menos 7 días de anticipación) y solicitar uno nuevo.</p>
+                            
+                            <div class='footer'>
+                                <p>Saludos,<br/>
+                                <strong>Farmacia Solidaria Cristiana</strong><br/>
+                                Iglesia Metodista de Cárdenas</p>
+                                <p>© 2025 Todos los derechos reservados.</p>
+                            </div>
+                        </div>
+                    </div>
+                </body>
+                </html>";
+            
+            await SendEmailAsync(destinatario, subject, body);
+        }
     }
 }

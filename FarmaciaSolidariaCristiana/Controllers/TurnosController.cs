@@ -689,6 +689,244 @@ namespace FarmaciaSolidariaCristiana.Controllers
                 }
             }
         }
+
+        // GET: Turnos/ReprogramarFecha
+        /// <summary>
+        /// Vista para reprogramar turnos de una fecha específica (Solo Admin)
+        /// </summary>
+        [HttpGet]
+        [Authorize(Roles = "Admin")]
+        public IActionResult ReprogramarFecha()
+        {
+            return View();
+        }
+
+        // POST: Turnos/ReprogramarTurnosPorFecha
+        /// <summary>
+        /// Reprograma automáticamente todos los turnos de una fecha específica
+        /// </summary>
+        [HttpPost]
+        [Authorize(Roles = "Admin")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ReprogramarTurnosPorFecha(DateTime fechaAfectada, string motivo)
+        {
+            if (string.IsNullOrWhiteSpace(motivo))
+            {
+                TempData["ErrorMessage"] = "Debe proporcionar un motivo para la reprogramación.";
+                return RedirectToAction(nameof(ReprogramarFecha));
+            }
+
+            // 1. Obtener turnos del día afectado (Aprobados y Pendientes)
+            var turnosAfectados = await _context.Turnos
+                .Include(t => t.User)
+                .Include(t => t.Medicamentos).ThenInclude(tm => tm.Medicine)
+                .Include(t => t.Insumos).ThenInclude(ti => ti.Supply)
+                .Where(t => t.FechaPreferida.HasValue && 
+                            t.FechaPreferida.Value.Date == fechaAfectada.Date &&
+                            (t.Estado == EstadoTurno.Aprobado || 
+                             t.Estado == EstadoTurno.Pendiente))
+                .ToListAsync();
+            
+            if (!turnosAfectados.Any())
+            {
+                TempData["InfoMessage"] = "No hay turnos en esa fecha.";
+                return RedirectToAction(nameof(ReprogramarFecha));
+            }
+            
+            // 2. Por cada turno afectado, buscar próximo slot disponible
+            var turnosReprogramados = new List<TurnoReprogramacion>();
+            var turnosNoReprogramados = new List<Turno>();
+            
+            foreach (var turno in turnosAfectados)
+            {
+                try
+                {
+                    // Buscar próxima fecha disponible (Martes o Jueves)
+                    var nuevaFecha = await BuscarProximaFechaDisponible(fechaAfectada.AddDays(1));
+                    
+                    if (nuevaFecha == null)
+                    {
+                        // No hay slots disponibles en próximos 30 días
+                        turnosNoReprogramados.Add(turno);
+                        _logger.LogWarning("No se encontró fecha disponible para turno {TurnoId}", turno.Id);
+                        continue;
+                    }
+                    
+                    // Buscar slot de hora disponible
+                    var nuevoSlot = await BuscarProximoSlotDisponible(nuevaFecha.Value);
+                    
+                    if (nuevoSlot == null)
+                    {
+                        turnosNoReprogramados.Add(turno);
+                        _logger.LogWarning("No se encontró slot disponible para turno {TurnoId}", turno.Id);
+                        continue;
+                    }
+                    
+                    // Guardar info para email
+                    turnosReprogramados.Add(new TurnoReprogramacion
+                    {
+                        Turno = turno,
+                        FechaOriginal = turno.FechaPreferida!.Value,
+                        FechaNueva = nuevoSlot.Value
+                    });
+                    
+                    // Actualizar turno
+                    var fechaAnterior = turno.FechaPreferida;
+                    turno.FechaPreferida = nuevoSlot.Value;
+                    turno.ComentariosFarmaceutico += $"\n[REPROGRAMADO - {DateTime.Now:dd/MM/yyyy HH:mm}]";
+                    turno.ComentariosFarmaceutico += $"\nFecha original: {fechaAnterior:dd/MM/yyyy HH:mm}";
+                    turno.ComentariosFarmaceutico += $"\nMotivo: {motivo}";
+                    
+                    _logger.LogInformation("Turno {TurnoId} reprogramado de {FechaAnterior} a {FechaNueva}",
+                        turno.Id, fechaAnterior, nuevoSlot.Value);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error reprogramando turno {TurnoId}", turno.Id);
+                    turnosNoReprogramados.Add(turno);
+                }
+            }
+            
+            await _context.SaveChangesAsync();
+            
+            // 3. Enviar emails a los pacientes afectados
+            foreach (var reprogramacion in turnosReprogramados)
+            {
+                await EnviarEmailReprogramacion(reprogramacion, motivo);
+            }
+            
+            // Mensaje de resultado
+            var mensaje = $"{turnosReprogramados.Count} turno(s) reprogramado(s) exitosamente.";
+            if (turnosNoReprogramados.Any())
+            {
+                mensaje += $" {turnosNoReprogramados.Count} turno(s) NO pudieron reprogramarse (sin disponibilidad).";
+                TempData["WarningMessage"] = mensaje;
+            }
+            else
+            {
+                TempData["SuccessMessage"] = mensaje;
+            }
+            
+            return RedirectToAction(nameof(ReprogramarFecha));
+        }
+
+        /// <summary>
+        /// Busca la próxima fecha disponible (Martes o Jueves, no bloqueada, con espacio)
+        /// </summary>
+        private async Task<DateTime?> BuscarProximaFechaDisponible(DateTime desde)
+        {
+            var fechaBusqueda = desde.Date;
+            var diasBuscados = 0;
+            
+            while (diasBuscados < 60) // Buscar hasta 60 días adelante
+            {
+                // Solo Martes (2) o Jueves (4)
+                if (fechaBusqueda.DayOfWeek == DayOfWeek.Tuesday || 
+                    fechaBusqueda.DayOfWeek == DayOfWeek.Thursday)
+                {
+                    // Verificar que no esté bloqueada
+                    var estaBloqueada = await _context.FechasBloqueadas
+                        .AnyAsync(f => f.Fecha.Date == fechaBusqueda);
+                    
+                    if (!estaBloqueada)
+                    {
+                        // Verificar que haya slots disponibles (menos de 30 turnos)
+                        var turnosEnFecha = await _context.Turnos
+                            .CountAsync(t => t.FechaPreferida.HasValue &&
+                                             t.FechaPreferida.Value.Date == fechaBusqueda &&
+                                             (t.Estado == EstadoTurno.Aprobado || 
+                                              t.Estado == EstadoTurno.Completado));
+                        
+                        if (turnosEnFecha < 30) // Hay espacio
+                        {
+                            return fechaBusqueda;
+                        }
+                    }
+                }
+                
+                fechaBusqueda = fechaBusqueda.AddDays(1);
+                diasBuscados++;
+            }
+            
+            return null; // No hay fechas disponibles en próximos 60 días
+        }
+
+        /// <summary>
+        /// Busca el próximo slot de hora disponible en una fecha específica
+        /// </summary>
+        private async Task<DateTime?> BuscarProximoSlotDisponible(DateTime fecha)
+        {
+            // Horario: 1:00 PM a 4:00 PM, slots de 6 minutos
+            var horaInicio = new TimeSpan(13, 0, 0); // 1 PM
+            var horaFin = new TimeSpan(16, 0, 0); // 4 PM
+            var duracionSlot = TimeSpan.FromMinutes(6);
+            
+            var horaActual = horaInicio;
+            
+            while (horaActual < horaFin)
+            {
+                var fechaHora = fecha.Date.Add(horaActual);
+                
+                // Verificar si este slot está ocupado
+                var ocupado = await _context.Turnos
+                    .AnyAsync(t => t.FechaPreferida.HasValue &&
+                                   t.FechaPreferida.Value == fechaHora &&
+                                   (t.Estado == EstadoTurno.Aprobado || 
+                                    t.Estado == EstadoTurno.Completado));
+                
+                if (!ocupado)
+                {
+                    return fechaHora;
+                }
+                
+                horaActual = horaActual.Add(duracionSlot);
+            }
+            
+            return null; // No hay slots disponibles en esta fecha
+        }
+
+        /// <summary>
+        /// Envía email de reprogramación al paciente afectado
+        /// </summary>
+        private async Task EnviarEmailReprogramacion(TurnoReprogramacion reprogramacion, string motivo)
+        {
+            var turno = reprogramacion.Turno;
+            var user = turno.User as IdentityUser;
+            
+            if (user?.Email == null)
+            {
+                _logger.LogWarning("Usuario del turno {TurnoId} no tiene email", turno.Id);
+                return;
+            }
+            
+            try
+            {
+                await _emailService.SendTurnoReprogramadoEmailAsync(
+                    user.Email,
+                    user.UserName ?? "Usuario",
+                    turno.NumeroTurno ?? 0,
+                    reprogramacion.FechaOriginal,
+                    reprogramacion.FechaNueva,
+                    motivo);
+                
+                _logger.LogInformation("Email de reprogramación enviado a {Email} para turno {TurnoId}",
+                    user.Email, turno.Id);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error enviando email de reprogramación para turno {TurnoId}", turno.Id);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Clase auxiliar para almacenar info de reprogramación
+    /// </summary>
+    public class TurnoReprogramacion
+    {
+        public Turno Turno { get; set; } = null!;
+        public DateTime FechaOriginal { get; set; }
+        public DateTime FechaNueva { get; set; }
     }
 
     /// <summary>
