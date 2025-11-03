@@ -260,9 +260,12 @@ namespace FarmaciaSolidariaCristiana.Controllers
             _context.Deliveries.Remove(delivery);
             await _context.SaveChangesAsync();
             
+            // ✅ NUEVO: Revertir turno a Pendiente si estaba Completado
+            await RevertTurnoToPendingIfCompletedAsync(delivery.PatientIdentification);
+            
             _logger.LogInformation("Delivery deleted: ID {Id}, Item: {Item}, Quantity: {Quantity}", 
                 delivery.Id, itemName, delivery.Quantity);
-            TempData["SuccessMessage"] = "Entrega eliminada exitosamente. El stock ha sido restaurado.";
+            TempData["SuccessMessage"] = "Entrega eliminada exitosamente. El stock ha sido restaurado y el turno revertido a Pendiente.";
 
             return RedirectToAction(nameof(Index));
         }
@@ -320,5 +323,57 @@ namespace FarmaciaSolidariaCristiana.Controllers
                 _logger.LogError(ex, "Error al intentar completar turno automáticamente para documento");
             }
         }
+
+        /// <summary>
+        /// Revierte un turno completado a Pendiente cuando se elimina una entrega
+        /// Limpia las cantidades aprobadas y la fecha de entrega
+        /// </summary>
+        private async Task RevertTurnoToPendingIfCompletedAsync(string documentoIdentidad)
+        {
+            try
+            {
+                // Calcular hash del documento (mismo método que usa TurnoService)
+                using var sha256 = System.Security.Cryptography.SHA256.Create();
+                var hashBytes = sha256.ComputeHash(System.Text.Encoding.UTF8.GetBytes(documentoIdentidad));
+                var documentHash = Convert.ToBase64String(hashBytes);
+
+                // Buscar turno completado con ese documento (incluir medicamentos e insumos)
+                var turno = await _context.Turnos
+                    .Include(t => t.Medicamentos)
+                    .Include(t => t.Insumos)
+                    .FirstOrDefaultAsync(t => 
+                        t.DocumentoIdentidadHash == documentHash && 
+                        t.Estado == "Completado");
+
+                if (turno != null)
+                {
+                    // Revertir a Pendiente
+                    turno.Estado = "Pendiente";
+                    turno.FechaEntrega = null;
+                    
+                    // Limpiar cantidades aprobadas de medicamentos
+                    foreach (var tm in turno.Medicamentos)
+                    {
+                        tm.CantidadAprobada = null;
+                    }
+                    
+                    // Limpiar cantidades aprobadas de insumos
+                    foreach (var ti in turno.Insumos)
+                    {
+                        ti.CantidadAprobada = null;
+                    }
+                    
+                    await _context.SaveChangesAsync();
+                    
+                    _logger.LogInformation("Turno #{TurnoId} revertido a Pendiente tras eliminar entrega. Cantidades aprobadas limpiadas.", turno.Id);
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log error pero no fallar la eliminación
+                _logger.LogError(ex, "Error al intentar revertir turno a Pendiente tras eliminar entrega");
+            }
+        }
     }
 }
+
