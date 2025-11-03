@@ -11,8 +11,8 @@
 </head>
 <body>
     <header>
-        <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-dark bg-primary border-bottom box-shadow mb-3">
-            <div class="container-fluid">
+        <nav class="navbar navbar-expand-lg navbar-toggleable-lg navbar-dark bg-primary border-bottom box-shadow mb-3">
+            <div class="container-fluid px-3">
                 <a class="navbar-brand" asp-controller="Home" asp-action="Index">
                     <i class="bi bi-heart-pulse-fill"></i> Farmacia Solidaria Cristiana
                 </a>
@@ -20,87 +20,116 @@
                         aria-expanded="false" aria-label="Toggle navigation">
                     <span class="navbar-toggler-icon"></span>
                 </button>
-                <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
-                    <ul class="navbar-nav flex-grow-1">
+                <div class="navbar-collapse collapse d-lg-inline-flex">
+                    <ul class="navbar-nav me-auto">
                         @if (User.Identity?.IsAuthenticated == true)
                         {
                             <li class="nav-item">
-                                <a class="nav-link text-white" asp-controller="Home" asp-action="Index">
-                                    <i class="bi bi-house"></i> Inicio
+                                <a class="nav-link text-white text-center" asp-controller="Home" asp-action="Index">
+                                    <i class="bi bi-house d-block"></i>
+                                    <small>Inicio</small>
                                 </a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link text-white" asp-controller="Patients" asp-action="Index">
-                                    <i class="bi bi-person-lines-fill"></i> Pacientes
+                                <a class="nav-link text-white text-center" asp-controller="Patients" asp-action="Index">
+                                    <i class="bi bi-person-lines-fill d-block"></i>
+                                    <small>Pacientes</small>
                                 </a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link text-white" asp-controller="Medicines" asp-action="Index">
-                                    <i class="bi bi-capsule"></i> Medicamentos
+                                <a class="nav-link text-white text-center" asp-controller="Medicines" asp-action="Index">
+                                    <i class="bi bi-capsule d-block"></i>
+                                    <small>Medicinas</small>
                                 </a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link text-white" asp-controller="Supplies" asp-action="Index">
-                                    <i class="bi bi-box-seam"></i> Insumos
+                                <a class="nav-link text-white text-center" asp-controller="Supplies" asp-action="Index">
+                                    <i class="bi bi-box-seam d-block"></i>
+                                    <small>Insumos</small>
                                 </a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link text-white" asp-controller="Deliveries" asp-action="Index">
-                                    <i class="bi bi-box-arrow-right"></i> Entregas
+                                <a class="nav-link text-white text-center" asp-controller="Deliveries" asp-action="Index">
+                                    <i class="bi bi-box-arrow-right d-block"></i>
+                                    <small>Entregas</small>
                                 </a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link text-white" asp-controller="Donations" asp-action="Index">
-                                    <i class="bi bi-gift"></i> Donaciones
+                                <a class="nav-link text-white text-center" asp-controller="Donations" asp-action="Index">
+                                    <i class="bi bi-gift d-block"></i>
+                                    <small>Donaciones</small>
                                 </a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link text-white" asp-controller="Reports" asp-action="Index">
-                                    <i class="bi bi-file-pdf"></i> Reportes
+                                <a class="nav-link text-white text-center" asp-controller="Reports" asp-action="Index">
+                                    <i class="bi bi-file-pdf d-block"></i>
+                                    <small>Reportes</small>
                                 </a>
                             </li>
                             @if (User.IsInRole("ViewerPublic"))
                             {
                                 <li class="nav-item">
-                                    <a class="nav-link text-white" asp-controller="Turnos" asp-action="Index">
-                                        <i class="bi bi-calendar-check"></i> Turnos
+                                    <a class="nav-link text-white text-center" asp-controller="Turnos" asp-action="Index">
+                                        <i class="bi bi-calendar-check d-block"></i>
+                                        <small>Turnos</small>
                                     </a>
                                 </li>
                             }
                             @if (User.IsInRole("Farmaceutico") || User.IsInRole("Admin"))
                             {
                                 <li class="nav-item">
-                                    <a class="nav-link text-white" asp-controller="Turnos" asp-action="Dashboard">
-                                        <i class="bi bi-kanban"></i> Gestión Turnos
+                                    <a class="nav-link text-white text-center" asp-controller="Turnos" asp-action="Dashboard">
+                                        <i class="bi bi-kanban d-block"></i>
+                                        <small>Gestión</small>
                                     </a>
                                 </li>
                             }
                             @if (User.IsInRole("Admin"))
                             {
+                                <li class="nav-item dropdown">
+                                    <a class="nav-link dropdown-toggle text-white text-center" href="#" id="navbarDropdownTurnos" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                        <i class="bi bi-calendar-event d-block"></i>
+                                        <small>Avanzado</small>
+                                    </a>
+                                    <ul class="dropdown-menu" aria-labelledby="navbarDropdownTurnos">
+                                        <li>
+                                            <a class="dropdown-item" asp-controller="FechasBloqueadas" asp-action="Index">
+                                                <i class="bi bi-calendar-x"></i> Fechas Bloqueadas
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item" asp-controller="Turnos" asp-action="ReprogramarFecha">
+                                                <i class="bi bi-calendar-range"></i> Reprogramar Turnos
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </li>
                                 <li class="nav-item">
-                                    <a class="nav-link text-white" asp-controller="Sponsors" asp-action="Manage">
-                                        <i class="bi bi-award"></i> Patrocinadores
+                                    <a class="nav-link text-white text-center" asp-controller="Sponsors" asp-action="Manage">
+                                        <i class="bi bi-award d-block"></i>
+                                        <small>Patrocinios</small>
                                     </a>
                                 </li>
                                 <li class="nav-item">
-                                    <a class="nav-link text-white" asp-controller="Account" asp-action="ManageUsers">
-                                        <i class="bi bi-people"></i> Usuarios
+                                    <a class="nav-link text-white text-center" asp-controller="Account" asp-action="ManageUsers">
+                                        <i class="bi bi-people d-block"></i>
+                                        <small>Usuarios</small>
                                     </a>
                                 </li>
                             }
                         }
                     </ul>
-                    <ul class="navbar-nav">
+                    <ul class="navbar-nav ms-auto flex-nowrap">
                         @if (User.Identity?.IsAuthenticated == true)
                         {
-                            <li class="nav-item">
-                                <span class="navbar-text text-white me-3">
+                            <li class="nav-item d-flex align-items-center me-2">
+                                <span class="navbar-text text-white">
                                     <i class="bi bi-person-circle"></i> @User.Identity.Name
                                 </span>
                             </li>
-                            <li class="nav-item">
-                                <form asp-controller="Account" asp-action="Logout" method="post" class="d-inline">
-                                    <button type="submit" class="btn btn-outline-light btn-sm">
+                            <li class="nav-item d-flex align-items-center">
+                                <form asp-controller="Account" asp-action="Logout" method="post">
+                                    <button type="submit" class="btn btn-outline-light btn-sm text-nowrap">
                                         <i class="bi bi-box-arrow-right"></i> Cerrar Sesión
                                     </button>
                                 </form>
