@@ -124,6 +124,39 @@ namespace FarmaciaSolidariaCristiana.Migrations
                     b.ToTable("Donations");
                 });
 
+            modelBuilder.Entity("FarmaciaSolidariaCristiana.Models.FechaBloqueada", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("Fecha")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Motivo")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("UsuarioId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Fecha")
+                        .IsUnique();
+
+                    b.HasIndex("UsuarioId");
+
+                    b.ToTable("FechasBloqueadas");
+                });
+
             modelBuilder.Entity("FarmaciaSolidariaCristiana.Models.Medicine", b =>
                 {
                     b.Property<int>("Id")
@@ -730,6 +763,17 @@ namespace FarmaciaSolidariaCristiana.Migrations
                     b.Navigation("Medicine");
 
                     b.Navigation("Supply");
+                });
+
+            modelBuilder.Entity("FarmaciaSolidariaCristiana.Models.FechaBloqueada", b =>
+                {
+                    b.HasOne("Microsoft.AspNetCore.Identity.IdentityUser", "Usuario")
+                        .WithMany()
+                        .HasForeignKey("UsuarioId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Usuario");
                 });
 
             modelBuilder.Entity("FarmaciaSolidariaCristiana.Models.PatientDocument", b =>
