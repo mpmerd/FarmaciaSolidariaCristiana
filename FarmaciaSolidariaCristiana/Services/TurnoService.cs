@@ -522,13 +522,32 @@ namespace FarmaciaSolidariaCristiana.Services
                             tm.CantidadAprobada = tm.CantidadSolicitada;
                         }
                     }
+                    
+                    // ✅ CORREGIDO: Actualizar cantidades aprobadas para INSUMOS también
+                    foreach (var ti in turno.Insumos)
+                    {
+                        if (cantidadesAprobadas.ContainsKey(ti.SupplyId))
+                        {
+                            ti.CantidadAprobada = cantidadesAprobadas[ti.SupplyId];
+                        }
+                        else
+                        {
+                            ti.CantidadAprobada = ti.CantidadSolicitada;
+                        }
+                    }
                 }
                 else
                 {
-                    // Aprobar todas las cantidades solicitadas
+                    // Aprobar todas las cantidades solicitadas para medicamentos
                     foreach (var tm in turno.Medicamentos)
                     {
                         tm.CantidadAprobada = tm.CantidadSolicitada;
+                    }
+                    
+                    // ✅ CORREGIDO: Aprobar todas las cantidades solicitadas para INSUMOS también
+                    foreach (var ti in turno.Insumos)
+                    {
+                        ti.CantidadAprobada = ti.CantidadSolicitada;
                     }
                 }
 
