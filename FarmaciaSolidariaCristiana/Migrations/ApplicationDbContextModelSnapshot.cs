@@ -78,6 +78,9 @@ namespace FarmaciaSolidariaCristiana.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<int?>("TurnoId")
+                        .HasColumnType("int");
+
                     b.HasKey("Id");
 
                     b.HasIndex("MedicineId");
@@ -85,6 +88,8 @@ namespace FarmaciaSolidariaCristiana.Migrations
                     b.HasIndex("PatientId");
 
                     b.HasIndex("SupplyId");
+
+                    b.HasIndex("TurnoId");
 
                     b.ToTable("Deliveries");
                 });
@@ -742,11 +747,17 @@ namespace FarmaciaSolidariaCristiana.Migrations
                         .WithMany()
                         .HasForeignKey("SupplyId");
 
+                    b.HasOne("FarmaciaSolidariaCristiana.Models.Turno", "Turno")
+                        .WithMany()
+                        .HasForeignKey("TurnoId");
+
                     b.Navigation("Medicine");
 
                     b.Navigation("Patient");
 
                     b.Navigation("Supply");
+
+                    b.Navigation("Turno");
                 });
 
             modelBuilder.Entity("FarmaciaSolidariaCristiana.Models.Donation", b =>

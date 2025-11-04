@@ -24,6 +24,7 @@ namespace FarmaciaSolidariaCristiana.Controllers
             var deliveries = _context.Deliveries
                 .Include(d => d.Medicine)
                 .Include(d => d.Supply)
+                .Include(d => d.Turno) // ✅ Incluir Turno
                 .AsQueryable();
 
             if (!string.IsNullOrEmpty(searchString))
@@ -60,129 +61,197 @@ namespace FarmaciaSolidariaCristiana.Controllers
         [HttpPost]
         [Authorize(Roles = "Admin,Farmaceutico")]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("PatientIdentification,MedicineId,SupplyId,Quantity,DeliveryDate,PatientNote,Comments,Dosage,TreatmentDuration")] Delivery delivery)
+        public async Task<IActionResult> Create(
+            string PatientIdentification,
+            DateTime DeliveryDate,
+            string? Comments,
+            string? MedicineIds,
+            string? MedicineQuantities,
+            string? SupplyIds,
+            string? SupplyQuantities)
         {
-            // Validar que se haya seleccionado medicamento O insumo (pero no ambos ni ninguno)
-            if (!delivery.MedicineId.HasValue && !delivery.SupplyId.HasValue)
+            // Validar que se hayan seleccionado medicamentos O insumos (pero no ambos ni ninguno)
+            bool hasMedicines = !string.IsNullOrWhiteSpace(MedicineIds);
+            bool hasSupplies = !string.IsNullOrWhiteSpace(SupplyIds);
+
+            if (!hasMedicines && !hasSupplies)
             {
-                ModelState.AddModelError("", "Debe seleccionar un medicamento o un insumo.");
+                TempData["ErrorMessage"] = "Debe seleccionar al menos un medicamento o un insumo.";
+                return RedirectToAction(nameof(Create));
             }
-            else if (delivery.MedicineId.HasValue && delivery.SupplyId.HasValue)
+
+            if (hasMedicines && hasSupplies)
             {
-                ModelState.AddModelError("", "Solo puede seleccionar medicamento O insumo, no ambos.");
+                TempData["ErrorMessage"] = "Solo puede seleccionar medicamentos O insumos, no ambos en la misma entrega.";
+                return RedirectToAction(nameof(Create));
             }
 
-            if (ModelState.IsValid)
+            // Validar fecha de entrega
+            var today = DateTime.Today;
+            var deliveryDateOnly = DeliveryDate.Date;
+            var minAllowedDate = today.AddDays(-5);
+
+            if (deliveryDateOnly > today)
             {
-                // Validar que la fecha de entrega no sea futura ni más de 5 días en el pasado
-                var today = DateTime.Today;
-                var deliveryDateOnly = delivery.DeliveryDate.Date;
-                var minAllowedDate = today.AddDays(-5);
+                TempData["ErrorMessage"] = "La fecha de entrega no puede ser futura.";
+                return RedirectToAction(nameof(Create));
+            }
 
-                if (deliveryDateOnly > today)
+            if (deliveryDateOnly < minAllowedDate)
+            {
+                TempData["ErrorMessage"] = "La fecha de entrega no puede ser mayor a 5 días en el pasado.";
+                return RedirectToAction(nameof(Create));
+            }
+
+            // Buscar el paciente
+            var patient = await _context.Patients
+                .FirstOrDefaultAsync(p => p.IdentificationDocument == PatientIdentification && p.IsActive);
+
+            if (patient == null)
+            {
+                TempData["ErrorMessage"] = "Paciente no encontrado. Por favor, registre primero al paciente.";
+                return RedirectToAction(nameof(Create));
+            }
+
+            try
+            {
+                var deliveredBy = User.Identity?.Name ?? "Sistema";
+                var createdAt = DateTime.Now;
+                int deliveriesCount = 0;
+
+                // ✅ NUEVO: Determinar el TurnoId ANTES de crear las entregas
+                int? turnoId = null;
+                if (hasMedicines)
                 {
-                    ModelState.AddModelError("DeliveryDate", "La fecha de entrega no puede ser futura.");
-                    ViewData["MedicineId"] = new SelectList(_context.Medicines.OrderBy(m => m.Name), "Id", "Name", delivery.MedicineId);
-                    ViewData["SupplyId"] = new SelectList(_context.Supplies.OrderBy(s => s.Name), "Id", "Name", delivery.SupplyId);
-                    return View(delivery);
+                    var firstMedicineId = MedicineIds!.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(int.Parse).First();
+                    turnoId = await FindTurnoIdAsync(PatientIdentification, firstMedicineId, null);
+                }
+                else if (hasSupplies)
+                {
+                    var firstSupplyId = SupplyIds!.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(int.Parse).First();
+                    turnoId = await FindTurnoIdAsync(PatientIdentification, null, firstSupplyId);
                 }
 
-                if (deliveryDateOnly < minAllowedDate)
+                if (hasMedicines)
                 {
-                    ModelState.AddModelError("DeliveryDate", "La fecha de entrega no puede ser mayor a 5 días en el pasado.");
-                    ViewData["MedicineId"] = new SelectList(_context.Medicines.OrderBy(m => m.Name), "Id", "Name", delivery.MedicineId);
-                    ViewData["SupplyId"] = new SelectList(_context.Supplies.OrderBy(s => s.Name), "Id", "Name", delivery.SupplyId);
-                    return View(delivery);
-                }
+                    var medicineIdsList = MedicineIds!.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(int.Parse).ToList();
+                    var medicineQuantitiesList = MedicineQuantities!.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(int.Parse).ToList();
 
-                // Buscar el paciente por su identificación
-                var patient = await _context.Patients
-                    .FirstOrDefaultAsync(p => p.IdentificationDocument == delivery.PatientIdentification && p.IsActive);
-
-                if (patient == null)
-                {
-                    ModelState.AddModelError("PatientIdentification", 
-                        "Paciente no encontrado. Por favor, registre primero al paciente en la sección de Pacientes.");
-                    ViewData["MedicineId"] = new SelectList(_context.Medicines.OrderBy(m => m.Name), "Id", "Name", delivery.MedicineId);
-                    ViewData["SupplyId"] = new SelectList(_context.Supplies.OrderBy(s => s.Name), "Id", "Name", delivery.SupplyId);
-                    return View(delivery);
-                }
-
-                // Asignar el paciente a la entrega
-                delivery.PatientId = patient.Id;
-                
-                // Capturar el usuario que realiza la entrega
-                delivery.DeliveredBy = User.Identity?.Name ?? "Sistema";
-
-                // Establecer la fecha de creación
-                delivery.CreatedAt = DateTime.Now;
-
-                // Manejar medicamento o insumo
-                string itemName = "";
-                string itemUnit = "";
-
-                if (delivery.MedicineId.HasValue)
-                {
-                    var medicine = await _context.Medicines.FindAsync(delivery.MedicineId.Value);
-                    if (medicine == null)
+                    if (medicineIdsList.Count != medicineQuantitiesList.Count)
                     {
-                        ModelState.AddModelError("", "Medicamento no encontrado");
-                        ViewData["MedicineId"] = new SelectList(_context.Medicines.OrderBy(m => m.Name), "Id", "Name", delivery.MedicineId);
-                        ViewData["SupplyId"] = new SelectList(_context.Supplies.OrderBy(s => s.Name), "Id", "Name", delivery.SupplyId);
-                        return View(delivery);
+                        TempData["ErrorMessage"] = "Error en los datos de medicamentos. Por favor, inténtelo de nuevo.";
+                        return RedirectToAction(nameof(Create));
                     }
 
-                    if (medicine.StockQuantity < delivery.Quantity)
+                    for (int i = 0; i < medicineIdsList.Count; i++)
                     {
-                        ModelState.AddModelError("Quantity", $"Stock insuficiente. Disponible: {medicine.StockQuantity} {medicine.Unit}");
-                        ViewData["MedicineId"] = new SelectList(_context.Medicines.OrderBy(m => m.Name), "Id", "Name", delivery.MedicineId);
-                        ViewData["SupplyId"] = new SelectList(_context.Supplies.OrderBy(s => s.Name), "Id", "Name", delivery.SupplyId);
-                        return View(delivery);
-                    }
+                        var medicine = await _context.Medicines.FindAsync(medicineIdsList[i]);
+                        if (medicine == null)
+                        {
+                            TempData["ErrorMessage"] = $"Medicamento con ID {medicineIdsList[i]} no encontrado.";
+                            return RedirectToAction(nameof(Create));
+                        }
 
-                    medicine.StockQuantity -= delivery.Quantity;
-                    itemName = medicine.Name;
-                    itemUnit = medicine.Unit;
+                        if (medicine.StockQuantity < medicineQuantitiesList[i])
+                        {
+                            TempData["ErrorMessage"] = $"Stock insuficiente para {medicine.Name}. Disponible: {medicine.StockQuantity} {medicine.Unit}";
+                            return RedirectToAction(nameof(Create));
+                        }
+
+                        // Crear entrega
+                        var delivery = new Delivery
+                        {
+                            PatientIdentification = PatientIdentification,
+                            PatientId = patient.Id,
+                            TurnoId = turnoId, // ✅ Asignar TurnoId
+                            MedicineId = medicineIdsList[i],
+                            Quantity = medicineQuantitiesList[i],
+                            DeliveryDate = DeliveryDate,
+                            Comments = Comments,
+                            DeliveredBy = deliveredBy,
+                            CreatedAt = createdAt
+                        };
+
+                        medicine.StockQuantity -= medicineQuantitiesList[i];
+                        _context.Add(delivery);
+                        deliveriesCount++;
+                        
+                        _logger.LogInformation("Delivery created for patient: {PatientName}, Medicine: {MedicineName}, Quantity: {Quantity}",
+                            patient.FullName, medicine.Name, medicineQuantitiesList[i]);
+                    }
                 }
-                else if (delivery.SupplyId.HasValue)
+                else if (hasSupplies)
                 {
-                    var supply = await _context.Supplies.FindAsync(delivery.SupplyId.Value);
-                    if (supply == null)
+                    var supplyIdsList = SupplyIds!.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(int.Parse).ToList();
+                    var supplyQuantitiesList = SupplyQuantities!.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(int.Parse).ToList();
+
+                    if (supplyIdsList.Count != supplyQuantitiesList.Count)
                     {
-                        ModelState.AddModelError("", "Insumo no encontrado");
-                        ViewData["MedicineId"] = new SelectList(_context.Medicines.OrderBy(m => m.Name), "Id", "Name", delivery.MedicineId);
-                        ViewData["SupplyId"] = new SelectList(_context.Supplies.OrderBy(s => s.Name), "Id", "Name", delivery.SupplyId);
-                        return View(delivery);
+                        TempData["ErrorMessage"] = "Error en los datos de insumos. Por favor, inténtelo de nuevo.";
+                        return RedirectToAction(nameof(Create));
                     }
 
-                    if (supply.StockQuantity < delivery.Quantity)
+                    for (int i = 0; i < supplyIdsList.Count; i++)
                     {
-                        ModelState.AddModelError("Quantity", $"Stock insuficiente. Disponible: {supply.StockQuantity} {supply.Unit}");
-                        ViewData["MedicineId"] = new SelectList(_context.Medicines.OrderBy(m => m.Name), "Id", "Name", delivery.MedicineId);
-                        ViewData["SupplyId"] = new SelectList(_context.Supplies.OrderBy(s => s.Name), "Id", "Name", delivery.SupplyId);
-                        return View(delivery);
-                    }
+                        var supply = await _context.Supplies.FindAsync(supplyIdsList[i]);
+                        if (supply == null)
+                        {
+                            TempData["ErrorMessage"] = $"Insumo con ID {supplyIdsList[i]} no encontrado.";
+                            return RedirectToAction(nameof(Create));
+                        }
 
-                    supply.StockQuantity -= delivery.Quantity;
-                    itemName = supply.Name;
-                    itemUnit = supply.Unit;
+                        if (supply.StockQuantity < supplyQuantitiesList[i])
+                        {
+                            TempData["ErrorMessage"] = $"Stock insuficiente para {supply.Name}. Disponible: {supply.StockQuantity} {supply.Unit}";
+                            return RedirectToAction(nameof(Create));
+                        }
+
+                        // Crear entrega
+                        var delivery = new Delivery
+                        {
+                            PatientIdentification = PatientIdentification,
+                            PatientId = patient.Id,
+                            TurnoId = turnoId, // ✅ Asignar TurnoId
+                            SupplyId = supplyIdsList[i],
+                            Quantity = supplyQuantitiesList[i],
+                            DeliveryDate = DeliveryDate,
+                            Comments = Comments,
+                            DeliveredBy = deliveredBy,
+                            CreatedAt = createdAt
+                        };
+
+                        supply.StockQuantity -= supplyQuantitiesList[i];
+                        _context.Add(delivery);
+                        deliveriesCount++;
+                        
+                        _logger.LogInformation("Delivery created for patient: {PatientName}, Supply: {SupplyName}, Quantity: {Quantity}",
+                            patient.FullName, supply.Name, supplyQuantitiesList[i]);
+                    }
                 }
 
-                _context.Add(delivery);
                 await _context.SaveChangesAsync();
-                
-                // ✅ NUEVO: Marcar turno como completado automáticamente si existe
-                await CompleteTurnoIfExistsAsync(patient.IdentificationDocument);
-                
-                _logger.LogInformation("Delivery created for patient: {PatientName}, item: {ItemName}, Quantity: {Quantity}", 
-                    patient.FullName, itemName, delivery.Quantity);
-                TempData["SuccessMessage"] = $"Entrega registrada exitosamente para {patient.FullName}.";
+
+                // ✅ Marcar turno como completado si corresponde (usar el primer item como referencia)
+                if (hasMedicines)
+                {
+                    var firstMedicineId = MedicineIds!.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(int.Parse).First();
+                    await CompleteTurnoIfExistsAsync(PatientIdentification, firstMedicineId, null);
+                }
+                else if (hasSupplies)
+                {
+                    var firstSupplyId = SupplyIds!.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(int.Parse).First();
+                    await CompleteTurnoIfExistsAsync(PatientIdentification, null, firstSupplyId);
+                }
+
+                TempData["SuccessMessage"] = $"{deliveriesCount} entrega(s) registrada(s) exitosamente para {patient.FullName}.";
                 return RedirectToAction(nameof(Index));
             }
-            
-            ViewData["MedicineId"] = new SelectList(_context.Medicines.OrderBy(m => m.Name), "Id", "Name", delivery.MedicineId);
-            ViewData["SupplyId"] = new SelectList(_context.Supplies.OrderBy(s => s.Name), "Id", "Name", delivery.SupplyId);
-            return View(delivery);
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error creating deliveries");
+                TempData["ErrorMessage"] = "Error al registrar las entregas. Por favor, inténtelo de nuevo.";
+                return RedirectToAction(nameof(Create));
+            }
         }
 
         // GET: Deliveries/Delete/5
@@ -260,6 +329,9 @@ namespace FarmaciaSolidariaCristiana.Controllers
             _context.Deliveries.Remove(delivery);
             await _context.SaveChangesAsync();
             
+            // ✅ NUEVO: Revertir turno correspondiente a Pendiente si fue completado
+            await RevertTurnoIfNeededAsync(delivery);
+            
             _logger.LogInformation("Delivery deleted: ID {Id}, Item: {Item}, Quantity: {Quantity}", 
                 delivery.Id, itemName, delivery.Quantity);
             TempData["SuccessMessage"] = "Entrega eliminada exitosamente. El stock ha sido restaurado.";
@@ -268,10 +340,62 @@ namespace FarmaciaSolidariaCristiana.Controllers
         }
 
         /// <summary>
-        /// Marca automáticamente un turno como completado si existe uno aprobado para el documento dado
-        /// También actualiza las cantidades aprobadas si no estaban establecidas
+        /// Busca el ID del turno que contiene el medicamento o insumo especificado
+        /// SIN marcar como completado (solo buscar)
         /// </summary>
-        private async Task CompleteTurnoIfExistsAsync(string documentoIdentidad)
+        private async Task<int?> FindTurnoIdAsync(string documentoIdentidad, int? medicineId, int? supplyId)
+        {
+            try
+            {
+                // Calcular hash del documento
+                using var sha256 = System.Security.Cryptography.SHA256.Create();
+                var hashBytes = sha256.ComputeHash(System.Text.Encoding.UTF8.GetBytes(documentoIdentidad));
+                var documentHash = Convert.ToBase64String(hashBytes);
+
+                // Buscar turnos aprobados o pendientes
+                var turnos = await _context.Turnos
+                    .Include(t => t.Medicamentos)
+                    .Include(t => t.Insumos)
+                    .Where(t => 
+                        t.DocumentoIdentidadHash == documentHash && 
+                        (t.Estado == "Aprobado" || t.Estado == "Pendiente" || t.Estado == "Completado"))
+                    .ToListAsync();
+
+                if (!turnos.Any())
+                {
+                    return null;
+                }
+
+                // Buscar el turno que contiene el item
+                Turno? turno = null;
+                
+                if (medicineId.HasValue)
+                {
+                    turno = turnos.FirstOrDefault(t => 
+                        t.Medicamentos.Any(tm => tm.MedicineId == medicineId.Value));
+                }
+                else if (supplyId.HasValue)
+                {
+                    turno = turnos.FirstOrDefault(t => 
+                        t.Insumos.Any(ti => ti.SupplyId == supplyId.Value));
+                }
+
+                return turno?.Id;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error finding turno ID");
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Marca automáticamente un turno como completado si existe uno aprobado o pendiente para el documento dado
+        /// Busca el turno específico que contiene el medicamento o insumo de la entrega
+        /// También actualiza las cantidades aprobadas si no estaban establecidas
+        /// RETORNA el ID del turno encontrado (o null si no hay turno)
+        /// </summary>
+        private async Task<int?> CompleteTurnoIfExistsAsync(string documentoIdentidad, int? medicineId, int? supplyId)
         {
             try
             {
@@ -280,17 +404,37 @@ namespace FarmaciaSolidariaCristiana.Controllers
                 var hashBytes = sha256.ComputeHash(System.Text.Encoding.UTF8.GetBytes(documentoIdentidad));
                 var documentHash = Convert.ToBase64String(hashBytes);
 
-                // Buscar turno aprobado con ese documento (incluir medicamentos e insumos)
-                var turno = await _context.Turnos
+                // Buscar TODOS los turnos (Aprobado o Pendiente) para este paciente
+                var turnos = await _context.Turnos
                     .Include(t => t.Medicamentos)
                     .Include(t => t.Insumos)
-                    .FirstOrDefaultAsync(t => 
+                    .Where(t => 
                         t.DocumentoIdentidadHash == documentHash && 
-                        t.Estado == "Aprobado");
+                        (t.Estado == "Aprobado" || t.Estado == "Pendiente"))
+                    .ToListAsync();
+
+                if (!turnos.Any())
+                {
+                    return null; // No hay turnos para este paciente
+                }
+
+                // Buscar el turno ESPECÍFICO que contiene el item de la entrega
+                Turno? turno = null;
+                
+                if (medicineId.HasValue)
+                {
+                    turno = turnos.FirstOrDefault(t => 
+                        t.Medicamentos.Any(tm => tm.MedicineId == medicineId.Value));
+                }
+                else if (supplyId.HasValue)
+                {
+                    turno = turnos.FirstOrDefault(t => 
+                        t.Insumos.Any(ti => ti.SupplyId == supplyId.Value));
+                }
 
                 if (turno != null)
                 {
-                    // ✅ CORREGIDO: Asegurar que las cantidades aprobadas estén establecidas
+                    // ✅ Asegurar que las cantidades aprobadas estén establecidas
                     foreach (var tm in turno.Medicamentos)
                     {
                         if (!tm.CantidadAprobada.HasValue)
@@ -311,14 +455,132 @@ namespace FarmaciaSolidariaCristiana.Controllers
                     turno.FechaEntrega = DateTime.Now;
                     await _context.SaveChangesAsync();
                     
-                    _logger.LogInformation("Turno #{TurnoId} marcado automáticamente como completado tras registrar entrega", turno.Id);
+                    string itemType = medicineId.HasValue ? "Medicamento" : "Insumo";
+                    int itemId = medicineId ?? supplyId ?? 0;
+                    _logger.LogInformation("Turno #{TurnoId} marcado como completado tras registrar entrega de {ItemType} ID {ItemId}", 
+                        turno.Id, itemType, itemId);
+                    
+                    return turno.Id; // ✅ Retornar el ID del turno
                 }
+                
+                return null; // No se encontró turno con este item
             }
             catch (Exception ex)
             {
                 // Log error pero no fallar la entrega
                 _logger.LogError(ex, "Error al intentar completar turno automáticamente para documento");
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Revierte un turno completado a Pendiente cuando se elimina una entrega
+        /// SOLO si no quedan más entregas asociadas a ese turno
+        /// </summary>
+        private async Task RevertTurnoIfNeededAsync(Delivery delivery)
+        {
+            try
+            {
+                // Calcular hash del documento
+                using var sha256 = System.Security.Cryptography.SHA256.Create();
+                var hashBytes = sha256.ComputeHash(System.Text.Encoding.UTF8.GetBytes(delivery.PatientIdentification));
+                var documentHash = Convert.ToBase64String(hashBytes);
+
+                // Buscar todos los turnos completados de este paciente
+                var turnosCompletados = await _context.Turnos
+                    .Include(t => t.Medicamentos)
+                    .Include(t => t.Insumos)
+                    .Where(t => t.DocumentoIdentidadHash == documentHash && t.Estado == "Completado")
+                    .ToListAsync();
+
+                if (!turnosCompletados.Any())
+                {
+                    return; // No hay turnos completados para revertir
+                }
+
+                // Buscar el turno específico que contiene el medicamento o insumo eliminado
+                Turno? turnoARevertir = null;
+
+                if (delivery.MedicineId.HasValue)
+                {
+                    // Buscar turno que tenga este medicamento
+                    turnoARevertir = turnosCompletados
+                        .FirstOrDefault(t => t.Medicamentos.Any(tm => tm.MedicineId == delivery.MedicineId.Value));
+                }
+                else if (delivery.SupplyId.HasValue)
+                {
+                    // Buscar turno que tenga este insumo
+                    turnoARevertir = turnosCompletados
+                        .FirstOrDefault(t => t.Insumos.Any(ti => ti.SupplyId == delivery.SupplyId.Value));
+                }
+
+                if (turnoARevertir != null)
+                {
+                    // ✅ NUEVA LÓGICA: Verificar si quedan más entregas del turno
+                    // Contar cuántas entregas quedan para los items de este turno
+                    int entregasRestantes = 0;
+
+                    // Contar entregas de medicamentos del turno
+                    foreach (var tm in turnoARevertir.Medicamentos)
+                    {
+                        var entregas = await _context.Deliveries
+                            .Where(d => 
+                                d.PatientIdentification == delivery.PatientIdentification &&
+                                d.MedicineId == tm.MedicineId &&
+                                d.Id != delivery.Id) // Excluir la entrega que se está eliminando
+                            .CountAsync();
+                        entregasRestantes += entregas;
+                    }
+
+                    // Contar entregas de insumos del turno
+                    foreach (var ti in turnoARevertir.Insumos)
+                    {
+                        var entregas = await _context.Deliveries
+                            .Where(d => 
+                                d.PatientIdentification == delivery.PatientIdentification &&
+                                d.SupplyId == ti.SupplyId &&
+                                d.Id != delivery.Id) // Excluir la entrega que se está eliminando
+                            .CountAsync();
+                        entregasRestantes += entregas;
+                    }
+
+                    // ✅ SOLO revertir si NO quedan más entregas
+                    if (entregasRestantes == 0)
+                    {
+                        // Revertir este turno específico a Pendiente
+                        turnoARevertir.Estado = "Pendiente";
+                        turnoARevertir.FechaEntrega = null;
+                        
+                        // Limpiar cantidades aprobadas
+                        foreach (var tm in turnoARevertir.Medicamentos)
+                        {
+                            tm.CantidadAprobada = null;
+                        }
+                        
+                        foreach (var ti in turnoARevertir.Insumos)
+                        {
+                            ti.CantidadAprobada = null;
+                        }
+                        
+                        await _context.SaveChangesAsync();
+                        
+                        _logger.LogInformation("Turno #{TurnoId} revertido a Pendiente tras eliminar ÚLTIMA entrega de {Tipo} ID {ItemId}", 
+                            turnoARevertir.Id, 
+                            delivery.MedicineId.HasValue ? "Medicamento" : "Insumo",
+                            delivery.MedicineId ?? delivery.SupplyId);
+                    }
+                    else
+                    {
+                        _logger.LogInformation("Turno #{TurnoId} mantiene estado Completado porque quedan {EntregasRestantes} entrega(s) asociadas", 
+                            turnoARevertir.Id, entregasRestantes);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al intentar revertir turno tras eliminar entrega");
             }
         }
     }
 }
+

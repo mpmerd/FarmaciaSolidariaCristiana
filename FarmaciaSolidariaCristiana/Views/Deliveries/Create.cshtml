@@ -32,6 +32,12 @@
                     <div id="patientDeliveriesHistory"></div>
                 </div>
                 
+                <!-- Área para mostrar turnos aprobados del paciente -->
+                <div id="approvedTurnosSection" class="alert alert-primary" style="display: none;">
+                    <h6><i class="bi bi-calendar-check"></i> Turnos Aprobados/Pendientes</h6>
+                    <div id="approvedTurnosList"></div>
+                </div>
+                
                 <div class="form-group mb-3">
                     <label class="form-label">Tipo de Entrega <span class="text-danger">*</span></label>
                     <div class="btn-group w-100" role="group">
@@ -51,24 +57,22 @@
                     <label class="form-label">Buscar Medicamento</label>
                     <input type="text" id="medicineSearch" class="form-control" placeholder="Escribe para buscar medicamento..." autocomplete="off" />
                     <div class="list-group" id="medicineResults" style="max-height: 300px; overflow-y: auto; display: none; position: absolute; z-index: 1000; width: calc(100% - 30px);"></div>
-                    <input type="hidden" asp-for="MedicineId" id="medicineIdInput" />
-                    <div id="selectedMedicine" class="mt-2"></div>
-                    <span asp-validation-for="MedicineId" class="text-danger"></span>
+                    
+                    <!-- Lista de medicamentos seleccionados -->
+                    <div id="selectedMedicinesList" class="mt-3"></div>
+                    <input type="hidden" name="MedicineIds" id="medicineIdsInput" />
+                    <input type="hidden" name="MedicineQuantities" id="medicineQuantitiesInput" />
                 </div>
 
                 <div class="form-group mb-3" id="supplySelect" style="display: none;">
                     <label class="form-label">Buscar Insumo</label>
                     <input type="text" id="supplySearch" class="form-control" placeholder="Escribe para buscar insumo..." autocomplete="off" />
                     <div class="list-group" id="supplyResults" style="max-height: 300px; overflow-y: auto; display: none; position: absolute; z-index: 1000; width: calc(100% - 30px);"></div>
-                    <input type="hidden" asp-for="SupplyId" id="supplyIdInput" />
-                    <div id="selectedSupply" class="mt-2"></div>
-                    <span asp-validation-for="SupplyId" class="text-danger"></span>
-                </div>
-                
-                <div class="form-group mb-3">
-                    <label asp-for="Quantity" class="form-label"></label>
-                    <input asp-for="Quantity" class="form-control" type="number" min="1" />
-                    <span asp-validation-for="Quantity" class="text-danger"></span>
+                    
+                    <!-- Lista de insumos seleccionados -->
+                    <div id="selectedSuppliesList" class="mt-3"></div>
+                    <input type="hidden" name="SupplyIds" id="supplyIdsInput" />
+                    <input type="hidden" name="SupplyQuantities" id="supplyQuantitiesInput" />
                 </div>
                 
                 <div class="form-group mb-3">
@@ -76,36 +80,14 @@
                     <input asp-for="DeliveryDate" class="form-control" type="date" />
                     <span asp-validation-for="DeliveryDate" class="text-danger"></span>
                 </div>
-
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="form-group mb-3">
-                            <label asp-for="Dosage" class="form-label"></label>
-                            <input asp-for="Dosage" class="form-control" placeholder="Ej: 1 tableta cada 8 horas" />
-                            <span asp-validation-for="Dosage" class="text-danger"></span>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="form-group mb-3">
-                            <label asp-for="TreatmentDuration" class="form-label"></label>
-                            <input asp-for="TreatmentDuration" class="form-control" placeholder="Ej: 7 días, 2 semanas" />
-                            <span asp-validation-for="TreatmentDuration" class="text-danger"></span>
-                        </div>
-                    </div>
-                </div>
                 
                 <div class="form-group mb-3">
-                    <label asp-for="PatientNote" class="form-label"></label>
-                    <textarea asp-for="PatientNote" class="form-control" rows="3" placeholder="Detalles de receta médica, justificante, etc."></textarea>
-                </div>
-                
-                <div class="form-group mb-3">
-                    <label asp-for="Comments" class="form-label"></label>
-                    <textarea asp-for="Comments" class="form-control" rows="2"></textarea>
+                    <label asp-for="Comments" class="form-label">Comentarios Generales</label>
+                    <textarea asp-for="Comments" class="form-control" rows="2" placeholder="Observaciones sobre la entrega..."></textarea>
                 </div>
                 
                 <div class="d-grid gap-2">
-                    <button type="submit" class="btn btn-success">Registrar Entrega</button>
+                    <button type="submit" class="btn btn-success">Registrar Entrega(s)</button>
                     <a asp-action="Index" class="btn btn-secondary">Cancelar</a>
                 </div>
             </form>
@@ -122,6 +104,8 @@
         const patientInfo = document.getElementById('patientInfo');
         const patientDetails = document.getElementById('patientDetails');
         const patientDeliveriesHistory = document.getElementById('patientDeliveriesHistory');
+        const approvedTurnosSection = document.getElementById('approvedTurnosSection');
+        const approvedTurnosList = document.getElementById('approvedTurnosList');
 
         identificationInput.addEventListener('blur', function() {
             const identification = this.value.trim();
@@ -129,6 +113,7 @@
             if (identification.length === 0) {
                 feedbackDiv.innerHTML = '';
                 patientInfo.style.display = 'none';
+                approvedTurnosSection.style.display = 'none';
                 return;
             }
 
@@ -139,6 +124,7 @@
             if (!ciPattern.test(identification) && !passportPattern.test(identification)) {
                 feedbackDiv.innerHTML = '<div class="alert alert-warning"><i class="bi bi-exclamation-triangle"></i> Formato inválido. Use 11 dígitos para CI o letra + 6-7 dígitos para pasaporte.</div>';
                 patientInfo.style.display = 'none';
+                approvedTurnosSection.style.display = 'none';
                 return;
             }
 
@@ -178,38 +164,104 @@
 
                         patientInfo.style.display = 'block';
                         feedbackDiv.innerHTML = '<div class="alert alert-success small mt-2"><i class="bi bi-check-circle"></i> Paciente encontrado</div>';
+                        
+                        // ✅ NUEVO: Cargar turnos aprobados/pendientes
+                        loadApprovedTurnos(identification);
                     } else {
                         feedbackDiv.innerHTML = '<div class="alert alert-warning small mt-2"><i class="bi bi-exclamation-circle"></i> Paciente no registrado. Por favor, registre primero al paciente en la sección de Pacientes.</div>';
                         patientInfo.style.display = 'none';
+                        approvedTurnosSection.style.display = 'none';
                     }
                 })
                 .catch(error => {
                     console.error('Error:', error);
                     feedbackDiv.innerHTML = '<div class="alert alert-danger small mt-2"><i class="bi bi-x-circle"></i> Error al buscar paciente.</div>';
                     patientInfo.style.display = 'none';
+                    approvedTurnosSection.style.display = 'none';
                 });
         });
+
+        // ✅ NUEVA FUNCIÓN: Cargar turnos aprobados del paciente
+        function loadApprovedTurnos(identification) {
+            approvedTurnosList.innerHTML = '<div class="spinner-border spinner-border-sm"></div> Cargando turnos...';
+            approvedTurnosSection.style.display = 'block';
+            
+            fetch(`/Patients/GetApprovedTurnos?identification=${encodeURIComponent(identification)}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.turnos && data.turnos.length > 0) {
+                        let turnosHtml = '<div class="table-responsive"><table class="table table-sm table-bordered mb-0">';
+                        turnosHtml += '<thead><tr><th>Turno #</th><th>Estado</th><th>Fecha/Hora</th><th>Items</th></tr></thead><tbody>';
+                        
+                        data.turnos.forEach(turno => {
+                            const estadoBadge = turno.estado === 'Aprobado' 
+                                ? '<span class="badge bg-success">Aprobado</span>' 
+                                : '<span class="badge bg-warning text-dark">Pendiente</span>';
+                            
+                            const fechaTurno = turno.fechaTurno 
+                                ? new Date(turno.fechaTurno).toLocaleDateString('es-ES') + ' ' + turno.horaTurno
+                                : 'Por asignar';
+                            
+                            let itemsHtml = '<ul class="mb-0 ps-3" style="font-size: 0.85rem;">';
+                            
+                            // Medicamentos
+                            turno.medicamentos.forEach(med => {
+                                const cantidad = med.cantidadAprobada || med.cantidadSolicitada;
+                                itemsHtml += `<li><strong>${med.nombre}</strong>: ${cantidad} ${med.unidad}</li>`;
+                            });
+                            
+                            // Insumos
+                            turno.insumos.forEach(ins => {
+                                const cantidad = ins.cantidadAprobada || ins.cantidadSolicitada;
+                                itemsHtml += `<li><strong>${ins.nombre}</strong>: ${cantidad} ${ins.unidad}</li>`;
+                            });
+                            
+                            itemsHtml += '</ul>';
+                            
+                            turnosHtml += `
+                                <tr>
+                                    <td>#${turno.id}</td>
+                                    <td>${estadoBadge}</td>
+                                    <td>${fechaTurno}</td>
+                                    <td>${itemsHtml}</td>
+                                </tr>
+                            `;
+                        });
+                        
+                        turnosHtml += '</tbody></table></div>';
+                        approvedTurnosList.innerHTML = turnosHtml;
+                    } else {
+                        approvedTurnosList.innerHTML = '<p class="text-muted small mb-0">No hay turnos aprobados o pendientes para este paciente.</p>';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    approvedTurnosList.innerHTML = '<p class="text-danger small mb-0">Error al cargar turnos.</p>';
+                });
+        }
 
         // Manejo del selector de tipo de entrega (Medicamento vs Insumo)
         const medicineRadio = document.getElementById('medicineType');
         const supplyRadio = document.getElementById('supplyType');
         const medicineSelectDiv = document.getElementById('medicineSelect');
         const supplySelectDiv = document.getElementById('supplySelect');
-        const medicineIdInput = document.getElementById('medicineIdInput');
-        const supplyIdInput = document.getElementById('supplyIdInput');
         const medicineSearch = document.getElementById('medicineSearch');
         const supplySearch = document.getElementById('supplySearch');
         const medicineResults = document.getElementById('medicineResults');
         const supplyResults = document.getElementById('supplyResults');
-        const selectedMedicine = document.getElementById('selectedMedicine');
-        const selectedSupply = document.getElementById('selectedSupply');
+        const selectedMedicinesList = document.getElementById('selectedMedicinesList');
+        const selectedSuppliesList = document.getElementById('selectedSuppliesList');
+        
+        // Arrays para almacenar los items seleccionados
+        let selectedMedicines = [];
+        let selectedSupplies = [];
 
         medicineRadio.addEventListener('change', function() {
             if (this.checked) {
                 medicineSelectDiv.style.display = 'block';
                 supplySelectDiv.style.display = 'none';
-                supplyIdInput.value = ''; // Limpiar selección de insumo
-                selectedSupply.innerHTML = '';
+                selectedSupplies = []; // Limpiar insumos
+                renderSuppliesList();
                 supplySearch.value = '';
             }
         });
@@ -218,8 +270,8 @@
             if (this.checked) {
                 medicineSelectDiv.style.display = 'none';
                 supplySelectDiv.style.display = 'block';
-                medicineIdInput.value = ''; // Limpiar selección de medicamento
-                selectedMedicine.innerHTML = '';
+                selectedMedicines = []; // Limpiar medicamentos
+                renderMedicinesList();
                 medicineSearch.value = '';
             }
         });
@@ -245,6 +297,11 @@
                         
                         if (data.medicines && data.medicines.length > 0) {
                             data.medicines.forEach(med => {
+                                // Verificar si ya está agregado
+                                if (selectedMedicines.find(m => m.id === med.id)) {
+                                    return; // Skip si ya está en la lista
+                                }
+                                
                                 const stockBadgeClass = med.stock > 10 ? 'bg-success' : med.stock > 5 ? 'bg-warning text-dark' : 'bg-danger';
                                 
                                 const item = document.createElement('a');
@@ -259,17 +316,9 @@
                                 
                                 item.addEventListener('click', function(e) {
                                     e.preventDefault();
-                                    medicineIdInput.value = med.id;
+                                    addMedicine(med);
                                     medicineSearch.value = '';
                                     medicineResults.style.display = 'none';
-                                    selectedMedicine.innerHTML = `
-                                        <div class="alert alert-success py-2">
-                                            <i class="bi bi-check-circle"></i> <strong>${med.name}</strong> seleccionado
-                                            <button type="button" class="btn btn-sm btn-danger float-end" onclick="clearMedicineSelection()">
-                                                <i class="bi bi-x"></i> Cambiar
-                                            </button>
-                                        </div>
-                                    `;
                                 });
                                 
                                 medicineResults.appendChild(item);
@@ -308,6 +357,11 @@
                         
                         if (data.supplies && data.supplies.length > 0) {
                             data.supplies.forEach(supply => {
+                                // Verificar si ya está agregado
+                                if (selectedSupplies.find(s => s.id === supply.id)) {
+                                    return; // Skip si ya está en la lista
+                                }
+                                
                                 const stockBadge = supply.stock > 0 
                                     ? `<span class="badge bg-success">Stock: ${supply.stock} ${supply.unit}</span>`
                                     : '<span class="badge bg-danger">Sin stock</span>';
@@ -325,17 +379,9 @@
                                 
                                 item.addEventListener('click', function(e) {
                                     e.preventDefault();
-                                    supplyIdInput.value = supply.id;
+                                    addSupply(supply);
                                     supplySearch.value = '';
                                     supplyResults.style.display = 'none';
-                                    selectedSupply.innerHTML = `
-                                        <div class="alert alert-success py-2">
-                                            <i class="bi bi-check-circle"></i> <strong>${supply.name}</strong> seleccionado
-                                            <button type="button" class="btn btn-sm btn-danger float-end" onclick="clearSupplySelection()">
-                                                <i class="bi bi-x"></i> Cambiar
-                                            </button>
-                                        </div>
-                                    `;
                                 });
                                 
                                 supplyResults.appendChild(item);
@@ -354,18 +400,140 @@
             }, 300);
         });
 
-        // Funciones para limpiar selecciones
-        window.clearMedicineSelection = function() {
-            medicineIdInput.value = '';
-            selectedMedicine.innerHTML = '';
-            medicineSearch.focus();
-        };
+        // ========== FUNCIONES PARA AGREGAR/ELIMINAR MEDICAMENTOS ==========
+        function addMedicine(med) {
+            selectedMedicines.push({
+                id: med.id,
+                name: med.name,
+                stock: med.stock,
+                unit: med.unit,
+                quantity: 1 // Cantidad por defecto
+            });
+            renderMedicinesList();
+        }
 
-        window.clearSupplySelection = function() {
-            supplyIdInput.value = '';
-            selectedSupply.innerHTML = '';
-            supplySearch.focus();
-        };
+        function removeMedicine(index) {
+            selectedMedicines.splice(index, 1);
+            renderMedicinesList();
+        }
+
+        function updateMedicineQuantity(index, quantity) {
+            if (quantity > 0 && quantity <= selectedMedicines[index].stock) {
+                selectedMedicines[index].quantity = parseInt(quantity);
+                updateHiddenInputs();
+            }
+        }
+
+        function renderMedicinesList() {
+            if (selectedMedicines.length === 0) {
+                selectedMedicinesList.innerHTML = '<p class="text-muted small">No hay medicamentos agregados. Busca y selecciona medicamentos arriba.</p>';
+                updateHiddenInputs();
+                return;
+            }
+
+            let html = '<div class="alert alert-success"><h6><i class="bi bi-list-check"></i> Medicamentos a entregar:</h6><table class="table table-sm mb-0">';
+            html += '<thead><tr><th>Medicamento</th><th>Stock</th><th>Cantidad</th><th>Acciones</th></tr></thead><tbody>';
+            
+            selectedMedicines.forEach((med, index) => {
+                html += `
+                    <tr>
+                        <td><strong>${med.name}</strong></td>
+                        <td>${med.stock} ${med.unit}</td>
+                        <td>
+                            <input type="number" class="form-control form-control-sm" style="width: 80px;" 
+                                   value="${med.quantity}" min="1" max="${med.stock}"
+                                   onchange="updateMedicineQuantity(${index}, this.value)" />
+                        </td>
+                        <td>
+                            <button type="button" class="btn btn-sm btn-danger" onclick="removeMedicine(${index})">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+            
+            html += '</tbody></table></div>';
+            selectedMedicinesList.innerHTML = html;
+            updateHiddenInputs();
+        }
+
+        // ========== FUNCIONES PARA AGREGAR/ELIMINAR INSUMOS ==========
+        function addSupply(supply) {
+            selectedSupplies.push({
+                id: supply.id,
+                name: supply.name,
+                stock: supply.stock,
+                unit: supply.unit,
+                quantity: 1 // Cantidad por defecto
+            });
+            renderSuppliesList();
+        }
+
+        function removeSupply(index) {
+            selectedSupplies.splice(index, 1);
+            renderSuppliesList();
+        }
+
+        function updateSupplyQuantity(index, quantity) {
+            if (quantity > 0 && quantity <= selectedSupplies[index].stock) {
+                selectedSupplies[index].quantity = parseInt(quantity);
+                updateHiddenInputs();
+            }
+        }
+
+        function renderSuppliesList() {
+            if (selectedSupplies.length === 0) {
+                selectedSuppliesList.innerHTML = '<p class="text-muted small">No hay insumos agregados. Busca y selecciona insumos arriba.</p>';
+                updateHiddenInputs();
+                return;
+            }
+
+            let html = '<div class="alert alert-info"><h6><i class="bi bi-list-check"></i> Insumos a entregar:</h6><table class="table table-sm mb-0">';
+            html += '<thead><tr><th>Insumo</th><th>Stock</th><th>Cantidad</th><th>Acciones</th></tr></thead><tbody>';
+            
+            selectedSupplies.forEach((supply, index) => {
+                html += `
+                    <tr>
+                        <td><strong>${supply.name}</strong></td>
+                        <td>${supply.stock} ${supply.unit}</td>
+                        <td>
+                            <input type="number" class="form-control form-control-sm" style="width: 80px;" 
+                                   value="${supply.quantity}" min="1" max="${supply.stock}"
+                                   onchange="updateSupplyQuantity(${index}, this.value)" />
+                        </td>
+                        <td>
+                            <button type="button" class="btn btn-sm btn-danger" onclick="removeSupply(${index})">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+            
+            html += '</tbody></table></div>';
+            selectedSuppliesList.innerHTML = html;
+            updateHiddenInputs();
+        }
+
+        // ========== ACTUALIZAR INPUTS OCULTOS PARA ENVÍO ==========
+        function updateHiddenInputs() {
+            const medicineIds = selectedMedicines.map(m => m.id).join(',');
+            const medicineQuantities = selectedMedicines.map(m => m.quantity).join(',');
+            const supplyIds = selectedSupplies.map(s => s.id).join(',');
+            const supplyQuantities = selectedSupplies.map(s => s.quantity).join(',');
+            
+            document.getElementById('medicineIdsInput').value = medicineIds;
+            document.getElementById('medicineQuantitiesInput').value = medicineQuantities;
+            document.getElementById('supplyIdsInput').value = supplyIds;
+            document.getElementById('supplyQuantitiesInput').value = supplyQuantities;
+        }
+
+        // Exponer funciones al scope global para onclick
+        window.removeMedicine = removeMedicine;
+        window.removeSupply = removeSupply;
+        window.updateMedicineQuantity = updateMedicineQuantity;
+        window.updateSupplyQuantity = updateSupplyQuantity;
 
         // Cerrar resultados al hacer clic fuera
         document.addEventListener('click', function(e) {

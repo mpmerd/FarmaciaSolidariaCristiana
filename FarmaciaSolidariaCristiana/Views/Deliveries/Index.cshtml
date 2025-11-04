@@ -53,6 +53,7 @@
                 <table class="table table-striped">
                     <thead class="table-dark">
                         <tr>
+                            <th>Turno #</th>
                             <th>Tipo</th>
                             <th>Item</th>
                             <th>Cantidad</th>
@@ -78,6 +79,18 @@
                             var itemBadge = item.Medicine != null ? "bg-primary" : "bg-info";
                             
                             <tr>
+                                <td>
+                                    @if (item.TurnoId.HasValue)
+                                    {
+                                        <a asp-controller="Turnos" asp-action="Details" asp-route-id="@item.TurnoId" class="badge bg-success" title="Ver detalles del turno">
+                                            #@item.TurnoId
+                                        </a>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted small">N/A</span>
+                                    }
+                                </td>
                                 <td><span class="badge @itemBadge">@itemType</span></td>
                                 <td>@itemName</td>
                                 <td>@item.Quantity @itemUnit</td>

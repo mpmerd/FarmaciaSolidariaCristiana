@@ -2,7 +2,7 @@
 -- SCRIPT DE MIGRACIÓN COMPLETO PARA SOMEE
 -- Farmacia Solidaria Cristiana
 -- =====================================================================================
--- Última actualización: 03 de noviembre de 2025
+-- Última actualización: 04 de noviembre de 2025
 -- 
 -- INCLUYE TODAS LAS MIGRACIONES:
 -- ✅ 20251023213325_AddPatientIdentificationRequired
@@ -14,6 +14,7 @@
 -- ✅ 20251028000000_AddTurnosSystem
 -- ✅ 20251031224145_AddTurnoInsumos
 -- ✅ 20251103000000_AddFechasBloqueadas
+-- ✅ 20251104004321_AddTurnoIdToDeliveries
 -- 
 -- IMPORTANTE: Ejecutar en el panel SQL de Somee.com
 -- =====================================================================================
@@ -587,6 +588,92 @@ END
 PRINT ''
 
 -- =====================================================================================
+-- MIGRACIÓN 10: AddTurnoIdToDeliveries (04/11/2025)
+-- =====================================================================================
+
+PRINT '-- MIGRACIÓN 10: Relación TurnoId en Deliveries...'
+PRINT ''
+
+-- Agregar columna TurnoId a Deliveries
+IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS 
+               WHERE TABLE_NAME = 'Deliveries' 
+               AND COLUMN_NAME = 'TurnoId')
+BEGIN
+    BEGIN TRY
+        ALTER TABLE [Deliveries] 
+        ADD [TurnoId] int NULL;
+        PRINT '✓ TurnoId agregada a Deliveries (nullable)'
+    END TRY
+    BEGIN CATCH
+        PRINT '✗ ERROR al agregar TurnoId: ' + ERROR_MESSAGE()
+    END CATCH
+END
+ELSE
+BEGIN
+    PRINT '✓ TurnoId ya existe en Deliveries'
+END
+
+-- Crear índice en TurnoId
+IF NOT EXISTS (SELECT * FROM sys.indexes 
+               WHERE name = 'IX_Deliveries_TurnoId' 
+               AND object_id = OBJECT_ID('Deliveries'))
+BEGIN
+    BEGIN TRY
+        CREATE NONCLUSTERED INDEX [IX_Deliveries_TurnoId] 
+            ON [Deliveries]([TurnoId] ASC);
+        PRINT '✓ Índice IX_Deliveries_TurnoId creado'
+    END TRY
+    BEGIN CATCH
+        PRINT '✗ ERROR al crear índice: ' + ERROR_MESSAGE()
+    END CATCH
+END
+ELSE
+BEGIN
+    PRINT '✓ Índice IX_Deliveries_TurnoId ya existe'
+END
+
+-- Crear Foreign Key a Turnos (RESTRICT)
+IF NOT EXISTS (SELECT * FROM sys.foreign_keys 
+               WHERE name = 'FK_Deliveries_Turnos_TurnoId')
+BEGIN
+    BEGIN TRY
+        ALTER TABLE [Deliveries] 
+        ADD CONSTRAINT [FK_Deliveries_Turnos_TurnoId] 
+        FOREIGN KEY ([TurnoId]) REFERENCES [Turnos] ([Id]);
+        PRINT '✓ Foreign key Deliveries -> Turnos creada (RESTRICT)'
+    END TRY
+    BEGIN CATCH
+        PRINT '✗ ERROR al crear Foreign Key: ' + ERROR_MESSAGE()
+    END CATCH
+END
+ELSE
+BEGIN
+    PRINT '✓ Foreign Key FK_Deliveries_Turnos_TurnoId ya existe'
+END
+
+-- Registrar migración
+IF NOT EXISTS (SELECT * FROM __EFMigrationsHistory 
+               WHERE MigrationId = '20251104004321_AddTurnoIdToDeliveries')
+BEGIN
+    BEGIN TRY
+        INSERT INTO __EFMigrationsHistory (MigrationId, ProductVersion)
+        VALUES ('20251104004321_AddTurnoIdToDeliveries', '8.0.11');
+        PRINT '✓ Migración 10 registrada en __EFMigrationsHistory'
+    END TRY
+    BEGIN CATCH
+        PRINT '✗ ERROR al registrar migración: ' + ERROR_MESSAGE()
+    END CATCH
+END
+ELSE
+BEGIN
+    PRINT '✓ Migración 10 ya estaba registrada en historial'
+END
+
+PRINT ''
+PRINT '✅ Migración AddTurnoIdToDeliveries completada exitosamente'
+PRINT ''
+
+-- =====================================================================================
 -- VERIFICACIONES Y ESTADÍSTICAS FINALES
 -- =====================================================================================
 
@@ -648,6 +735,7 @@ PRINT '  • Donaciones ahora soportan medicamentos E insumos'
 PRINT '  • Sistema de Turnos implementado (Martes/Jueves 1-4 PM)'
 PRINT '  • Turnos ahora soportan medicamentos E insumos médicos'
 PRINT '  • Sistema de Bloqueo de Fechas para días sin turnos'
+PRINT '  • Entregas vinculadas a Turnos (TurnoId) para mejor trazabilidad'
 PRINT ''
 PRINT '📌 IMPORTANTE:'
 PRINT '  • Entregas antiguas tienen CreatedAt = NULL (usan DeliveryDate)'
@@ -663,6 +751,8 @@ PRINT '  • Turnos permiten solicitar medicamentos O insumos (no ambos a la vez
 PRINT '  • Límite: 30 turnos por día, horario Martes/Jueves 1-4 PM (slots de 6 min)'
 PRINT '  • Fechas bloqueadas impiden solicitar turnos (días festivos, emergencias)'
 PRINT '  • Admins pueden bloquear fechas individuales o rangos de hasta 30 días'
+PRINT '  • Múltiples entregas por turno: se puede registrar varios items de un turno'
+PRINT '  • Eliminación inteligente: turno vuelve a Pendiente solo cuando se eliminan TODAS sus entregas'
 PRINT ''
 PRINT 'Finalizado: ' + CONVERT(VARCHAR, GETDATE(), 120)
 PRINT '========================================================================='
