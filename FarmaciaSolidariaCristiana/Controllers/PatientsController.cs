@@ -106,6 +106,64 @@ namespace FarmaciaSolidariaCristiana.Controllers
             });
         }
 
+        /// <summary>
+        /// Obtiene los turnos aprobados o pendientes de un paciente por su documento de identidad
+        /// </summary>
+        [HttpGet]
+        public async Task<IActionResult> GetApprovedTurnos(string identification)
+        {
+            if (string.IsNullOrWhiteSpace(identification))
+            {
+                return Json(new { success = false, turnos = new List<object>() });
+            }
+
+            // Calcular hash del documento
+            using var sha256 = System.Security.Cryptography.SHA256.Create();
+            var hashBytes = sha256.ComputeHash(System.Text.Encoding.UTF8.GetBytes(identification));
+            var documentHash = Convert.ToBase64String(hashBytes);
+
+            // Buscar turnos aprobados o pendientes (que hayan sido revertidos)
+            var turnos = await _context.Turnos
+                .Include(t => t.Medicamentos)
+                    .ThenInclude(tm => tm.Medicine)
+                .Include(t => t.Insumos)
+                    .ThenInclude(ti => ti.Supply)
+                .Where(t => 
+                    t.DocumentoIdentidadHash == documentHash && 
+                    (t.Estado == "Aprobado" || t.Estado == "Pendiente"))
+                .OrderByDescending(t => t.FechaPreferida ?? t.FechaSolicitud)
+                .Select(t => new
+                {
+                    id = t.Id,
+                    estado = t.Estado,
+                    fechaTurno = t.FechaPreferida,
+                    horaTurno = t.FechaPreferida != null ? t.FechaPreferida.Value.ToString("HH:mm") : null,
+                    medicamentos = t.Medicamentos.Select(tm => new
+                    {
+                        id = tm.MedicineId,
+                        nombre = tm.Medicine != null ? tm.Medicine.Name : "N/A",
+                        cantidadSolicitada = tm.CantidadSolicitada,
+                        cantidadAprobada = tm.CantidadAprobada,
+                        unidad = tm.Medicine != null ? tm.Medicine.Unit : ""
+                    }).ToList(),
+                    insumos = t.Insumos.Select(ti => new
+                    {
+                        id = ti.SupplyId,
+                        nombre = ti.Supply != null ? ti.Supply.Name : "N/A",
+                        cantidadSolicitada = ti.CantidadSolicitada,
+                        cantidadAprobada = ti.CantidadAprobada,
+                        unidad = ti.Supply != null ? ti.Supply.Unit : ""
+                    }).ToList()
+                })
+                .ToListAsync();
+
+            return Json(new
+            {
+                success = true,
+                turnos = turnos
+            });
+        }
+
         // POST: Patients/Create
         [HttpPost]
         [ValidateAntiForgeryToken]

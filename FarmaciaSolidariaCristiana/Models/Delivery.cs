@@ -22,6 +22,9 @@ namespace FarmaciaSolidariaCristiana.Models
         [Display(Name = "Paciente")]
         public int? PatientId { get; set; }
 
+        [Display(Name = "Turno")]
+        public int? TurnoId { get; set; }
+
         [Required(ErrorMessage = "La cantidad es obligatoria")]
         [Range(1, int.MaxValue, ErrorMessage = "La cantidad debe ser mayor que 0")]
         [Display(Name = "Cantidad")]
@@ -65,5 +68,6 @@ namespace FarmaciaSolidariaCristiana.Models
         public Medicine? Medicine { get; set; }
         public Supply? Supply { get; set; }
         public Patient? Patient { get; set; }
+        public Turno? Turno { get; set; }
     }
 }
