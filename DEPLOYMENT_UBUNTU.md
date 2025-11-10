@@ -1,10 +1,10 @@
-# Guía de Despliegue en Ubuntu Server (192.168.2.113)
+# Guía de Despliegue en Ubuntu Server (192.168.x.x)
 
 Esta guía explica paso a paso cómo desplegar la aplicación **Farmacia Solidaria Cristiana** en tu servidor Ubuntu de la red local.
 
 ## 📋 Requisitos Previos
 
-### En el Servidor Ubuntu (192.168.2.113):
+### En el Servidor Ubuntu (192.168.x.x3):
 - Ubuntu Server (18.04 o superior)
 - Acceso SSH
 - Usuario con permisos sudo
@@ -16,9 +16,9 @@ Esta guía explica paso a paso cómo desplegar la aplicación **Farmacia Solidar
 
 ### 1.1 Conectarse al servidor
 ```bash
-ssh usuario@192.168.2.113
+ssh usuario@192.168.x.x
 # O usando el nombre de host:
-ssh usuario@MPMESCRITORIO
+ssh usuario@MPMESCRITNOMBREPC
 ```
 
 ### 1.2 Actualizar el sistema
@@ -84,14 +84,14 @@ cd publish
 tar -czf farmacia.tar.gz *
 
 # Transferir al servidor Ubuntu
-scp farmacia.tar.gz usuario@192.168.2.113:/home/usuario/
+scp farmacia.tar.gz usuario@192.168.x.x:/home/usuario/
 ```
 
 **O usar rsync (más eficiente):**
 ```bash
-cd /Users/maikelpelaez/Documents/Proyectos/FarmaciaSolidariaCristiana/FarmaciaSolidariaCristiana
+cd /Users/xxxxxxxx/Documents/Proyectos/FarmaciaSolidariaCristiana/FarmaciaSolidariaCristiana
 
-rsync -avz --progress ./publish/ usuario@192.168.2.113:/home/usuario/farmacia/
+rsync -avz --progress ./publish/ usuario@192.168.x.x:/home/usuario/farmacia/
 ```
 
 ---
@@ -120,7 +120,7 @@ Verificar la cadena de conexión (debe apuntar a localhost ya que SQL Server est
 ```json
 {
   "ConnectionStrings": {
-    "DefaultConnection": "Server=localhost,1433;Database=FarmaciaDb;User Id=farmaceutico;Password=wuwbug-hAjkip-xikgy3;TrustServerCertificate=True"
+    "DefaultConnection": "Server=localhost,1433;Database=FarmaciaDb;User Id=xxxxxxx;Password=xxx-xxx-xxx-xxx;TrustServerCertificate=True"
   },
   "Logging": {
     "LogLevel": {
@@ -138,7 +138,7 @@ cd /var/www/farmacia
 dotnet FarmaciaSolidariaCristiana.dll --urls="http://0.0.0.0:5000"
 ```
 
-Desde tu Mac, abre el navegador: `http://192.168.2.113:5000`
+Desde tu Mac, abre el navegador: `http://192.168.x.x:5000`
 
 Si funciona correctamente, presiona `Ctrl+C` para detener y continúa con el siguiente paso.
 
@@ -285,7 +285,7 @@ echo 'export PATH="$PATH:/opt/mssql-tools/bin"' >> ~/.bashrc
 source ~/.bashrc
 
 # Probar conexión
-sqlcmd -S localhost -U farmaceutico -P 'wuwbug-hAjkip-xikgy3' -Q "SELECT @@VERSION"
+sqlcmd -S localhost -U xxxxxxxxx -P 'xxxxx-xxxxx-xxxxxx' -Q "SELECT @@VERSION"
 ```
 
 ### 7.2 Aplicar migraciones
@@ -315,12 +315,12 @@ dotnet ef database update
 ## 🎯 Paso 8: Acceder a la Aplicación
 
 ### 8.1 Desde cualquier dispositivo en la red local:
-- **Por IP:** http://192.168.2.113
-- **Por nombre:** http://MPMESCRITORIO (si tu red tiene DNS/WINS configurado)
+- **Por IP:** http://192.168.x.x
+- **Por nombre:** http://NOMBREPC (si tu red tiene DNS/WINS configurado)
 
 ### 8.2 Credenciales de acceso:
 - **Usuario:** admin
-- **Contraseña:** doqkox-gadqud-niJho0
+- **Contraseña:** xxxxxxxxxxx
 
 ---
 
@@ -334,7 +334,7 @@ cd /Users/maikelpelaez/Documents/Proyectos/FarmaciaSolidariaCristiana/FarmaciaSo
 dotnet publish -c Release -o ./publish
 
 # 2. Transferir al servidor
-rsync -avz --progress ./publish/ usuario@192.168.2.113:/home/usuario/farmacia-new/
+rsync -avz --progress ./publish/ usuario@192.168.x.x:/home/usuario/farmacia-new/
 
 # 3. En el servidor Ubuntu: Detener servicio
 sudo systemctl stop farmacia.service
@@ -460,7 +460,7 @@ Agregar:
 server {
     listen 443 ssl http2;
     listen [::]:443 ssl http2;
-    server_name 192.168.2.113 MPMESCRITORIO;
+    server_name 192.168.x.x NOMBREPC;
 
     ssl_certificate /etc/ssl/certs/farmacia.crt;
     ssl_certificate_key /etc/ssl/private/farmacia.key;

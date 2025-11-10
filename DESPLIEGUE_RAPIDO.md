@@ -3,11 +3,11 @@
 ## 📊 Estado Actual del Proyecto
 
 - **Versión .NET:** 8.0
-- **Servidor:** Ubuntu 24.04 (192.168.2.113 / MPMESCRITORIO)
-- **Usuario SSH:** maikeled
-- **Base de Datos:** SQL Server en 192.168.2.113
-- **URL Aplicación:** http://192.168.2.113
-- **Credenciales Admin:** admin / doqkox-gadqud-niJho0
+- **Servidor:** Ubuntu 24.04 (192.168.x.x/ NOMBREPC)
+- **Usuario SSH:** usuario
+- **Base de Datos:** SQL Server en 192.168.x.x
+- **URL Aplicación:** http://192.168.x.x
+- **Credenciales Admin:** admin / xxxx-xxxxx-xxxxx
 
 ---
 
@@ -16,7 +16,7 @@
 ### Paso 1: Publicar Cambios en tu Mac
 
 ```bash
-cd /Users/maikelpelaez/Documents/Proyectos/FarmaciaSolidariaCristiana/FarmaciaSolidariaCristiana
+cd /Users/Documents/Proyectos/FarmaciaSolidariaCristiana/FarmaciaSolidariaCristiana
 
 # Limpiar y publicar
 rm -rf publish
@@ -29,14 +29,14 @@ dotnet publish -c Release -o ./publish
 cd ..
 
 # Transferir archivos actualizados
-rsync -avz --progress --delete ./FarmaciaSolidariaCristiana/publish/ maikeled@192.168.2.113:~/farmacia-files/
+rsync -avz --progress --delete ./FarmaciaSolidariaCristiana/publish/ usuario@192.168.x.x:~/farmacia-files/
 ```
 
 ### Paso 3: Actualizar en el Servidor
 
 ```bash
 # Conectarse al servidor
-ssh maikeled@192.168.2.113
+ssh user@192.168.x.x
 
 # Detener el servicio
 sudo systemctl stop farmacia.service
@@ -68,16 +68,16 @@ sudo systemctl status farmacia.service
 
 ```bash
 # 1. En tu Mac: Publicar
-cd /Users/maikelpelaez/Documents/Proyectos/FarmaciaSolidariaCristiana/FarmaciaSolidariaCristiana
+cd /Users/usuario/Documents/Proyectos/FarmaciaSolidariaCristiana/FarmaciaSolidariaCristiana
 dotnet publish -c Release -o ./publish
 cd ..
 
 # 2. Transferir script y archivos
-scp setup-simple.sh maikeled@192.168.2.113:~/
-rsync -avz --progress ./FarmaciaSolidariaCristiana/publish/ maikeled@192.168.2.113:~/farmacia-files/
+scp setup-simple.sh maikeled@192.168.x.x:~/
+rsync -avz --progress ./FarmaciaSolidariaCristiana/publish/ maikeled@192.168.x.x:~/farmacia-files/
 
 # 3. Ejecutar instalación
-ssh -t maikeled@192.168.2.113 "bash ~/setup-simple.sh"
+ssh -t maikeled@192.168.x.x "bash ~/setup-simple.sh"
 ```
 
 ### Opción B: Sin SSH (USB)
@@ -98,7 +98,7 @@ cp -r usb-deployment /Volumes/TU_USB/farmacia/
 
 ### Ver Logs en Tiempo Real
 ```bash
-ssh maikeled@192.168.2.113
+ssh usuario@192.168.x.x
 sudo journalctl -u farmacia.service -f
 ```
 
@@ -139,27 +139,27 @@ dotnet --list-runtimes
 
 ### Aplicar Migraciones
 ```bash
-ssh maikeled@192.168.2.113
+ssh usuario@192.168.x.x
 cd /var/www/farmacia
 dotnet ef database update
 ```
 
 ### Crear Nueva Migración (desde tu Mac)
 ```bash
-cd /Users/maikelpelaez/Documents/Proyectos/FarmaciaSolidariaCristiana/FarmaciaSolidariaCristiana
+cd /Users/maikelpusuario/Documents/Proyectos/FarmaciaSolidariaCristiana/FarmaciaSolidariaCristiana
 dotnet ef migrations add NombreDeLaMigracion
 ```
 
 ### Ver Migraciones Aplicadas
 ```bash
-ssh maikeled@192.168.2.113
+ssh usuario@192.168.x.x
 cd /var/www/farmacia
 dotnet ef migrations list
 ```
 
 ### Limpiar Datos de Prueba
 ```bash
-ssh maikeled@192.168.2.113
+ssh usuario@192.168.x.x
 cd /var/www/farmacia
 dotnet ef database drop --force
 dotnet ef database update
@@ -211,7 +211,7 @@ sudo systemctl disable apache2
 sudo systemctl status mssql-server
 
 # Probar conexión manualmente
-/opt/mssql-tools/bin/sqlcmd -S localhost -U farmaceutico -P 'wuwbug-hAjkip-xikgy3' -Q "SELECT @@VERSION"
+/opt/mssql-tools/bin/sqlcmd -S localhost -U usuario -P 'xxxx-xxxxx-xxxx' -Q "SELECT @@VERSION"
 ```
 
 ---
@@ -231,18 +231,18 @@ sudo systemctl status mssql-server
 ## 🔐 Información de Seguridad
 
 ### Credenciales SQL Server
-- **Servidor:** 192.168.2.113,1433
+- **Servidor:** 192.168.x.x,1433
 - **Base de Datos:** FarmaciaDb
-- **Usuario:** farmaceutico
-- **Contraseña:** wuwbug-hAjkip-xikgy3
+- **Usuario:** usuario
+- **Contraseña:** xxxx-xxxx-xxxxx
 
 ### Credenciales Admin Aplicación
 - **Usuario:** admin
-- **Contraseña:** doqkox-gadqud-niJho0
+- **Contraseña:** xxxx-xxxxxx-xxxxxxxx
 
 ### SSH
-- **Usuario:** maikeled
-- **Contraseña:** Buran.shutle1
+- **Usuario:** usuario
+- **Contraseña:** xxxx-xxxxx-xxxxxx
 
 **⚠️ IMPORTANTE:** Cambia estas credenciales en producción.
 
@@ -264,7 +264,7 @@ sudo systemctl status mssql-server
 
 ```bash
 # 1. Hacer cambios en tu Mac
-cd /Users/maikelpelaez/Documents/Proyectos/FarmaciaSolidariaCristiana
+cd /User/Documents/Proyectos/FarmaciaSolidariaCristiana
 
 # 2. Commit y push
 git add .
@@ -291,7 +291,7 @@ sudo systemctl status farmacia.service
 EOF
 
 # 6. Verificar
-open http://192.168.2.113
+open http://192.168.x.x
 ```
 
 ---
@@ -300,7 +300,7 @@ open http://192.168.2.113
 
 - [ ] Servicio `farmacia.service` está corriendo
 - [ ] Nginx está corriendo
-- [ ] Aplicación responde en http://192.168.2.113
+- [ ] Aplicación responde en http://192.168.x.x
 - [ ] Login funciona correctamente
 - [ ] Las páginas cargan sin errores
 - [ ] Los reportes PDF se generan correctamente

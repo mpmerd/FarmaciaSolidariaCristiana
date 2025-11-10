@@ -17,7 +17,7 @@
 6. **Abre** el editor SQL
 7. **Copia TODO el contenido** del archivo:
    ```
-   /Users/maikelpelaez/Documents/Proyectos/FarmaciaSolidariaCristiana/apply-migration-somee.sql
+   /Users/Documents/Proyectos/FarmaciaSolidariaCristiana/apply-migration-somee.sql
    ```
 8. **Pega** en el editor SQL de Somee
 9. **EJECUTA** el script (botón "Execute" o "Run")
@@ -31,7 +31,7 @@
 #### Opción A: Usar el Script Automático (Recomendado)
 
 ```bash
-cd /Users/maikelpelaez/Documents/Proyectos/FarmaciaSolidariaCristiana
+cd /Users/Documents/Proyectos/FarmaciaSolidariaCristiana
 ./deploy-to-somee.sh
 ```
 
@@ -46,7 +46,7 @@ Si el script no existe o tienes problemas, usa la **Opción B**.
 - **Puerto**: 21
 
 **Archivos a subir:**
-- **Origen**: `/Users/maikelpelaez/Documents/Proyectos/FarmaciaSolidariaCristiana/publish/`
+- **Origen**: `/Users/Documents/Proyectos/FarmaciaSolidariaCristiana/publish/`
 - **Destino**: Raíz de tu sitio web en Somee (generalmente `/wwwroot` o `/`)
 
 **Archivos importantes a subir:**
@@ -79,13 +79,7 @@ Si el script no existe o tienes problemas, usa la **Opción B**.
 #### Prueba 1: Verificar Usuarios
 1. Ve a "Gestión de Usuarios"
 2. Verifica que aparecen todos tus usuarios reales:
-   - equipo
-   - idalmis
-   - pruebamia
-   - adriano
-   - Joel
-   - perica
-   - susej
+   xxxxx
 
 #### Prueba 2: Crear Paciente con Identificación
 1. Ve a **"Pacientes"** → **"Nuevo Paciente"**

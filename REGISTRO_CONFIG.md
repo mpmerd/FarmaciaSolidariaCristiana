@@ -6,11 +6,12 @@ El sistema cuenta con un sistema de registro público que permite a usuarios ext
 
 ## 🔐 Roles de Usuario
 
-El sistema maneja tres roles principales:
+El sistema maneja cuatro roles principales:
 
 1. **Admin**: Acceso completo al sistema, gestión de usuarios
 2. **Farmaceutico**: Gestión de medicamentos, donaciones, entregas y pacientes
-3. **Viewer**: Solo lectura (usuarios auto-registrados)
+3. **Viewer**: Solo lectura 
+4. **ViwerPublic** Solo lectura mas restrictivo (usuarios auto-registrados)
 
 ## ⚙️ Configuración
 

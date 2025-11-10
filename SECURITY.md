@@ -43,7 +43,7 @@ Esta guía explica cómo manejar información sensible de forma segura.
 
 ```bash
 # .env (NUNCA commitear este archivo)
-DB_SERVER=192.168.2.113
+DB_SERVER=192.168.x.x
 DB_PASSWORD=mi_password_secreto
 ADMIN_PASSWORD=otra_password_segura
 ```
@@ -72,7 +72,7 @@ ADMIN_PASSWORD=cambiar_esto
 ```json
 {
   "ConnectionStrings": {
-    "DefaultConnection": "Server=192.168.2.113,1433;Database=FarmaciaDb;User Id=farmaceutico;Password=password_real_aqui;TrustServerCertificate=True;"
+    "DefaultConnection": "Server=192.168.x.x,1433;Database=FarmaciaDb;User Id=usuario;Password=password_real_aqui;TrustServerCertificate=True;"
   }
 }
 ```

@@ -13,7 +13,7 @@ La ficha del paciente incluye los siguientes datos:
 #### **Datos Personales**
 - Nombre completo
 - Edad
-- Género (Masculino/Femenino/Otro)
+- Género (Masculino/Femenino)
 - Dirección
 - Teléfono
 - DNI o documento de identificación
