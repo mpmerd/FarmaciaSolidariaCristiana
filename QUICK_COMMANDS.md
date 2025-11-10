@@ -4,7 +4,7 @@
 
 ### Publicar la aplicación
 ```bash
-cd /Users/maikelpelaez/Documents/Proyectos/FarmaciaSolidariaCristiana/FarmaciaSolidariaCristiana
+cd /Users/Documents/Proyectos/FarmaciaSolidariaCristiana/FarmaciaSolidariaCristiana
 dotnet publish -c Release -o ./publish
 ```
 
@@ -20,10 +20,10 @@ rsync -avz --progress ./publish/ usuario@192.168.2.113:~/farmacia-files/
 ### Transferir actualización
 ```bash
 # Transferir script de actualización
-scp update-app.sh usuario@192.168.2.113:~/
+scp update-app.sh usuario@192.168.x.x:~/
 
 # Transferir archivos actualizados
-rsync -avz --progress ./publish/ usuario@192.168.2.113:~/farmacia-new/
+rsync -avz --progress ./publish/ usuario@192.168.x.x:~/farmacia-new/
 ```
 
 ---
@@ -32,13 +32,13 @@ rsync -avz --progress ./publish/ usuario@192.168.2.113:~/farmacia-new/
 
 ### Instalación inicial (solo primera vez)
 ```bash
-ssh usuario@192.168.2.113
+ssh usuario@192.168.x.x
 bash setup-ubuntu.sh
 ```
 
 ### Actualizar aplicación
 ```bash
-ssh usuario@192.168.2.113
+ssh usuario@192.168.x.x
 bash update-app.sh
 ```
 
@@ -171,14 +171,14 @@ sudo systemctl restart mssql-server
 
 ```bash
 # 1. En tu Mac
-cd /Users/maikelpelaez/Documents/Proyectos/FarmaciaSolidariaCristiana/FarmaciaSolidariaCristiana
+cd /Users/Documents/Proyectos/FarmaciaSolidariaCristiana/FarmaciaSolidariaCristiana
 git pull
 dotnet publish -c Release -o ./publish
-scp update-app.sh usuario@192.168.2.113:~/
-rsync -avz --progress ./publish/ usuario@192.168.2.113:~/farmacia-new/
+scp update-app.sh usuario@192.168.x.x:~/
+rsync -avz --progress ./publish/ usuario@192.168.x.x:~/farmacia-new/
 
 # 2. En Ubuntu
-ssh usuario@192.168.2.113
+ssh usuario@192.168.x.x
 bash update-app.sh
 
 # 3. Verificar

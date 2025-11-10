@@ -109,14 +109,7 @@ Fecha: 2025-10-23 15:30:45
 Usuarios registrados actualmente: 8
 
 Usuarios que se PRESERVARÁN:
-admin          admin@farmacia.com
-adriano        adriano@example.com
-equipo         equipo@farmacia.com
-idalmis        idalmis@example.com
-Joel           joel@example.com
-perica         perica@example.com
-pruebamia      pruebamia@example.com
-susej          susej@example.com
+xxx.   xxxxxx
 
 =========================================================================
 

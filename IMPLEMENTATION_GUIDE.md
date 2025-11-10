@@ -421,7 +421,7 @@ Edita `appsettings.json` con tu configuración de SQL Server real:
 
 ### 2. Crear la migración inicial
 ```bash
-cd /Users/maikelpelaez/Documents/Proyectos/FarmaciaSolidariaCristiana/FarmaciaSolidariaCristiana
+cd /Users/Documents/Proyectos/FarmaciaSolidariaCristiana/FarmaciaSolidariaCristiana
 dotnet ef migrations add InitialCreate
 ```
 
