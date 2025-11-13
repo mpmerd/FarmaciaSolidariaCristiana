@@ -12,15 +12,16 @@
 <body>
     <header>
         <nav class="navbar navbar-expand-lg navbar-toggleable-lg navbar-dark bg-primary border-bottom box-shadow mb-3">
-            <div class="container-fluid px-3">
-                <a class="navbar-brand" asp-controller="Home" asp-action="Index">
-                    <i class="bi bi-heart-pulse-fill"></i> Farmacia Solidaria Cristiana
+            <div class="container-fluid px-3 position-relative">
+                <a class="navbar-brand d-flex flex-column align-items-start" asp-controller="Home" asp-action="Index" style="line-height: 1.2;">
+                    <div>
+                        <i class="bi bi-heart-pulse-fill"></i> Farmacia Solidaria Cristiana
+                    </div>
+                    <!-- Decoración del Navbar (se carga dinámicamente) -->
+                    <div id="navbar-decoration" class="d-none d-lg-flex align-items-center" style="font-size: 0.85rem; margin-top: 2px;">
+                        <!-- El contenido se inyecta vía JavaScript -->
+                    </div>
                 </a>
-                
-                <!-- Decoración del Navbar (se carga dinámicamente) -->
-                <div id="navbar-decoration" class="d-none d-lg-flex align-items-center ms-3" style="position: absolute; left: 50%; transform: translateX(-50%);">
-                    <!-- El contenido se inyecta vía JavaScript -->
-                </div>
                 
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
                         aria-expanded="false" aria-label="Toggle navigation">

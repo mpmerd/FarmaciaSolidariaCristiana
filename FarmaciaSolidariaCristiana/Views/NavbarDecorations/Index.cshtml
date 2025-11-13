@@ -372,15 +372,3 @@
         </div>
     }
 </div>
-
-@section Scripts {
-    <script>
-        // Auto-refresh de la vista previa cada 5 segundos para reflejar cambios
-        setInterval(function() {
-            // Solo refrescamos si no hay ninguna acción en curso
-            if (!document.querySelector('form[onsubmit]')) {
-                location.reload();
-            }
-        }, 10000); // 10 segundos
-    </script>
-}
