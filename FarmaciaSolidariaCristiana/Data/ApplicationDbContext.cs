@@ -22,6 +22,7 @@ namespace FarmaciaSolidariaCristiana.Data
         public DbSet<TurnoMedicamento> TurnoMedicamentos { get; set; }
         public DbSet<TurnoInsumo> TurnoInsumos { get; set; }
         public DbSet<FechaBloqueada> FechasBloqueadas { get; set; }
+        public DbSet<NavbarDecoration> NavbarDecorations { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -110,6 +111,10 @@ namespace FarmaciaSolidariaCristiana.Data
                 .WithMany()
                 .HasForeignKey(f => f.UsuarioId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            // Configure NavbarDecoration - solo una puede estar activa a la vez
+            modelBuilder.Entity<NavbarDecoration>()
+                .HasIndex(nd => nd.IsActive);
         }
     }
 }

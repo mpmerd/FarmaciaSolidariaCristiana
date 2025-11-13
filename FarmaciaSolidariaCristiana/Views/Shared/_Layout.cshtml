@@ -16,6 +16,12 @@
                 <a class="navbar-brand" asp-controller="Home" asp-action="Index">
                     <i class="bi bi-heart-pulse-fill"></i> Farmacia Solidaria Cristiana
                 </a>
+                
+                <!-- Decoración del Navbar (se carga dinámicamente) -->
+                <div id="navbar-decoration" class="d-none d-lg-flex align-items-center ms-3" style="position: absolute; left: 50%; transform: translateX(-50%);">
+                    <!-- El contenido se inyecta vía JavaScript -->
+                </div>
+                
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
                         aria-expanded="false" aria-label="Toggle navigation">
                     <span class="navbar-toggler-icon"></span>
@@ -102,6 +108,12 @@
                                                 <i class="bi bi-calendar-range"></i> Reprogramar Turnos
                                             </a>
                                         </li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li>
+                                            <a class="dropdown-item" asp-controller="NavbarDecorations" asp-action="Index">
+                                                <i class="fa-solid fa-palette"></i> Decoraciones del Navbar
+                                            </a>
+                                        </li>
                                     </ul>
                                 </li>
                                 <li class="nav-item">
@@ -181,7 +193,84 @@
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css">
     <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
+    
+    <!-- Font Awesome para iconos de festividades -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
     <script src="~/js/site.js" asp-append-version="true"></script>
+    
+    <!-- Script para decoración dinámica del navbar -->
+    <script>
+        (function() {
+            let currentDecorationId = null;
+            
+            function loadNavbarDecoration() {
+                fetch('/api/navbar-decoration/active')
+                    .then(response => response.json())
+                    .then(data => {
+                        const decorationContainer = document.getElementById('navbar-decoration');
+                        
+                        if (!data.active) {
+                            decorationContainer.innerHTML = '';
+                            decorationContainer.classList.add('d-none');
+                            currentDecorationId = null;
+                            return;
+                        }
+                        
+                        // Solo actualizar si cambió la decoración
+                        const newId = data.name + (data.displayText || '');
+                        if (currentDecorationId === newId) {
+                            return;
+                        }
+                        
+                        currentDecorationId = newId;
+                        
+                        let html = '';
+                        
+                        // Agregar icono
+                        if (data.type === 'Custom' && data.customIconPath) {
+                            html += `<img src="${data.customIconPath}" alt="Icono" style="width: 28px; height: 28px; object-fit: contain; margin-right: 10px;">`;
+                        } else if (data.iconClass) {
+                            html += `<i class="${data.iconClass} fa-lg" style="color: ${data.iconColor}; margin-right: 10px;"></i>`;
+                        }
+                        
+                        // Agregar texto
+                        if (data.displayText) {
+                            html += `<span style="color: ${data.textColor}; font-weight: 500; font-size: 1.1rem; text-shadow: 1px 1px 2px rgba(0,0,0,0.3);">${data.displayText}</span>`;
+                        }
+                        
+                        decorationContainer.innerHTML = html;
+                        decorationContainer.classList.remove('d-none');
+                        
+                        // Agregar animación suave
+                        decorationContainer.style.animation = 'fadeIn 0.5s ease-in';
+                    })
+                    .catch(error => {
+                        console.error('Error loading navbar decoration:', error);
+                    });
+            }
+            
+            // Cargar decoración al inicio
+            loadNavbarDecoration();
+            
+            // Recargar cada 30 segundos para detectar cambios sin refrescar la página
+            setInterval(loadNavbarDecoration, 30000);
+            
+            // CSS para animación
+            const style = document.createElement('style');
+            style.textContent = `
+                @@keyframes fadeIn {
+                    from { opacity: 0; transform: translateX(-50%) translateY(-10px); }
+                    to { opacity: 1; transform: translateX(-50%) translateY(0); }
+                }
+                #navbar-decoration {
+                    transition: all 0.3s ease;
+                }
+            `;
+            document.head.appendChild(style);
+        })();
+    </script>
+    
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

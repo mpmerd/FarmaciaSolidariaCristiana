@@ -1,0 +1,386 @@
+@model IEnumerable<FarmaciaSolidariaCristiana.Models.NavbarDecoration>
+@{
+    ViewData["Title"] = "Decoraciones del Navbar";
+    var presets = ViewBag.Presets as Dictionary<string, FarmaciaSolidariaCristiana.Models.DecorationPreset>;
+}
+
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col">
+            <h2><i class="fa-solid fa-palette me-2"></i>Decoraciones del Navbar</h2>
+            <p class="text-muted">Administra los adornos temáticos del navbar según las festividades cristianas</p>
+        </div>
+    </div>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show">
+            <i class="fa-solid fa-check-circle me-2"></i>@TempData["SuccessMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show">
+            <i class="fa-solid fa-exclamation-circle me-2"></i>@TempData["ErrorMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <!-- Decoración activa actual -->
+    <div class="row mb-4">
+        <div class="col-lg-8">
+            <div class="card border-primary">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fa-solid fa-star me-2"></i>Decoración Actualmente Visible</h5>
+                </div>
+                <div class="card-body">
+                    @{
+                        var activeDecoration = Model.FirstOrDefault(d => d.IsActive);
+                    }
+                    @if (activeDecoration != null)
+                    {
+                        <div class="d-flex align-items-center">
+                            <div class="me-3">
+                                @if (activeDecoration.Type == DecorationType.Custom && !string.IsNullOrEmpty(activeDecoration.CustomIconPath))
+                                {
+                                    <img src="@activeDecoration.CustomIconPath" alt="Icono" style="width: 48px; height: 48px; object-fit: contain;">
+                                }
+                                else if (!string.IsNullOrEmpty(activeDecoration.IconClass))
+                                {
+                                    <i class="@activeDecoration.IconClass fa-3x" style="color: @activeDecoration.IconColor;"></i>
+                                }
+                            </div>
+                            <div class="flex-grow-1">
+                                <h4 class="mb-1">@activeDecoration.Name</h4>
+                                @if (!string.IsNullOrEmpty(activeDecoration.DisplayText))
+                                {
+                                    <p class="mb-1" style="color: @activeDecoration.TextColor; font-weight: 500;">
+                                        @activeDecoration.DisplayText
+                                    </p>
+                                }
+                                <small class="text-muted">
+                                    Activada por @activeDecoration.ActivatedBy el @activeDecoration.ActivatedAt?.ToString("dd/MM/yyyy HH:mm")
+                                </small>
+                            </div>
+                            <div>
+                                <form asp-action="DeactivateAll" method="post" class="d-inline">
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit" class="btn btn-warning" 
+                                            onclick="return confirm('¿Desea desactivar la decoración actual?');">
+                                        <i class="fa-solid fa-eye-slash me-1"></i>Desactivar
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="text-center text-muted py-4">
+                            <i class="fa-solid fa-circle-xmark fa-3x mb-3"></i>
+                            <p class="mb-0">No hay ninguna decoración activa actualmente</p>
+                            <small>Active una decoración predefinida o cree una personalizada</small>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card border-info">
+                <div class="card-header bg-info text-white">
+                    <h6 class="mb-0"><i class="fa-solid fa-circle-info me-2"></i>Vista Previa</h6>
+                </div>
+                <div class="card-body">
+                    <div id="preview-navbar" class="bg-light p-3 rounded">
+                        <div class="d-flex align-items-center">
+                            <span class="fw-bold me-2">Farmacia Solidaria</span>
+                            <div id="preview-decoration" class="ms-auto d-flex align-items-center">
+                                @if (activeDecoration != null)
+                                {
+                                    @if (activeDecoration.Type == DecorationType.Custom && !string.IsNullOrEmpty(activeDecoration.CustomIconPath))
+                                    {
+                                        <img src="@activeDecoration.CustomIconPath" alt="Icono" 
+                                             style="width: 24px; height: 24px; object-fit: contain; margin-right: 8px;">
+                                    }
+                                    else if (!string.IsNullOrEmpty(activeDecoration.IconClass))
+                                    {
+                                        <i class="@activeDecoration.IconClass me-2" 
+                                           style="color: @activeDecoration.IconColor;"></i>
+                                    }
+                                    @if (!string.IsNullOrEmpty(activeDecoration.DisplayText))
+                                    {
+                                        <span style="color: @activeDecoration.TextColor;">
+                                            @activeDecoration.DisplayText
+                                        </span>
+                                    }
+                                }
+                                else
+                                {
+                                    <small class="text-muted">(sin decoración)</small>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                    <small class="text-muted mt-2 d-block">
+                        Así se verá en el navbar real
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Decoraciones Predefinidas -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="fa-solid fa-church me-2"></i>Festividades Cristianas Predefinidas</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        @foreach (var preset in presets.Values)
+                        {
+                            <div class="col-md-6 col-lg-4">
+                                <div class="card h-100 border-secondary">
+                                    <div class="card-body">
+                                        <div class="d-flex align-items-start mb-2">
+                                            <div class="me-3">
+                                                <i class="@preset.IconClass fa-2x" style="color: @preset.IconColor;"></i>
+                                            </div>
+                                            <div class="flex-grow-1">
+                                                <h5 class="card-title mb-1">@preset.Name</h5>
+                                                <small class="text-muted">@preset.SuggestedPeriod</small>
+                                            </div>
+                                        </div>
+                                        <p class="card-text small">@preset.Description</p>
+                                        <div class="mb-2">
+                                            <span class="badge" style="background-color: @preset.TextColor; color: #000;">
+                                                @preset.DefaultText
+                                            </span>
+                                        </div>
+                                        <form asp-action="ActivatePreset" method="post" class="mt-3">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="presetKey" value="@preset.Key" />
+                                            <div class="input-group input-group-sm mb-2">
+                                                <span class="input-group-text">
+                                                    <i class="fa-solid fa-font"></i>
+                                                </span>
+                                                <input type="text" class="form-control" name="customText" 
+                                                       placeholder="Texto opcional" 
+                                                       value="@preset.DefaultText" />
+                                            </div>
+                                            <button type="submit" class="btn btn-sm btn-success w-100">
+                                                <i class="fa-solid fa-check me-1"></i>Activar
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Decoración Personalizada -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="fa-solid fa-wand-magic-sparkles me-2"></i>Crear Decoración Personalizada</h5>
+                </div>
+                <div class="card-body">
+                    <form asp-action="ActivateCustom" method="post" enctype="multipart/form-data">
+                        @Html.AntiForgeryToken()
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">
+                                        <i class="fa-solid fa-tag me-1"></i>Nombre de la decoración *
+                                    </label>
+                                    <input type="text" class="form-control" name="name" 
+                                           placeholder="Ej: Aniversario de la Iglesia" required />
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">
+                                        <i class="fa-solid fa-font me-1"></i>Texto a mostrar (opcional)
+                                    </label>
+                                    <input type="text" class="form-control" name="displayText" 
+                                           placeholder="Ej: ¡50 años de bendición!" />
+                                    <small class="text-muted">Aparecerá junto al icono en el navbar</small>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">
+                                        <i class="fa-solid fa-palette me-1"></i>Color del texto
+                                    </label>
+                                    <input type="color" class="form-control form-control-color" 
+                                           name="textColor" value="#FFFFFF" />
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">
+                                        <i class="fa-solid fa-image me-1"></i>Icono personalizado (opcional)
+                                    </label>
+                                    <input type="file" class="form-control" name="iconFile" 
+                                           accept=".png,.jpg,.jpeg,.svg,.gif" />
+                                    <small class="text-muted">
+                                        Formatos: PNG, JPG, SVG, GIF. Máximo 1MB. Recomendado: 48x48px
+                                    </small>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">
+                                        <i class="fa-solid fa-palette me-1"></i>Color del icono (si aplica)
+                                    </label>
+                                    <input type="color" class="form-control form-control-color" 
+                                           name="iconColor" value="#FFFFFF" />
+                                </div>
+
+                                <div class="alert alert-info">
+                                    <i class="fa-solid fa-lightbulb me-2"></i>
+                                    <strong>Consejo:</strong> Si no subes un icono, puedes usar colores 
+                                    para que el texto destaque en el navbar.
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="text-end">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="fa-solid fa-check me-2"></i>Crear y Activar
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Historial de Decoraciones -->
+    @if (Model.Any())
+    {
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fa-solid fa-clock-rotate-left me-2"></i>Historial de Decoraciones</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Estado</th>
+                                        <th>Nombre</th>
+                                        <th>Tipo</th>
+                                        <th>Texto</th>
+                                        <th>Última Activación</th>
+                                        <th>Activado Por</th>
+                                        <th>Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var decoration in Model)
+                                    {
+                                        <tr class="@(decoration.IsActive ? "table-success" : "")">
+                                            <td>
+                                                @if (decoration.IsActive)
+                                                {
+                                                    <span class="badge bg-success">
+                                                        <i class="fa-solid fa-circle-check"></i> Activa
+                                                    </span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge bg-secondary">Inactiva</span>
+                                                }
+                                            </td>
+                                            <td>
+                                                @if (decoration.Type == DecorationType.Custom && !string.IsNullOrEmpty(decoration.CustomIconPath))
+                                                {
+                                                    <img src="@decoration.CustomIconPath" alt="Icono" 
+                                                         style="width: 24px; height: 24px; object-fit: contain;" 
+                                                         class="me-2">
+                                                }
+                                                else if (!string.IsNullOrEmpty(decoration.IconClass))
+                                                {
+                                                    <i class="@decoration.IconClass me-2" 
+                                                       style="color: @decoration.IconColor;"></i>
+                                                }
+                                                @decoration.Name
+                                            </td>
+                                            <td>
+                                                @if (decoration.Type == DecorationType.Predefined)
+                                                {
+                                                    <span class="badge bg-info">Predefinida</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge bg-warning text-dark">Personalizada</span>
+                                                }
+                                            </td>
+                                            <td>
+                                                @if (!string.IsNullOrEmpty(decoration.DisplayText))
+                                                {
+                                                    <span style="color: @decoration.TextColor; font-weight: 500;">
+                                                        @decoration.DisplayText
+                                                    </span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="text-muted">-</span>
+                                                }
+                                            </td>
+                                            <td>
+                                                @if (decoration.ActivatedAt.HasValue)
+                                                {
+                                                    @decoration.ActivatedAt.Value.ToString("dd/MM/yyyy HH:mm")
+                                                }
+                                                else
+                                                {
+                                                    <span class="text-muted">Nunca</span>
+                                                }
+                                            </td>
+                                            <td>@(decoration.ActivatedBy ?? "-")</td>
+                                            <td>
+                                                @if (!decoration.IsActive && decoration.Type == DecorationType.Custom)
+                                                {
+                                                    <form asp-action="Delete" asp-route-id="@decoration.Id" 
+                                                          method="post" class="d-inline">
+                                                        @Html.AntiForgeryToken()
+                                                        <button type="submit" class="btn btn-sm btn-danger" 
+                                                                onclick="return confirm('¿Eliminar esta decoración personalizada?');">
+                                                            <i class="fa-solid fa-trash"></i>
+                                                        </button>
+                                                    </form>
+                                                }
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@section Scripts {
+    <script>
+        // Auto-refresh de la vista previa cada 5 segundos para reflejar cambios
+        setInterval(function() {
+            // Solo refrescamos si no hay ninguna acción en curso
+            if (!document.querySelector('form[onsubmit]')) {
+                location.reload();
+            }
+        }, 10000); // 10 segundos
+    </script>
+}

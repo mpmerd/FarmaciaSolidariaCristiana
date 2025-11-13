@@ -2,7 +2,7 @@
 -- SCRIPT DE MIGRACIÓN COMPLETO PARA SOMEE
 -- Farmacia Solidaria Cristiana
 -- =====================================================================================
--- Última actualización: 04 de noviembre de 2025
+-- Última actualización: 13 de noviembre de 2025
 -- 
 -- INCLUYE TODAS LAS MIGRACIONES:
 -- ✅ 20251023213325_AddPatientIdentificationRequired
@@ -15,6 +15,7 @@
 -- ✅ 20251031224145_AddTurnoInsumos
 -- ✅ 20251103000000_AddFechasBloqueadas
 -- ✅ 20251104004321_AddTurnoIdToDeliveries
+-- ✅ 20251113150644_AddNavbarDecorations
 -- 
 -- IMPORTANTE: Ejecutar en el panel SQL de Somee.com
 -- =====================================================================================
@@ -674,6 +675,82 @@ PRINT '✅ Migración AddTurnoIdToDeliveries completada exitosamente'
 PRINT ''
 
 -- =====================================================================================
+-- MIGRACIÓN 11: AddNavbarDecorations (13/11/2025)
+-- =====================================================================================
+
+PRINT '-- MIGRACIÓN 11: Sistema de decoraciones del navbar...'
+PRINT ''
+
+-- Verificar si la tabla NavbarDecorations ya existe
+IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'NavbarDecorations')
+BEGIN
+    BEGIN TRY
+        -- Crear tabla NavbarDecorations
+        CREATE TABLE [NavbarDecorations] (
+            [Id] int IDENTITY(1,1) NOT NULL,
+            [Name] nvarchar(max) NOT NULL,
+            [Type] int NOT NULL,
+            [PresetKey] nvarchar(max) NULL,
+            [DisplayText] nvarchar(max) NULL,
+            [TextColor] nvarchar(max) NULL,
+            [CustomIconPath] nvarchar(max) NULL,
+            [IconClass] nvarchar(max) NULL,
+            [IconColor] nvarchar(max) NULL,
+            [IsActive] bit NOT NULL DEFAULT 0,
+            [ActivatedAt] datetime2 NULL,
+            [ActivatedBy] nvarchar(max) NULL,
+            [CreatedAt] datetime2 NOT NULL DEFAULT GETDATE(),
+            CONSTRAINT [PK_NavbarDecorations] PRIMARY KEY ([Id])
+        );
+        PRINT '✓ Tabla NavbarDecorations creada'
+        
+        -- Crear índice en IsActive para consultas rápidas
+        CREATE NONCLUSTERED INDEX [IX_NavbarDecorations_IsActive] 
+            ON [NavbarDecorations]([IsActive] ASC);
+        PRINT '✓ Índice IX_NavbarDecorations_IsActive creado'
+        
+        PRINT ''
+        PRINT '✅ Migración AddNavbarDecorations completada exitosamente'
+        PRINT ''
+        PRINT '📝 Nueva funcionalidad habilitada:'
+        PRINT '  • Decoraciones predefinidas: Navidad, Epifanía, Semana Santa, Aldersgate, Pentecostés'
+        PRINT '  • Decoraciones personalizadas con iconos propios'
+        PRINT '  • Actualización dinámica sin reiniciar aplicación'
+        PRINT '  • Solo una decoración activa a la vez'
+        PRINT ''
+        PRINT '🎨 Administradores: Avanzado > Decoraciones del Navbar'
+        
+    END TRY
+    BEGIN CATCH
+        PRINT '✗ ERROR en AddNavbarDecorations: ' + ERROR_MESSAGE()
+    END CATCH
+END
+ELSE
+BEGIN
+    PRINT '⚠ Tabla NavbarDecorations ya existe, omitiendo creación'
+END
+
+-- Registrar migración
+IF NOT EXISTS (SELECT * FROM __EFMigrationsHistory 
+               WHERE MigrationId = '20251113150644_AddNavbarDecorations')
+BEGIN
+    BEGIN TRY
+        INSERT INTO __EFMigrationsHistory (MigrationId, ProductVersion)
+        VALUES ('20251113150644_AddNavbarDecorations', '8.0.11');
+        PRINT '✓ Migración 11 registrada en __EFMigrationsHistory'
+    END TRY
+    BEGIN CATCH
+        PRINT '✗ ERROR al registrar migración: ' + ERROR_MESSAGE()
+    END CATCH
+END
+ELSE
+BEGIN
+    PRINT '✓ Migración 11 ya estaba registrada en historial'
+END
+
+PRINT ''
+
+-- =====================================================================================
 -- VERIFICACIONES Y ESTADÍSTICAS FINALES
 -- =====================================================================================
 
@@ -705,7 +782,13 @@ SELECT
                  ELSE 0 END) AS TotalTurnoInsumos,
     (SELECT CASE WHEN EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'FechasBloqueadas') 
                  THEN (SELECT COUNT(*) FROM FechasBloqueadas) 
-                 ELSE 0 END) AS TotalFechasBloqueadas;
+                 ELSE 0 END) AS TotalFechasBloqueadas,
+    (SELECT CASE WHEN EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'NavbarDecorations') 
+                 THEN (SELECT COUNT(*) FROM NavbarDecorations) 
+                 ELSE 0 END) AS TotalDecoraciones,
+    (SELECT CASE WHEN EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'NavbarDecorations') 
+                 THEN (SELECT COUNT(*) FROM NavbarDecorations WHERE IsActive = 1) 
+                 ELSE 0 END) AS DecoracionesActivas;
 
 -- Estadísticas adicionales solo si las columnas existen (SQL dinámico)
 IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'Deliveries' AND COLUMN_NAME = 'SupplyId')
@@ -736,6 +819,7 @@ PRINT '  • Sistema de Turnos implementado (Martes/Jueves 1-4 PM)'
 PRINT '  • Turnos ahora soportan medicamentos E insumos médicos'
 PRINT '  • Sistema de Bloqueo de Fechas para días sin turnos'
 PRINT '  • Entregas vinculadas a Turnos (TurnoId) para mejor trazabilidad'
+PRINT '  • Sistema de Decoraciones del Navbar para festividades cristianas'
 PRINT ''
 PRINT '📌 IMPORTANTE:'
 PRINT '  • Entregas antiguas tienen CreatedAt = NULL (usan DeliveryDate)'
@@ -753,6 +837,8 @@ PRINT '  • Fechas bloqueadas impiden solicitar turnos (días festivos, emergen
 PRINT '  • Admins pueden bloquear fechas individuales o rangos de hasta 30 días'
 PRINT '  • Múltiples entregas por turno: se puede registrar varios items de un turno'
 PRINT '  • Eliminación inteligente: turno vuelve a Pendiente solo cuando se eliminan TODAS sus entregas'
+PRINT '  • Decoraciones del navbar: 5 festividades predefinidas + opción personalizada'
+PRINT '  • Actualización dinámica: decoraciones se aplican sin reiniciar la aplicación'
 PRINT ''
 PRINT 'Finalizado: ' + CONVERT(VARCHAR, GETDATE(), 120)
 PRINT '========================================================================='
