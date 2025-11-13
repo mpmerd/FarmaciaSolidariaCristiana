@@ -88,11 +88,14 @@ namespace FarmaciaSolidariaCristiana.Controllers
 
             if (existingDecoration != null)
             {
-                // Actualizar y activar la existente
+                // Actualizar y activar la existente (incluyendo colores e iconos actualizados)
                 existingDecoration.IsActive = true;
                 existingDecoration.DisplayText = string.IsNullOrWhiteSpace(customText) 
                     ? preset.DefaultText 
                     : customText;
+                existingDecoration.TextColor = preset.TextColor;
+                existingDecoration.IconClass = preset.IconClass;
+                existingDecoration.IconColor = preset.IconColor;
                 existingDecoration.ActivatedAt = DateTime.Now;
                 existingDecoration.ActivatedBy = userName;
             }

@@ -95,10 +95,10 @@ namespace FarmaciaSolidariaCristiana.Models
                     Key = "navidad",
                     Name = "Navidad",
                     Description = "Celebración del nacimiento de Jesús (25 de diciembre)",
-                    IconClass = "fa-solid fa-tree-christmas",
-                    IconColor = "#228B22",
+                    IconClass = "fa-solid fa-tree", // Cambiado a fa-tree (existe en FA)
+                    IconColor = "#228B22", // Verde árbol
                     DefaultText = "¡Feliz Navidad!",
-                    TextColor = "#FFD700",
+                    TextColor = "#228B22", // Verde
                     SuggestedPeriod = "Del 24 de diciembre al 6 de enero"
                 }
             },
@@ -110,9 +110,9 @@ namespace FarmaciaSolidariaCristiana.Models
                     Name = "Epifanía",
                     Description = "Manifestación de Jesús a los Reyes Magos (6 de enero)",
                     IconClass = "fa-solid fa-star",
-                    IconColor = "#FFD700",
+                    IconColor = "#FFD700", // Amarillo dorado
                     DefaultText = "Epifanía del Señor",
-                    TextColor = "#4169E1",
+                    TextColor = "#FFD700", // Amarillo (igual que el ícono)
                     SuggestedPeriod = "6 de enero"
                 }
             },
@@ -152,9 +152,9 @@ namespace FarmaciaSolidariaCristiana.Models
                     Name = "Pentecostés",
                     Description = "Venida del Espíritu Santo sobre los apóstoles",
                     IconClass = "fa-solid fa-fire-flame-curved",
-                    IconColor = "#FF4500",
+                    IconColor = "#FF8C00", // Naranja oscuro (llama)
                     DefaultText = "Pentecostés",
-                    TextColor = "#FF4500",
+                    TextColor = "#FFD700", // Dorado
                     SuggestedPeriod = "50 días después de la Pascua"
                 }
             }
