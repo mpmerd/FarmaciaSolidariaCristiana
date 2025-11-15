@@ -12,10 +12,10 @@
 <body>
     <header>
         <nav class="navbar navbar-expand-lg navbar-toggleable-lg navbar-dark bg-primary border-bottom box-shadow mb-3">
-            <div class="container-fluid px-3 position-relative">
-                <a class="navbar-brand d-flex flex-column align-items-start" asp-controller="Home" asp-action="Index" style="line-height: 1.2;">
+            <div class="container-fluid px-2 position-relative">
+                <a class="navbar-brand d-flex flex-column align-items-start me-2" asp-controller="Home" asp-action="Index" style="line-height: 1.2;">
                     <div>
-                        <i class="bi bi-heart-pulse-fill"></i> Farmacia Solidaria Cristiana
+                        <i class="bi bi-heart-pulse-fill"></i> Farmacia Solidaria
                     </div>
                     <!-- Decoración del Navbar (se carga dinámicamente) -->
                     <div id="navbar-decoration" class="d-none d-lg-flex align-items-center" style="font-size: 0.85rem; margin-top: 2px;">
@@ -27,8 +27,8 @@
                         aria-expanded="false" aria-label="Toggle navigation">
                     <span class="navbar-toggler-icon"></span>
                 </button>
-                <div class="navbar-collapse collapse d-lg-inline-flex">
-                    <ul class="navbar-nav me-auto">
+                <div class="navbar-collapse collapse d-lg-inline-flex justify-content-between">
+                    <ul class="navbar-nav gap-1">
                         @if (User.Identity?.IsAuthenticated == true)
                         {
                             <li class="nav-item">
@@ -133,6 +133,12 @@
                         }
                     </ul>
                     <ul class="navbar-nav ms-auto flex-nowrap">
+                        <!-- Botón Quiénes somos (siempre visible) -->
+                        <li class="nav-item d-flex align-items-center me-2">
+                            <a class="btn btn-outline-light btn-sm text-nowrap" asp-controller="Home" asp-action="About">
+                                <i class="bi bi-info-circle"></i> Quiénes somos
+                            </a>
+                        </li>
                         @if (User.Identity?.IsAuthenticated == true)
                         {
                             <li class="nav-item d-flex align-items-center me-2">
