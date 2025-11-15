@@ -58,7 +58,7 @@
                             <th>Item</th>
                             <th>Cantidad</th>
                             <th>Fecha</th>
-                            <th>Nota Paciente</th>
+                            <th>Comentarios Generales</th>
                             @if (User.IsInRole("Admin") || User.IsInRole("Farmaceutico"))
                             {
                                 <th>Acciones</th>
@@ -95,7 +95,7 @@
                                 <td>@itemName</td>
                                 <td>@item.Quantity @itemUnit</td>
                                 <td>@item.DeliveryDate.ToString("dd/MM/yyyy")</td>
-                                <td>@item.PatientNote</td>
+                                <td>@item.Comments</td>
                                 @if (User.IsInRole("Admin") || User.IsInRole("Farmaceutico"))
                                 {
                                     <td>
