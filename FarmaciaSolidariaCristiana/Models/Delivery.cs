@@ -39,7 +39,7 @@ namespace FarmaciaSolidariaCristiana.Models
         [Display(Name = "Nota del Paciente")]
         public string? PatientNote { get; set; }
 
-        [Display(Name = "Comentarios")]
+        [Display(Name = "Comentarios Generales")]
         public string? Comments { get; set; }
 
         // 3. MEDICAMENTO SOLICITADO - Información adicional

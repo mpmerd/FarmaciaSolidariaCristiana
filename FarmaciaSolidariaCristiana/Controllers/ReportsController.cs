@@ -164,7 +164,7 @@ namespace FarmaciaSolidariaCristiana.Controllers
                 table.AddHeaderCell("Item");
                 table.AddHeaderCell("Cantidad");
                 table.AddHeaderCell("Fecha");
-                table.AddHeaderCell("Nota Paciente");
+                table.AddHeaderCell("Comentarios Generales");
 
                 foreach (var item in data)
                 {
@@ -176,7 +176,7 @@ namespace FarmaciaSolidariaCristiana.Controllers
                     table.AddCell(itemName);
                     table.AddCell($"{item.Quantity} {itemUnit}");
                     table.AddCell(item.DeliveryDate.ToString("dd/MM/yyyy"));
-                    table.AddCell(item.PatientNote ?? "");
+                    table.AddCell(item.Comments ?? "");
                 }
 
                 document.Add(table);
