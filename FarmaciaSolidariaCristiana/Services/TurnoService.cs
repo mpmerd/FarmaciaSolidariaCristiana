@@ -627,6 +627,9 @@ namespace FarmaciaSolidariaCristiana.Services
                     return (false, $"Turno ya fue {turno.Estado.ToLower()}");
                 }
 
+                // Eliminar archivos físicos asociados al turno
+                DeleteTurnoFiles(turno);
+
                 turno.Estado = EstadoTurno.Rechazado;
                 turno.RevisadoPorId = farmaceuticoId;
                 turno.FechaRevision = DateTime.Now;
@@ -1051,6 +1054,9 @@ namespace FarmaciaSolidariaCristiana.Services
             if (!CanUserCancelTurno(turno))
                 return false;
             
+            // Eliminar archivos físicos asociados al turno
+            DeleteTurnoFiles(turno);
+            
             // Cambiar estado a Rechazado (usamos este estado para cancelaciones)
             turno.Estado = EstadoTurno.Rechazado;
             turno.FechaRevision = DateTime.Now;
@@ -1062,6 +1068,52 @@ namespace FarmaciaSolidariaCristiana.Services
             _logger.LogInformation("Turno {TurnoId} cancelado por usuario {UserId}", turnoId, userId);
             
             return true;
+        }
+
+        /// <summary>
+        /// Elimina archivos físicos asociados a un turno (receta, tarjetón, PDF)
+        /// </summary>
+        private void DeleteTurnoFiles(Turno turno)
+        {
+            try
+            {
+                // Eliminar receta médica si existe
+                if (!string.IsNullOrEmpty(turno.RecetaMedicaPath))
+                {
+                    var recetaPath = Path.Combine(_environment.WebRootPath, turno.RecetaMedicaPath.TrimStart('/'));
+                    if (File.Exists(recetaPath))
+                    {
+                        File.Delete(recetaPath);
+                        _logger.LogInformation("Archivo de receta eliminado: {FilePath}", recetaPath);
+                    }
+                }
+
+                // Eliminar tarjetón si existe
+                if (!string.IsNullOrEmpty(turno.TarjetonPath))
+                {
+                    var tarjetonPath = Path.Combine(_environment.WebRootPath, turno.TarjetonPath.TrimStart('/'));
+                    if (File.Exists(tarjetonPath))
+                    {
+                        File.Delete(tarjetonPath);
+                        _logger.LogInformation("Archivo de tarjetón eliminado: {FilePath}", tarjetonPath);
+                    }
+                }
+
+                // Eliminar PDF del turno si existe
+                if (!string.IsNullOrEmpty(turno.TurnoPdfPath))
+                {
+                    var pdfPath = Path.Combine(_environment.WebRootPath, turno.TurnoPdfPath.TrimStart('/'));
+                    if (File.Exists(pdfPath))
+                    {
+                        File.Delete(pdfPath);
+                        _logger.LogInformation("PDF del turno eliminado: {FilePath}", pdfPath);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error eliminando archivos del turno {TurnoId}", turno.Id);
+            }
         }
     }
 }
