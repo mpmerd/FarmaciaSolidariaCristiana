@@ -558,6 +558,37 @@ namespace FarmaciaSolidariaCristiana.Services
                 // Generar número de turno
                 turno.NumeroTurno = await GenerateNumeroTurnoAsync(turno.FechaPreferida.Value);
 
+                // ✅ NUEVO: Reservar stock (descontar temporalmente del stock disponible)
+                foreach (var tm in turno.Medicamentos)
+                {
+                    var medicine = await _context.Medicines.FindAsync(tm.MedicineId);
+                    if (medicine != null && tm.CantidadAprobada.HasValue)
+                    {
+                        if (medicine.StockQuantity < tm.CantidadAprobada.Value)
+                        {
+                            await transaction.RollbackAsync();
+                            return (false, $"Stock insuficiente para {medicine.Name}. Disponible: {medicine.StockQuantity}, Solicitado: {tm.CantidadAprobada.Value}", null);
+                        }
+                        medicine.StockQuantity -= tm.CantidadAprobada.Value;
+                        _logger.LogInformation("Stock reservado para medicamento {Name}: {Cantidad} unidades", medicine.Name, tm.CantidadAprobada.Value);
+                    }
+                }
+
+                foreach (var ti in turno.Insumos)
+                {
+                    var supply = await _context.Supplies.FindAsync(ti.SupplyId);
+                    if (supply != null && ti.CantidadAprobada.HasValue)
+                    {
+                        if (supply.StockQuantity < ti.CantidadAprobada.Value)
+                        {
+                            await transaction.RollbackAsync();
+                            return (false, $"Stock insuficiente para {supply.Name}. Disponible: {supply.StockQuantity}, Solicitado: {ti.CantidadAprobada.Value}", null);
+                        }
+                        supply.StockQuantity -= ti.CantidadAprobada.Value;
+                        _logger.LogInformation("Stock reservado para insumo {Name}: {Cantidad} unidades", supply.Name, ti.CantidadAprobada.Value);
+                    }
+                }
+
                 // Actualizar estado del turno
                 turno.Estado = EstadoTurno.Aprobado;
                 turno.RevisadoPorId = farmaceuticoId;
@@ -1053,6 +1084,30 @@ namespace FarmaciaSolidariaCristiana.Services
             // Validar que se puede cancelar
             if (!CanUserCancelTurno(turno))
                 return false;
+            
+            // ✅ NUEVO: Devolver stock reservado al cancelar turno aprobado
+            if (turno.Estado == EstadoTurno.Aprobado)
+            {
+                foreach (var tm in turno.Medicamentos)
+                {
+                    if (tm.CantidadAprobada.HasValue && tm.Medicine != null)
+                    {
+                        tm.Medicine.StockQuantity += tm.CantidadAprobada.Value;
+                        _logger.LogInformation("Stock devuelto para medicamento {Name}: {Cantidad} unidades", 
+                            tm.Medicine.Name, tm.CantidadAprobada.Value);
+                    }
+                }
+
+                foreach (var ti in turno.Insumos)
+                {
+                    if (ti.CantidadAprobada.HasValue && ti.Supply != null)
+                    {
+                        ti.Supply.StockQuantity += ti.CantidadAprobada.Value;
+                        _logger.LogInformation("Stock devuelto para insumo {Name}: {Cantidad} unidades", 
+                            ti.Supply.Name, ti.CantidadAprobada.Value);
+                    }
+                }
+            }
             
             // Eliminar archivos físicos asociados al turno
             DeleteTurnoFiles(turno);
