@@ -172,7 +172,20 @@ namespace FarmaciaSolidariaCristiana.Controllers
                             CreatedAt = createdAt
                         };
 
-                        medicine.StockQuantity -= medicineQuantitiesList[i];
+                        // ✅ CORREGIDO: Solo descontar stock si NO es de un turno aprobado
+                        // Si es de un turno, el stock ya fue reservado al aprobar
+                        if (turnoId == null)
+                        {
+                            medicine.StockQuantity -= medicineQuantitiesList[i];
+                            _logger.LogInformation("Stock descontado (entrega sin turno) - Medicine: {MedicineName}, Quantity: {Quantity}",
+                                medicine.Name, medicineQuantitiesList[i]);
+                        }
+                        else
+                        {
+                            _logger.LogInformation("Stock YA reservado (entrega de turno #{TurnoId}) - Medicine: {MedicineName}, Quantity: {Quantity}",
+                                turnoId, medicine.Name, medicineQuantitiesList[i]);
+                        }
+                        
                         _context.Add(delivery);
                         deliveriesCount++;
                         
@@ -220,7 +233,20 @@ namespace FarmaciaSolidariaCristiana.Controllers
                             CreatedAt = createdAt
                         };
 
-                        supply.StockQuantity -= supplyQuantitiesList[i];
+                        // ✅ CORREGIDO: Solo descontar stock si NO es de un turno aprobado
+                        // Si es de un turno, el stock ya fue reservado al aprobar
+                        if (turnoId == null)
+                        {
+                            supply.StockQuantity -= supplyQuantitiesList[i];
+                            _logger.LogInformation("Stock descontado (entrega sin turno) - Supply: {SupplyName}, Quantity: {Quantity}",
+                                supply.Name, supplyQuantitiesList[i]);
+                        }
+                        else
+                        {
+                            _logger.LogInformation("Stock YA reservado (entrega de turno #{TurnoId}) - Supply: {SupplyName}, Quantity: {Quantity}",
+                                turnoId, supply.Name, supplyQuantitiesList[i]);
+                        }
+                        
                         _context.Add(delivery);
                         deliveriesCount++;
                         
@@ -314,16 +340,23 @@ namespace FarmaciaSolidariaCristiana.Controllers
             }
 
             // Devolver al stock (medicamento o insumo)
+            // SIEMPRE devolver stock al eliminar entrega:
+            // - Si era de turno: devolvemos el stock reservado
+            // - Si no era de turno: devolvemos el stock descontado al crear la entrega
             string itemName = "";
             if (delivery.Medicine != null)
             {
                 delivery.Medicine.StockQuantity += delivery.Quantity;
                 itemName = delivery.Medicine.Name;
+                _logger.LogInformation("Stock devuelto - Medicine: {MedicineName}, Quantity: {Quantity}, TurnoId: {TurnoId}",
+                    delivery.Medicine.Name, delivery.Quantity, delivery.TurnoId ?? 0);
             }
             else if (delivery.Supply != null)
             {
                 delivery.Supply.StockQuantity += delivery.Quantity;
                 itemName = delivery.Supply.Name;
+                _logger.LogInformation("Stock devuelto - Supply: {SupplyName}, Quantity: {Quantity}, TurnoId: {TurnoId}",
+                    delivery.Supply.Name, delivery.Quantity, delivery.TurnoId ?? 0);
             }
 
             _context.Deliveries.Remove(delivery);
