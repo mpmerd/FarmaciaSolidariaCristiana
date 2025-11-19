@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
 using FarmaciaSolidariaCristiana.Data;
 using FarmaciaSolidariaCristiana.Services;
+using FarmaciaSolidariaCristiana.Filters;
 using System.Globalization;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -12,7 +13,11 @@ CultureInfo.DefaultThreadCurrentCulture = cultureInfo;
 CultureInfo.DefaultThreadCurrentUICulture = cultureInfo;
 
 // Add services to the container.
-builder.Services.AddControllersWithViews();
+builder.Services.AddControllersWithViews(options =>
+{
+    // Add global filters
+    options.Filters.Add<MaintenanceModeFilter>();
+});
 
 // Configure DbContext with SQL Server
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
@@ -26,6 +31,9 @@ builder.Services.AddScoped<IImageCompressionService, ImageCompressionService>();
 
 // Register Turno Service
 builder.Services.AddScoped<ITurnoService, TurnoService>();
+
+// Register Maintenance Service
+builder.Services.AddScoped<IMaintenanceService, MaintenanceService>();
 
 // Register Background Services
 builder.Services.AddHostedService<TurnoCleanupService>();
