@@ -30,6 +30,11 @@ namespace FarmaciaSolidariaCristiana.Filters
             if (controller == "Maintenance")
                 return;
 
+            // Permitir acceso a rutas de autenticación (Login, Logout)
+            // Esto permite que los Admin puedan iniciar sesión durante el mantenimiento
+            if (controller == "Account" && (action == "Login" || action == "Logout"))
+                return;
+
             // Permitir a los Admin seguir usando la aplicación
             if (context.HttpContext.User.IsInRole("Admin"))
                 return;
