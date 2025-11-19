@@ -35,8 +35,8 @@ namespace FarmaciaSolidariaCristiana.Filters
             if (controller == "Account" && (action == "Login" || action == "Logout"))
                 return;
 
-            // Permitir a los Admin seguir usando la aplicación
-            if (context.HttpContext.User.IsInRole("Admin"))
+            // Permitir a los Admin y Farmaceuticos seguir usando la aplicación
+            if (context.HttpContext.User.IsInRole("Admin") || context.HttpContext.User.IsInRole("Farmaceutico"))
                 return;
 
             // Para todos los demás usuarios, redirigir a la página de mantenimiento
