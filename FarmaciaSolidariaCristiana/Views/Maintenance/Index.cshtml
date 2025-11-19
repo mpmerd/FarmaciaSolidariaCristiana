@@ -1,0 +1,104 @@
+@{
+    ViewData["Title"] = "Mantenimiento";
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - Farmacia Solidaria Cristiana</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .maintenance-container {
+            background: white;
+            border-radius: 20px;
+            padding: 50px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 600px;
+            text-align: center;
+        }
+        .maintenance-icon {
+            font-size: 80px;
+            margin-bottom: 20px;
+            color: #667eea;
+        }
+        .maintenance-title {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 20px;
+        }
+        .maintenance-message {
+            font-size: 1.1rem;
+            color: #666;
+            margin-bottom: 30px;
+            line-height: 1.6;
+        }
+        .maintenance-reason {
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            padding: 20px;
+            border-radius: 5px;
+            margin: 30px 0;
+            text-align: left;
+        }
+        .maintenance-footer {
+            margin-top: 30px;
+            color: #999;
+            font-size: 0.9rem;
+        }
+        .admin-link {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="maintenance-container">
+        <div class="maintenance-icon">
+            🛠️
+        </div>
+        
+        <h1 class="maintenance-title">Sitio en Mantenimiento</h1>
+        
+        <p class="maintenance-message">
+            Lo sentimos, la Farmacia Solidaria Cristiana está temporalmente fuera de servicio.
+            Estamos trabajando para mejorar tu experiencia.
+        </p>
+        
+        <div class="maintenance-reason">
+            <strong>📋 Motivo:</strong>
+            <p class="mt-2 mb-0">@ViewBag.Reason</p>
+        </div>
+        
+        <p class="maintenance-message">
+            Por favor, vuelve más tarde. Esperamos estar disponibles pronto.
+        </p>
+        
+        <div class="maintenance-footer">
+            <p><strong>Farmacia Solidaria Cristiana</strong></p>
+            <p>Iglesia Metodista de Cárdenas</p>
+            <p>© @DateTime.Now.Year - Todos los derechos reservados</p>
+        </div>
+        
+        @if (User.IsInRole("Admin"))
+        {
+            <div class="admin-link">
+                <a href="@Url.Action("Control", "Maintenance")" class="btn btn-primary">
+                    <i class="bi bi-gear-fill"></i> Panel de Control
+                </a>
+            </div>
+        }
+    </div>
+</body>
+</html>
