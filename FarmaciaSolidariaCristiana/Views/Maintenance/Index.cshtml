@@ -99,11 +99,20 @@
                 </a>
             </div>
         }
+        else if (User.IsInRole("Farmaceutico"))
+        {
+            <div class="admin-link">
+                <p class="text-white mb-2">Has iniciado sesión como Farmacéutico</p>
+                <a href="@Url.Action("Index", "Home")" class="btn btn-success">
+                    <i class="bi bi-house-fill"></i> Ir al Sistema
+                </a>
+            </div>
+        }
         else
         {
             <div class="admin-link">
                 <a href="@Url.Action("Login", "Account")" class="btn btn-outline-secondary btn-sm">
-                    🔐 Acceso Administradores
+                    🔐 Acceso Personal Autorizado
                 </a>
             </div>
         }
