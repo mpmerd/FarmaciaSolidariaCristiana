@@ -685,5 +685,146 @@ namespace FarmaciaSolidariaCristiana.Services
             
             await SendEmailAsync(destinatario, subject, body);
         }
+
+        public async Task SendTurnoNoAsistenciaUsuarioEmailAsync(
+            string destinatario,
+            string nombreUsuario,
+            int numeroTurno,
+            DateTime fechaTurno)
+        {
+            var subject = $"Turno #{numeroTurno:000} Cancelado por No Asistencia";
+            
+            var body = $@"
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <style>
+                        body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+                        .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+                        .header {{ background-color: #dc3545; color: white; padding: 20px; text-align: center; border-radius: 10px 10px 0 0; }}
+                        .content {{ background-color: #f8d7da; padding: 30px; border-radius: 0 0 10px 10px; }}
+                        .info-box {{ background-color: white; padding: 15px; margin: 20px 0; border-left: 4px solid #dc3545; }}
+                        .warning {{ background-color: #fff3cd; padding: 15px; border-radius: 5px; margin: 15px 0; border-left: 4px solid #ffc107; }}
+                        .footer {{ text-align: center; margin-top: 20px; font-size: 12px; color: #6c757d; }}
+                    </style>
+                </head>
+                <body>
+                    <div class='container'>
+                        <div class='header'>
+                            <h1>❌ Turno Cancelado</h1>
+                        </div>
+                        <div class='content'>
+                            <p>Estimado/a <strong>{nombreUsuario}</strong>,</p>
+                            
+                            <p>Lamentamos informarte que tu turno ha sido <strong>cancelado automáticamente</strong> porque no asististe a la farmacia en la fecha y hora programadas.</p>
+                            
+                            <div class='info-box'>
+                                <p><strong>Número de Turno:</strong> #{numeroTurno:000}</p>
+                                <p><strong>Fecha Programada:</strong> {fechaTurno:dd/MM/yyyy HH:mm}</p>
+                                <p><strong>Estado:</strong> <span style='color: #dc3545;'>CANCELADO</span></p>
+                            </div>
+                            
+                            <div class='warning'>
+                                <p><strong>⚠️ Importante:</strong></p>
+                                <ul>
+                                    <li>Este turno cuenta como uno de tus <strong>2 turnos mensuales permitidos</strong></li>
+                                    <li>Las cantidades reservadas han sido devueltas al stock</li>
+                                    <li>Si aún necesitas medicamentos/insumos, debes solicitar un nuevo turno</li>
+                                    <li>Recuerda: máximo 2 turnos por mes</li>
+                                </ul>
+                            </div>
+                            
+                            <p><strong>¿Qué puedes hacer ahora?</strong></p>
+                            <ul>
+                                <li>Verifica cuántos turnos te quedan disponibles este mes</li>
+                                <li>Si tienes disponibilidad, solicita un nuevo turno desde la plataforma</li>
+                                <li>Asegúrate de asistir puntualmente a futuros turnos</li>
+                                <li>Si tienes alguna emergencia, cancela el turno con anticipación (mínimo 7 días antes)</li>
+                            </ul>
+                            
+                            <p>Si tuviste algún inconveniente o emergencia que te impidió asistir, por favor comunícate con nosotros.</p>
+                            
+                            <div class='footer'>
+                                <p>Saludos,<br/>
+                                <strong>Farmacia Solidaria Cristiana</strong><br/>
+                                Iglesia Metodista de Cárdenas</p>
+                                <p>© 2025 Todos los derechos reservados.</p>
+                            </div>
+                        </div>
+                    </div>
+                </body>
+                </html>";
+            
+            await SendEmailAsync(destinatario, subject, body);
+        }
+
+        public async Task SendTurnoNoAsistenciaFarmaceuticoEmailAsync(
+            string destinatario,
+            string nombreFarmaceutico,
+            int numeroTurno,
+            string nombreUsuario,
+            DateTime fechaTurno,
+            string itemsReservados)
+        {
+            var subject = $"[Sistema] Turno #{numeroTurno:000} Cancelado por No Asistencia";
+            
+            var body = $@"
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <style>
+                        body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+                        .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+                        .header {{ background-color: #6c757d; color: white; padding: 20px; text-align: center; border-radius: 10px 10px 0 0; }}
+                        .content {{ background-color: #e9ecef; padding: 30px; border-radius: 0 0 10px 10px; }}
+                        .info-box {{ background-color: white; padding: 15px; margin: 20px 0; border-left: 4px solid #6c757d; }}
+                        .items {{ background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin: 15px 0; }}
+                        .footer {{ text-align: center; margin-top: 20px; font-size: 12px; color: #6c757d; }}
+                    </style>
+                </head>
+                <body>
+                    <div class='container'>
+                        <div class='header'>
+                            <h1>🔔 Notificación del Sistema</h1>
+                        </div>
+                        <div class='content'>
+                            <p>Hola <strong>{nombreFarmaceutico}</strong>,</p>
+                            
+                            <p>El sistema ha cancelado automáticamente un turno por <strong>no asistencia del usuario</strong>.</p>
+                            
+                            <div class='info-box'>
+                                <p><strong>Número de Turno:</strong> #{numeroTurno:000}</p>
+                                <p><strong>Usuario:</strong> {nombreUsuario}</p>
+                                <p><strong>Fecha Programada:</strong> {fechaTurno:dd/MM/yyyy HH:mm}</p>
+                                <p><strong>Procesado:</strong> {DateTime.Now:dd/MM/yyyy HH:mm}</p>
+                            </div>
+                            
+                            <div class='items'>
+                                <p><strong>Stock devuelto:</strong></p>
+                                <pre style='white-space: pre-wrap;'>{itemsReservados}</pre>
+                            </div>
+                            
+                            <p><strong>✅ Acciones realizadas automáticamente:</strong></p>
+                            <ul>
+                                <li>Turno marcado como CANCELADO</li>
+                                <li>Stock reservado devuelto al inventario</li>
+                                <li>Email enviado al usuario</li>
+                                <li>Contador de turnos mensuales del usuario <strong>NO recuperado</strong></li>
+                            </ul>
+                            
+                            <p><strong>ℹ️ Nota:</strong> Este turno cuenta como uno de los 2 turnos mensuales permitidos para este usuario.</p>
+                            
+                            <div class='footer'>
+                                <p>Sistema Automático de Gestión de Turnos<br/>
+                                <strong>Farmacia Solidaria Cristiana</strong></p>
+                                <p>© 2025 Todos los derechos reservados.</p>
+                            </div>
+                        </div>
+                    </div>
+                </body>
+                </html>";
+            
+            await SendEmailAsync(destinatario, subject, body);
+        }
     }
 }

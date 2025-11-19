@@ -57,5 +57,25 @@ namespace FarmaciaSolidariaCristiana.Services
             DateTime fechaOriginal,
             DateTime fechaNueva,
             string motivo);
+
+        /// <summary>
+        /// Envía email al usuario cuando su turno es cancelado por no asistencia
+        /// </summary>
+        Task SendTurnoNoAsistenciaUsuarioEmailAsync(
+            string destinatario,
+            string nombreUsuario,
+            int numeroTurno,
+            DateTime fechaTurno);
+
+        /// <summary>
+        /// Envía email a farmacéuticos cuando un turno es cancelado por no asistencia del usuario
+        /// </summary>
+        Task SendTurnoNoAsistenciaFarmaceuticoEmailAsync(
+            string destinatario,
+            string nombreFarmaceutico,
+            int numeroTurno,
+            string nombreUsuario,
+            DateTime fechaTurno,
+            string itemsReservados);
     }
 }

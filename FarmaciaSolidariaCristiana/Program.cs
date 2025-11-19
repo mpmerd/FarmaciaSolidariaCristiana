@@ -27,6 +27,9 @@ builder.Services.AddScoped<IImageCompressionService, ImageCompressionService>();
 // Register Turno Service
 builder.Services.AddScoped<ITurnoService, TurnoService>();
 
+// Register Background Services
+builder.Services.AddHostedService<TurnoCleanupService>();
+
 // Configure Identity
 builder.Services.AddIdentity<IdentityUser, IdentityRole>(options =>
 {
