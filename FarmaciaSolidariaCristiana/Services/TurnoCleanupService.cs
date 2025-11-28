@@ -57,13 +57,18 @@ namespace FarmaciaSolidariaCristiana.Services
             // Solo procesar después de las 6 PM (18:00)
             if (now.Hour < 18)
             {
-                _logger.LogInformation("TurnoCleanupService: Aún no son las 6 PM, omitiendo verificación");
+                _logger.LogInformation("TurnoCleanupService: Aún no son las 6 PM (hora actual: {Hora}), omitiendo verificación", now.Hour);
                 return;
             }
 
-            // Buscar turnos aprobados cuya fecha ya pasó (incluyendo hoy antes de las 6 PM)
-            // Un turno se considera vencido si su hora programada ya pasó y no se completó
+            // Buscar turnos aprobados cuya FechaPreferida (fecha asignada del turno) ya pasó
+            // Un turno se considera vencido si:
+            // - Su fecha asignada (FechaPreferida) es anterior a HOY
+            // - O su fecha asignada es HOY pero ya pasaron las 6 PM
             var cutoffTime = now.Date.AddHours(18); // Hoy a las 6 PM
+            
+            _logger.LogInformation("TurnoCleanupService: Buscando turnos vencidos. Hora actual: {Now}, Corte: {Cutoff}", 
+                now.ToString("yyyy-MM-dd HH:mm:ss"), cutoffTime.ToString("yyyy-MM-dd HH:mm:ss"));
             
             var expiredTurnos = await context.Turnos
                 .Include(t => t.User)
@@ -71,7 +76,7 @@ namespace FarmaciaSolidariaCristiana.Services
                 .Include(t => t.Insumos).ThenInclude(ti => ti.Supply)
                 .Where(t => t.Estado == EstadoTurno.Aprobado &&
                            t.FechaPreferida.HasValue &&
-                           t.FechaPreferida.Value < cutoffTime) // Turnos antes de las 6 PM de hoy
+                           t.FechaPreferida.Value.Date <= cutoffTime.Date) // Turnos de HOY o anteriores (después de las 6 PM)
                 .ToListAsync();
 
             if (!expiredTurnos.Any())
@@ -80,7 +85,14 @@ namespace FarmaciaSolidariaCristiana.Services
                 return;
             }
 
-            _logger.LogInformation("TurnoCleanupService: Encontrados {Count} turnos vencidos", expiredTurnos.Count);
+            _logger.LogInformation("TurnoCleanupService: Encontrados {Count} turnos vencidos para cancelar", expiredTurnos.Count);
+            
+            // Log detallado de cada turno encontrado
+            foreach (var t in expiredTurnos)
+            {
+                _logger.LogInformation("  - Turno #{Id} | Usuario: {User} | Fecha asignada: {Fecha} | Estado: {Estado}", 
+                    t.Id, t.User?.UserName ?? "N/A", t.FechaPreferida?.ToString("yyyy-MM-dd HH:mm") ?? "N/A", t.Estado);
+            }
 
             foreach (var turno in expiredTurnos)
             {
