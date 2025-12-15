@@ -559,34 +559,57 @@ namespace FarmaciaSolidariaCristiana.Services
                 turno.NumeroTurno = await GenerateNumeroTurnoAsync(turno.FechaPreferida.Value);
 
                 // ✅ NUEVO: Reservar stock (descontar temporalmente del stock disponible)
+                // ⚠️ IMPORTANTE: Usar FromSqlRaw con UPDLOCK+ROWLOCK (SQL Server) para bloquear filas y evitar race conditions
                 foreach (var tm in turno.Medicamentos)
                 {
-                    var medicine = await _context.Medicines.FindAsync(tm.MedicineId);
-                    if (medicine != null && tm.CantidadAprobada.HasValue)
+                    if (!tm.CantidadAprobada.HasValue) continue;
+
+                    // Bloquear fila del medicamento para lectura exclusiva durante la transacción (SQL Server)
+                    var medicine = await _context.Medicines
+                        .FromSqlRaw("SELECT * FROM Medicines WITH (UPDLOCK, ROWLOCK) WHERE Id = {0}", tm.MedicineId)
+                        .FirstOrDefaultAsync();
+
+                    if (medicine == null)
                     {
-                        if (medicine.StockQuantity < tm.CantidadAprobada.Value)
-                        {
-                            await transaction.RollbackAsync();
-                            return (false, $"Stock insuficiente para {medicine.Name}. Disponible: {medicine.StockQuantity}, Solicitado: {tm.CantidadAprobada.Value}", null);
-                        }
-                        medicine.StockQuantity -= tm.CantidadAprobada.Value;
-                        _logger.LogInformation("Stock reservado para medicamento {Name}: {Cantidad} unidades", medicine.Name, tm.CantidadAprobada.Value);
+                        await transaction.RollbackAsync();
+                        return (false, $"Medicamento con ID {tm.MedicineId} no encontrado", null);
                     }
+
+                    if (medicine.StockQuantity < tm.CantidadAprobada.Value)
+                    {
+                        await transaction.RollbackAsync();
+                        return (false, $"Stock insuficiente para {medicine.Name}. Disponible: {medicine.StockQuantity}, Solicitado: {tm.CantidadAprobada.Value}", null);
+                    }
+
+                    medicine.StockQuantity -= tm.CantidadAprobada.Value;
+                    _logger.LogInformation("Stock reservado para medicamento {Name}: {Cantidad} unidades (Stock restante: {Stock})", 
+                        medicine.Name, tm.CantidadAprobada.Value, medicine.StockQuantity);
                 }
 
                 foreach (var ti in turno.Insumos)
                 {
-                    var supply = await _context.Supplies.FindAsync(ti.SupplyId);
-                    if (supply != null && ti.CantidadAprobada.HasValue)
+                    if (!ti.CantidadAprobada.HasValue) continue;
+
+                    // Bloquear fila del insumo para lectura exclusiva durante la transacción (SQL Server)
+                    var supply = await _context.Supplies
+                        .FromSqlRaw("SELECT * FROM Supplies WITH (UPDLOCK, ROWLOCK) WHERE Id = {0}", ti.SupplyId)
+                        .FirstOrDefaultAsync();
+
+                    if (supply == null)
                     {
-                        if (supply.StockQuantity < ti.CantidadAprobada.Value)
-                        {
-                            await transaction.RollbackAsync();
-                            return (false, $"Stock insuficiente para {supply.Name}. Disponible: {supply.StockQuantity}, Solicitado: {ti.CantidadAprobada.Value}", null);
-                        }
-                        supply.StockQuantity -= ti.CantidadAprobada.Value;
-                        _logger.LogInformation("Stock reservado para insumo {Name}: {Cantidad} unidades", supply.Name, ti.CantidadAprobada.Value);
+                        await transaction.RollbackAsync();
+                        return (false, $"Insumo con ID {ti.SupplyId} no encontrado", null);
                     }
+
+                    if (supply.StockQuantity < ti.CantidadAprobada.Value)
+                    {
+                        await transaction.RollbackAsync();
+                        return (false, $"Stock insuficiente para {supply.Name}. Disponible: {supply.StockQuantity}, Solicitado: {ti.CantidadAprobada.Value}", null);
+                    }
+
+                    supply.StockQuantity -= ti.CantidadAprobada.Value;
+                    _logger.LogInformation("Stock reservado para insumo {Name}: {Cantidad} unidades (Stock restante: {Stock})", 
+                        supply.Name, ti.CantidadAprobada.Value, supply.StockQuantity);
                 }
 
                 // Actualizar estado del turno
