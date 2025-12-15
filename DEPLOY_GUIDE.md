@@ -97,6 +97,33 @@ sudo journalctl -u farmacia.service -n 50
 
 ## 🔧 Solución de Problemas
 
+### Subida forzada del DLL (emergencias - Somee)
+Cuando el despliegue por FTP no refleja cambios (vistas precompiladas en el DLL) puedes forzar la actualización del binario principal y luego reiniciar la app desde el panel de Somee.
+
+Pasos:
+
+```bash
+# 1) Publicar en Release localmente
+cd /Users/maikelpelaez/Documents/Proyectos/FarmaciaSolidariaCristiana/FarmaciaSolidariaCristiana
+dotnet publish -c Release
+
+# 2) Desde la raíz del repo, ejecutar el script de subida forzada
+cd /Users/maikelpelaez/Documents/Proyectos/FarmaciaSolidariaCristiana
+./force-upload-now.sh
+
+# El script pedirá la contraseña FTP y subirá:
+#   FarmaciaSolidariaCristiana/bin/Release/net8.0/publish/FarmaciaSolidariaCristiana.dll
+#   FarmaciaSolidariaCristiana/bin/Release/net8.0/publish/FarmaciaSolidariaCristiana.pdb
+
+# 3) Ir al panel de Somee y reiniciar la app
+#    https://somee.com/ControlPanel.aspx → Restart / Recycle App Pool
+```
+
+Notas:
+- Usa este método solo en emergencias cuando el `deploy-to-somee.sh` no refresca el DLL cargado en memoria.
+- Los mensajes de "chmod" en Somee son normales y no afectan la subida.
+- Siempre reinicia la aplicación en Somee para que tome el nuevo DLL.
+
 ### Servicio no inicia
 
 ```bash
