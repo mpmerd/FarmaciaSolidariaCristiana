@@ -113,6 +113,9 @@ namespace FarmaciaSolidariaCristiana.Controllers
                 return RedirectToAction(nameof(Create));
             }
 
+            // ⚠️ IMPORTANTE: Usar transacción para garantizar atomicidad y evitar race conditions en stock
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            
             try
             {
                 var deliveredBy = User.Identity?.Name ?? "Sistema";
@@ -145,15 +148,31 @@ namespace FarmaciaSolidariaCristiana.Controllers
 
                     for (int i = 0; i < medicineIdsList.Count; i++)
                     {
-                        var medicine = await _context.Medicines.FindAsync(medicineIdsList[i]);
+                        // ⚠️ Bloquear fila para evitar race conditions (SQL Server: UPDLOCK + ROWLOCK)
+                        // Solo bloquear si NO es de un turno (turno ya reservó stock con lock)
+                        Medicine? medicine;
+                        if (turnoId == null)
+                        {
+                            medicine = await _context.Medicines
+                                .FromSqlRaw("SELECT * FROM Medicines WITH (UPDLOCK, ROWLOCK) WHERE Id = {0}", medicineIdsList[i])
+                                .FirstOrDefaultAsync();
+                        }
+                        else
+                        {
+                            medicine = await _context.Medicines.FindAsync(medicineIdsList[i]);
+                        }
+
                         if (medicine == null)
                         {
+                            await transaction.RollbackAsync();
                             TempData["ErrorMessage"] = $"Medicamento con ID {medicineIdsList[i]} no encontrado.";
                             return RedirectToAction(nameof(Create));
                         }
 
-                        if (medicine.StockQuantity < medicineQuantitiesList[i])
+                        // ✅ Validar stock solo si NO es de turno (turno ya validó al aprobar)
+                        if (turnoId == null && medicine.StockQuantity < medicineQuantitiesList[i])
                         {
+                            await transaction.RollbackAsync();
                             TempData["ErrorMessage"] = $"Stock insuficiente para {medicine.Name}. Disponible: {medicine.StockQuantity} {medicine.Unit}";
                             return RedirectToAction(nameof(Create));
                         }
@@ -206,15 +225,31 @@ namespace FarmaciaSolidariaCristiana.Controllers
 
                     for (int i = 0; i < supplyIdsList.Count; i++)
                     {
-                        var supply = await _context.Supplies.FindAsync(supplyIdsList[i]);
+                        // ⚠️ Bloquear fila para evitar race conditions (SQL Server: UPDLOCK + ROWLOCK)
+                        // Solo bloquear si NO es de un turno (turno ya reservó stock con lock)
+                        Supply? supply;
+                        if (turnoId == null)
+                        {
+                            supply = await _context.Supplies
+                                .FromSqlRaw("SELECT * FROM Supplies WITH (UPDLOCK, ROWLOCK) WHERE Id = {0}", supplyIdsList[i])
+                                .FirstOrDefaultAsync();
+                        }
+                        else
+                        {
+                            supply = await _context.Supplies.FindAsync(supplyIdsList[i]);
+                        }
+
                         if (supply == null)
                         {
+                            await transaction.RollbackAsync();
                             TempData["ErrorMessage"] = $"Insumo con ID {supplyIdsList[i]} no encontrado.";
                             return RedirectToAction(nameof(Create));
                         }
 
-                        if (supply.StockQuantity < supplyQuantitiesList[i])
+                        // ✅ Validar stock solo si NO es de turno (turno ya validó al aprobar)
+                        if (turnoId == null && supply.StockQuantity < supplyQuantitiesList[i])
                         {
+                            await transaction.RollbackAsync();
                             TempData["ErrorMessage"] = $"Stock insuficiente para {supply.Name}. Disponible: {supply.StockQuantity} {supply.Unit}";
                             return RedirectToAction(nameof(Create));
                         }
@@ -269,12 +304,17 @@ namespace FarmaciaSolidariaCristiana.Controllers
                     await CompleteTurnoIfExistsAsync(PatientIdentification, null, firstSupplyId);
                 }
 
+                // ✅ Confirmar transacción - todos los cambios se aplicaron correctamente
+                await transaction.CommitAsync();
+
                 TempData["SuccessMessage"] = $"{deliveriesCount} entrega(s) registrada(s) exitosamente para {patient.FullName}.";
                 return RedirectToAction(nameof(Index));
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error creating deliveries");
+                // ⚠️ Rollback automático al salir del using, pero lo hacemos explícito para claridad
+                await transaction.RollbackAsync();
+                _logger.LogError(ex, "Error creating deliveries - Transacción revertida");
                 TempData["ErrorMessage"] = "Error al registrar las entregas. Por favor, inténtelo de nuevo.";
                 return RedirectToAction(nameof(Create));
             }
