@@ -114,6 +114,7 @@
                 feedbackDiv.innerHTML = '';
                 patientInfo.style.display = 'none';
                 approvedTurnosSection.style.display = 'none';
+                approvedTurnosData = []; // ✅ Limpiar turnos
                 return;
             }
 
@@ -190,6 +191,9 @@
                 .then(response => response.json())
                 .then(data => {
                     if (data.success && data.turnos && data.turnos.length > 0) {
+                        // ✅ NUEVO: Guardar los turnos para usarlos al buscar medicamentos
+                        approvedTurnosData = data.turnos;
+                        
                         let turnosHtml = '<div class="table-responsive"><table class="table table-sm table-bordered mb-0">';
                         turnosHtml += '<thead><tr><th>Turno #</th><th>Estado</th><th>Fecha/Hora</th><th>Items</th></tr></thead><tbody>';
                         
@@ -255,6 +259,9 @@
         // Arrays para almacenar los items seleccionados
         let selectedMedicines = [];
         let selectedSupplies = [];
+        
+        // ✅ NUEVO: Almacenar turnos aprobados para ajustar stock
+        let approvedTurnosData = [];
 
         medicineRadio.addEventListener('change', function() {
             if (this.checked) {
@@ -275,6 +282,51 @@
                 medicineSearch.value = '';
             }
         });
+
+        // ✅ NUEVA FUNCIÓN: Calcular stock ajustado (stock actual + cantidades reservadas en turnos)
+        function getAdjustedStock(medicineId, currentStock) {
+            let reservedQuantity = 0;
+            
+            // Sumar todas las cantidades reservadas de este medicamento en turnos aprobados
+            approvedTurnosData.forEach(turno => {
+                if (turno.medicamentos) {
+                    turno.medicamentos.forEach(med => {
+                        if (med.id === medicineId) {
+                            const cantidad = med.cantidadAprobada || med.cantidadSolicitada || 0;
+                            reservedQuantity += cantidad;
+                        }
+                    });
+                }
+            });
+            
+            return {
+                displayStock: currentStock + reservedQuantity,
+                actualStock: currentStock,
+                reservedQuantity: reservedQuantity
+            };
+        }
+        
+        // ✅ NUEVA FUNCIÓN: Similar para insumos
+        function getAdjustedStockSupply(supplyId, currentStock) {
+            let reservedQuantity = 0;
+            
+            approvedTurnosData.forEach(turno => {
+                if (turno.insumos) {
+                    turno.insumos.forEach(ins => {
+                        if (ins.id === supplyId) {
+                            const cantidad = ins.cantidadAprobada || ins.cantidadSolicitada || 0;
+                            reservedQuantity += cantidad;
+                        }
+                    });
+                }
+            });
+            
+            return {
+                displayStock: currentStock + reservedQuantity,
+                actualStock: currentStock,
+                reservedQuantity: reservedQuantity
+            };
+        }
 
         // ========== BÚSQUEDA DE MEDICAMENTOS CON AJAX ==========
         let searchTimeout;
@@ -302,7 +354,19 @@
                                     return; // Skip si ya está en la lista
                                 }
                                 
-                                const stockBadgeClass = med.stock > 10 ? 'bg-success' : med.stock > 5 ? 'bg-warning text-dark' : 'bg-danger';
+                                // ✅ NUEVO: Calcular stock ajustado con cantidades reservadas
+                                const stockInfo = getAdjustedStock(med.id, med.stock);
+                                const displayStock = stockInfo.displayStock;
+                                const actualStock = stockInfo.actualStock;
+                                const reserved = stockInfo.reservedQuantity;
+                                
+                                // Mostrar badge de stock con indicador de stock reservado
+                                let stockText = `Stock: ${displayStock} ${med.unit || 'unidades'}`;
+                                if (reserved > 0) {
+                                    stockText = `Stock: ${displayStock} ${med.unit || 'unidades'} (📍 ${reserved} reservadas)`;
+                                }
+                                
+                                const stockBadgeClass = displayStock > 10 ? 'bg-success' : displayStock > 5 ? 'bg-warning text-dark' : displayStock > 0 ? 'bg-info' : 'bg-danger';
                                 
                                 const item = document.createElement('a');
                                 item.href = '#';
@@ -310,13 +374,19 @@
                                 item.innerHTML = `
                                     <div class="d-flex justify-content-between align-items-center">
                                         <div><strong>${med.name}</strong></div>
-                                        <span class="badge ${stockBadgeClass}">Stock: ${med.stock} ${med.unit || 'unidades'}</span>
+                                        <span class="badge ${stockBadgeClass}">${stockText}</span>
                                     </div>
                                 `;
                                 
                                 item.addEventListener('click', function(e) {
                                     e.preventDefault();
-                                    addMedicine(med);
+                                    // ✅ Pasar el stock ajustado al agregar
+                                    addMedicine({
+                                        ...med,
+                                        stock: displayStock,
+                                        actualStock: actualStock,
+                                        reservedQuantity: reserved
+                                    });
                                     medicineSearch.value = '';
                                     medicineResults.style.display = 'none';
                                 });
@@ -362,9 +432,22 @@
                                     return; // Skip si ya está en la lista
                                 }
                                 
-                                const stockBadge = supply.stock > 0 
-                                    ? `<span class="badge bg-success">Stock: ${supply.stock} ${supply.unit}</span>`
-                                    : '<span class="badge bg-danger">Sin stock</span>';
+                                // ✅ NUEVO: Calcular stock ajustado con cantidades reservadas
+                                const stockInfo = getAdjustedStockSupply(supply.id, supply.stock);
+                                const displayStock = stockInfo.displayStock;
+                                const actualStock = stockInfo.actualStock;
+                                const reserved = stockInfo.reservedQuantity;
+                                
+                                // Mostrar badge con indicador de stock reservado
+                                let stockText = displayStock > 0 
+                                    ? `Stock: ${displayStock} ${supply.unit}`
+                                    : 'Sin stock';
+                                if (reserved > 0) {
+                                    stockText = `Stock: ${displayStock} ${supply.unit} (📍 ${reserved} reservadas)`;
+                                }
+                                
+                                const stockBadgeClass = displayStock > 0 ? 'bg-success' : 'bg-danger';
+                                const stockBadge = `<span class="badge ${stockBadgeClass}">${stockText}</span>`;
                                 
                                 const item = document.createElement('a');
                                 item.href = '#';
@@ -379,7 +462,13 @@
                                 
                                 item.addEventListener('click', function(e) {
                                     e.preventDefault();
-                                    addSupply(supply);
+                                    // ✅ Pasar el stock ajustado al agregar
+                                    addSupply({
+                                        ...supply,
+                                        stock: displayStock,
+                                        actualStock: actualStock,
+                                        reservedQuantity: reserved
+                                    });
                                     supplySearch.value = '';
                                     supplyResults.style.display = 'none';
                                 });
@@ -405,7 +494,9 @@
             selectedMedicines.push({
                 id: med.id,
                 name: med.name,
-                stock: med.stock,
+                stock: med.stock, // Stock ajustado (para validación en UI)
+                actualStock: med.actualStock || med.stock,
+                reservedQuantity: med.reservedQuantity || 0,
                 unit: med.unit,
                 quantity: 1 // Cantidad por defecto
             });
@@ -432,13 +523,19 @@
             }
 
             let html = '<div class="alert alert-success"><h6><i class="bi bi-list-check"></i> Medicamentos a entregar:</h6><table class="table table-sm mb-0">';
-            html += '<thead><tr><th>Medicamento</th><th>Stock</th><th>Cantidad</th><th>Acciones</th></tr></thead><tbody>';
+            html += '<thead><tr><th>Medicamento</th><th>Stock Disponible</th><th>Cantidad</th><th>Acciones</th></tr></thead><tbody>';
             
             selectedMedicines.forEach((med, index) => {
+                // ✅ Mostrar información de stock con indicador si hay cantidad reservada
+                let stockDisplay = `${med.stock} ${med.unit}`;
+                if (med.reservedQuantity > 0) {
+                    stockDisplay += ` <small class="text-muted">(📍 ${med.reservedQuantity} de turno)</small>`;
+                }
+                
                 html += `
                     <tr>
                         <td><strong>${med.name}</strong></td>
-                        <td>${med.stock} ${med.unit}</td>
+                        <td>${stockDisplay}</td>
                         <td>
                             <input type="number" class="form-control form-control-sm" style="width: 80px;" 
                                    value="${med.quantity}" min="1" max="${med.stock}"
@@ -463,7 +560,9 @@
             selectedSupplies.push({
                 id: supply.id,
                 name: supply.name,
-                stock: supply.stock,
+                stock: supply.stock, // Stock ajustado (para validación en UI)
+                actualStock: supply.actualStock || supply.stock,
+                reservedQuantity: supply.reservedQuantity || 0,
                 unit: supply.unit,
                 quantity: 1 // Cantidad por defecto
             });
@@ -490,13 +589,19 @@
             }
 
             let html = '<div class="alert alert-info"><h6><i class="bi bi-list-check"></i> Insumos a entregar:</h6><table class="table table-sm mb-0">';
-            html += '<thead><tr><th>Insumo</th><th>Stock</th><th>Cantidad</th><th>Acciones</th></tr></thead><tbody>';
+            html += '<thead><tr><th>Insumo</th><th>Stock Disponible</th><th>Cantidad</th><th>Acciones</th></tr></thead><tbody>';
             
             selectedSupplies.forEach((supply, index) => {
+                // ✅ Mostrar información de stock con indicador si hay cantidad reservada
+                let stockDisplay = `${supply.stock} ${supply.unit}`;
+                if (supply.reservedQuantity > 0) {
+                    stockDisplay += ` <small class="text-muted">(📍 ${supply.reservedQuantity} de turno)</small>`;
+                }
+                
                 html += `
                     <tr>
                         <td><strong>${supply.name}</strong></td>
-                        <td>${supply.stock} ${supply.unit}</td>
+                        <td>${stockDisplay}</td>
                         <td>
                             <input type="number" class="form-control form-control-sm" style="width: 80px;" 
                                    value="${supply.quantity}" min="1" max="${supply.stock}"

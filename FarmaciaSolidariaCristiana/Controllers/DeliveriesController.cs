@@ -128,11 +128,15 @@ namespace FarmaciaSolidariaCristiana.Controllers
                 {
                     var firstMedicineId = MedicineIds!.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(int.Parse).First();
                     turnoId = await FindTurnoIdAsync(PatientIdentification, firstMedicineId, null);
+                    _logger.LogInformation("🔍 Buscando turno para paciente {PatientId} con medicamento {MedicineId}. TurnoId encontrado: {TurnoId}",
+                        PatientIdentification, firstMedicineId, turnoId?.ToString() ?? "NULL");
                 }
                 else if (hasSupplies)
                 {
                     var firstSupplyId = SupplyIds!.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(int.Parse).First();
                     turnoId = await FindTurnoIdAsync(PatientIdentification, null, firstSupplyId);
+                    _logger.LogInformation("🔍 Buscando turno para paciente {PatientId} con insumo {SupplyId}. TurnoId encontrado: {TurnoId}",
+                        PatientIdentification, firstSupplyId, turnoId?.ToString() ?? "NULL");
                 }
 
                 if (hasMedicines)
@@ -173,8 +177,17 @@ namespace FarmaciaSolidariaCristiana.Controllers
                         if (turnoId == null && medicine.StockQuantity < medicineQuantitiesList[i])
                         {
                             await transaction.RollbackAsync();
+                            _logger.LogWarning("⚠️ Stock insuficiente para {MedicineName}. Disponible: {Available}, Solicitado: {Requested}, TurnoId: {TurnoId}",
+                                medicine.Name, medicine.StockQuantity, medicineQuantitiesList[i], "NULL");
                             TempData["ErrorMessage"] = $"Stock insuficiente para {medicine.Name}. Disponible: {medicine.StockQuantity} {medicine.Unit}";
                             return RedirectToAction(nameof(Create));
+                        }
+                        
+                        // 🔍 LOG: Informar si se omite validación por turno
+                        if (turnoId != null)
+                        {
+                            _logger.LogInformation("✅ Omitiendo validación de stock para {MedicineName} porque es de turno #{TurnoId}. Stock actual: {Stock}",
+                                medicine.Name, turnoId, medicine.StockQuantity);
                         }
 
                         // Crear entrega
@@ -425,6 +438,9 @@ namespace FarmaciaSolidariaCristiana.Controllers
                 var hashBytes = sha256.ComputeHash(System.Text.Encoding.UTF8.GetBytes(documentoIdentidad));
                 var documentHash = Convert.ToBase64String(hashBytes);
 
+                _logger.LogInformation("🔍 FindTurnoIdAsync - Documento: {Documento}, Hash: {Hash}, MedicineId: {MedicineId}, SupplyId: {SupplyId}",
+                    documentoIdentidad, documentHash, medicineId?.ToString() ?? "NULL", supplyId?.ToString() ?? "NULL");
+
                 // Buscar turnos aprobados o pendientes
                 var turnos = await _context.Turnos
                     .Include(t => t.Medicamentos)
@@ -434,8 +450,17 @@ namespace FarmaciaSolidariaCristiana.Controllers
                         (t.Estado == "Aprobado" || t.Estado == "Pendiente" || t.Estado == "Completado"))
                     .ToListAsync();
 
+                _logger.LogInformation("🔍 Turnos encontrados: {Count}", turnos.Count);
+                
+                foreach (var t in turnos)
+                {
+                    _logger.LogInformation("🔍 Turno #{TurnoId} - Estado: {Estado}, Medicamentos: {MedCount}, Insumos: {InsCount}",
+                        t.Id, t.Estado, t.Medicamentos.Count, t.Insumos.Count);
+                }
+
                 if (!turnos.Any())
                 {
+                    _logger.LogInformation("❌ No se encontraron turnos para este documento");
                     return null;
                 }
 
@@ -446,11 +471,15 @@ namespace FarmaciaSolidariaCristiana.Controllers
                 {
                     turno = turnos.FirstOrDefault(t => 
                         t.Medicamentos.Any(tm => tm.MedicineId == medicineId.Value));
+                    _logger.LogInformation("🔍 Buscando turno con medicamento {MedicineId}: {Found}",
+                        medicineId.Value, turno != null ? $"Encontrado #{turno.Id}" : "No encontrado");
                 }
                 else if (supplyId.HasValue)
                 {
                     turno = turnos.FirstOrDefault(t => 
                         t.Insumos.Any(ti => ti.SupplyId == supplyId.Value));
+                    _logger.LogInformation("🔍 Buscando turno con insumo {SupplyId}: {Found}",
+                        supplyId.Value, turno != null ? $"Encontrado #{turno.Id}" : "No encontrado");
                 }
 
                 return turno?.Id;
