@@ -360,6 +360,9 @@ namespace FarmaciaSolidariaCristiana.Controllers
                 }
             }
             
+            // Ordenar por nombre de usuario
+            turnos = turnos.OrderBy(t => t.User?.UserName ?? "").ToList();
+            
             ViewData["EstadoFiltro"] = estado;
             ViewData["TipoFiltro"] = tipo;
             ViewData["DesdeFiltro"] = desde;
