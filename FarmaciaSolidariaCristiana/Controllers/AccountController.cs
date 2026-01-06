@@ -53,7 +53,15 @@ namespace FarmaciaSolidariaCristiana.Controllers
                 if (result.Succeeded)
                 {
                     _logger.LogInformation("User logged in: {Username}", model.Username);
-                    return RedirectToLocal(returnUrl);
+                    
+                    // Si hay una URL de retorno válida, usarla
+                    if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))
+                    {
+                        return LocalRedirect(returnUrl);
+                    }
+                    
+                    // Siempre redirigir a la página de inicio
+                    return RedirectToAction("Index", "Home");
                 }
                 else
                 {
