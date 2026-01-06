@@ -6,6 +6,23 @@
     ViewData["Title"] = "Gestión de Usuarios";
     var users = UserManager.Users.ToList();
     var currentUserId = UserManager.GetUserId(User);
+    
+    // Order users by role priority (Admin, Farmaceutico, Viewer, others) then by username
+    var userRolePairs = new List<(IdentityUser user, string role, int priority)>();
+    foreach (var user in users)
+    {
+        var userRoles = await UserManager.GetRolesAsync(user);
+        var role = userRoles.FirstOrDefault() ?? "Sin rol";
+        int priority = role switch
+        {
+            "Admin" => 1,
+            "Farmaceutico" => 2,
+            "Viewer" => 3,
+            _ => 4
+        };
+        userRolePairs.Add((user, role, priority));
+    }
+    users = userRolePairs.OrderBy(x => x.priority).ThenBy(x => x.user.UserName).Select(x => x.user).ToList();
 }
 
 <div class="container mt-4">
