@@ -466,7 +466,8 @@ namespace FarmaciaSolidariaCristiana.Services
                 query = query.Where(t => t.FechaSolicitud <= hasta.Value);
             }
 
-            return await query.OrderByDescending(t => t.FechaSolicitud).ToListAsync();
+            // No aplicar ordenamiento aquí - dejar que el controlador maneje el orden
+            return await query.ToListAsync();
         }
 
         /// <summary>
