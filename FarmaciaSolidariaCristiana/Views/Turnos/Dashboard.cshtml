@@ -198,7 +198,7 @@
                                                 <span class="text-muted">-</span>
                                             }
                                         </td>
-                                        <td>
+                                        <td data-order="@turno.FechaSolicitud.ToString("yyyy-MM-dd HH:mm:ss")">
                                             <small>@turno.FechaSolicitud.ToString("dd/MM/yyyy HH:mm")</small>
                                         </td>
                                         <td>
@@ -343,7 +343,7 @@
                 language: {
                     url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/es-ES.json'
                 },
-                order: [[4, 'desc']], // Ordenar por fecha de solicitud descendente
+                order: [[5, 'desc']], // Ordenar por fecha de solicitud descendente (columna 5)
                 pageLength: 25
             });
         });
