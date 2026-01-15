@@ -121,8 +121,9 @@ namespace FarmaciaSolidariaCristiana.Controllers
             List<int> quantities,
             List<int> supplyIds,
             List<int> supplyQuantities,
-            IFormFile? receta,
-            IFormFile? tarjeton)
+            List<IFormFile>? documentFiles,
+            List<string>? documentTypes,
+            List<string>? documentDescriptions)
         {
             try
             {
@@ -145,35 +146,26 @@ namespace FarmaciaSolidariaCristiana.Controllers
                     ModelState.AddModelError("", "Error en las cantidades de insumos");
                 }
 
-                // Validar uploads (receta opcional, tarjeton opcional)
-                if (receta != null && receta.Length > 5 * 1024 * 1024)
-                {
-                    ModelState.AddModelError("receta", "El archivo de receta no puede superar 5MB");
-                }
-
-                if (tarjeton != null && tarjeton.Length > 5 * 1024 * 1024)
-                {
-                    ModelState.AddModelError("tarjeton", "El archivo del tarjetón no puede superar 5MB");
-                }
-
-                // Validar formatos de archivo
+                // Validar uploads de documentos
                 var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".pdf" };
                 
-                if (receta != null)
+                if (documentFiles != null)
                 {
-                    var recetaExt = Path.GetExtension(receta.FileName).ToLowerInvariant();
-                    if (!allowedExtensions.Contains(recetaExt))
+                    foreach (var file in documentFiles)
                     {
-                        ModelState.AddModelError("receta", "Solo se permiten archivos JPG, PNG o PDF");
-                    }
-                }
+                        if (file != null && file.Length > 0)
+                        {
+                            if (file.Length > 5 * 1024 * 1024)
+                            {
+                                ModelState.AddModelError("", $"El archivo '{file.FileName}' no puede superar 5MB");
+                            }
 
-                if (tarjeton != null)
-                {
-                    var tarjetonExt = Path.GetExtension(tarjeton.FileName).ToLowerInvariant();
-                    if (!allowedExtensions.Contains(tarjetonExt))
-                    {
-                        ModelState.AddModelError("tarjeton", "Solo se permiten archivos JPG, PNG o PDF");
+                            var ext = Path.GetExtension(file.FileName).ToLowerInvariant();
+                            if (!allowedExtensions.Contains(ext))
+                            {
+                                ModelState.AddModelError("", $"El archivo '{file.FileName}' debe ser JPG, PNG o PDF");
+                            }
+                        }
                     }
                 }
 
@@ -234,7 +226,14 @@ namespace FarmaciaSolidariaCristiana.Controllers
                     NotasSolicitante = model.NotasSolicitante
                 };
 
-                var createdTurno = await _turnoService.CreateTurnoAsync(turno, medicamentos, insumos, receta, tarjeton);
+                // Usar el nuevo método con múltiples documentos
+                var createdTurno = await _turnoService.CreateTurnoWithDocumentsAsync(
+                    turno, 
+                    medicamentos, 
+                    insumos, 
+                    documentFiles ?? new List<IFormFile>(), 
+                    documentTypes ?? new List<string>(), 
+                    documentDescriptions ?? new List<string>());
 
                 // Enviar email de confirmación al usuario (no bloqueante)
                 var user = await _userManager.GetUserAsync(User);

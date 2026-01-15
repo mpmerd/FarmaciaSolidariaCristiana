@@ -21,6 +21,7 @@ namespace FarmaciaSolidariaCristiana.Data
         public DbSet<Turno> Turnos { get; set; }
         public DbSet<TurnoMedicamento> TurnoMedicamentos { get; set; }
         public DbSet<TurnoInsumo> TurnoInsumos { get; set; }
+        public DbSet<TurnoDocumento> TurnoDocumentos { get; set; }
         public DbSet<FechaBloqueada> FechasBloqueadas { get; set; }
         public DbSet<NavbarDecoration> NavbarDecorations { get; set; }
 
@@ -91,6 +92,13 @@ namespace FarmaciaSolidariaCristiana.Data
                 .WithMany()
                 .HasForeignKey(ti => ti.SupplyId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            // Configure TurnoDocumento relationships
+            modelBuilder.Entity<TurnoDocumento>()
+                .HasOne(td => td.Turno)
+                .WithMany(t => t.Documentos)
+                .HasForeignKey(td => td.TurnoId)
+                .OnDelete(DeleteBehavior.Cascade);
 
             // Configure decimal precision for Patient vitals
             modelBuilder.Entity<Patient>()

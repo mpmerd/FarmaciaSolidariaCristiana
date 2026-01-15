@@ -164,10 +164,233 @@ namespace FarmaciaSolidariaCristiana.Controllers
             });
         }
 
+        /// <summary>
+        /// Busca documentos de turnos por número de identificación para importar a ficha del paciente
+        /// Solo funciona cuando se está creando un nuevo paciente
+        /// </summary>
+        [HttpGet]
+        [Authorize(Roles = "Admin,Farmaceutico")]
+        public async Task<IActionResult> SearchTurnoDocuments(string identification)
+        {
+            if (string.IsNullOrWhiteSpace(identification))
+            {
+                return Json(new { success = false, documents = new List<object>(), message = "Identificación vacía" });
+            }
+
+            // Calcular hash del documento
+            using var sha256 = System.Security.Cryptography.SHA256.Create();
+            var hashBytes = sha256.ComputeHash(System.Text.Encoding.UTF8.GetBytes(identification));
+            var documentHash = Convert.ToBase64String(hashBytes);
+
+            // Buscar turnos con documentos para esta identificación
+            var turnosConDocumentos = await _context.Turnos
+                .Include(t => t.Documentos)
+                .Where(t => t.DocumentoIdentidadHash == documentHash)
+                .OrderByDescending(t => t.FechaSolicitud)
+                .ToListAsync();
+
+            // Recopilar todos los documentos de todos los turnos
+            var documentos = new List<object>();
+            
+            foreach (var turno in turnosConDocumentos)
+            {
+                // Documentos de la nueva tabla TurnoDocumentos
+                if (turno.Documentos != null && turno.Documentos.Any())
+                {
+                    foreach (var doc in turno.Documentos)
+                    {
+                        documentos.Add(new
+                        {
+                            id = doc.Id,
+                            turnoId = turno.Id,
+                            type = doc.DocumentType,
+                            fileName = doc.FileName,
+                            filePath = doc.FilePath,
+                            fechaSolicitud = turno.FechaSolicitud.ToString("dd/MM/yyyy"),
+                            source = "turno_documento"
+                        });
+                    }
+                }
+
+                // También incluir los campos antiguos RecetaMedicaPath y TarjetonPath si existen
+                if (!string.IsNullOrEmpty(turno.RecetaMedicaPath))
+                {
+                    documentos.Add(new
+                    {
+                        id = 0,
+                        turnoId = turno.Id,
+                        type = "Receta Médica",
+                        fileName = Path.GetFileName(turno.RecetaMedicaPath),
+                        filePath = turno.RecetaMedicaPath,
+                        fechaSolicitud = turno.FechaSolicitud.ToString("dd/MM/yyyy"),
+                        source = "turno_receta"
+                    });
+                }
+
+                if (!string.IsNullOrEmpty(turno.TarjetonPath))
+                {
+                    documentos.Add(new
+                    {
+                        id = 0,
+                        turnoId = turno.Id,
+                        type = "Tarjetón Sanitario",
+                        fileName = Path.GetFileName(turno.TarjetonPath),
+                        filePath = turno.TarjetonPath,
+                        fechaSolicitud = turno.FechaSolicitud.ToString("dd/MM/yyyy"),
+                        source = "turno_tarjeton"
+                    });
+                }
+            }
+
+            return Json(new
+            {
+                success = documentos.Any(),
+                documents = documentos,
+                count = documentos.Count,
+                message = documentos.Any() 
+                    ? $"Se encontraron {documentos.Count} documento(s) en solicitudes de turno anteriores." 
+                    : "No se encontraron documentos de turnos para esta identificación."
+            });
+        }
+
+        /// <summary>
+        /// Copia documentos de turnos a la carpeta de documentos de pacientes
+        /// Retorna los IDs de las rutas copiadas para poder eliminarlas si se cancela
+        /// </summary>
+        [HttpPost]
+        [Authorize(Roles = "Admin,Farmaceutico")]
+        public async Task<IActionResult> ImportTurnoDocuments([FromBody] ImportDocumentsRequest request)
+        {
+            if (request?.DocumentPaths == null || !request.DocumentPaths.Any())
+            {
+                return Json(new { success = false, message = "No se especificaron documentos para importar" });
+            }
+
+            var uploadFolder = Path.Combine(_environment.WebRootPath, "uploads", "patient-documents");
+            if (!Directory.Exists(uploadFolder))
+            {
+                Directory.CreateDirectory(uploadFolder);
+            }
+
+            var copiedFiles = new List<object>();
+            var errors = new List<string>();
+
+            foreach (var docPath in request.DocumentPaths)
+            {
+                try
+                {
+                    // Construir ruta del archivo origen (en turnos)
+                    var sourcePath = Path.Combine(_environment.WebRootPath, docPath.TrimStart('/'));
+                    
+                    if (!System.IO.File.Exists(sourcePath))
+                    {
+                        _logger.LogWarning("Archivo no encontrado para importar: {Path}", sourcePath);
+                        errors.Add($"Archivo no encontrado: {Path.GetFileName(docPath)}");
+                        continue;
+                    }
+
+                    // Generar nuevo nombre para el archivo copiado
+                    var fileExtension = Path.GetExtension(docPath).ToLower();
+                    var newFileName = $"imported_{Guid.NewGuid()}{fileExtension}";
+                    var destPath = Path.Combine(uploadFolder, newFileName);
+
+                    // Copiar el archivo
+                    System.IO.File.Copy(sourcePath, destPath);
+                    
+                    // Obtener información del archivo
+                    var fileInfo = new FileInfo(destPath);
+
+                    copiedFiles.Add(new
+                    {
+                        originalPath = docPath,
+                        newPath = $"/uploads/patient-documents/{newFileName}",
+                        fileName = Path.GetFileName(docPath),
+                        fileSize = fileInfo.Length,
+                        documentType = request.DocumentTypes?.ElementAtOrDefault(request.DocumentPaths.IndexOf(docPath)) ?? "Importado de Turno"
+                    });
+
+                    _logger.LogInformation("Documento importado de turno: {Source} -> {Dest}", sourcePath, destPath);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error importando documento: {Path}", docPath);
+                    errors.Add($"Error al importar {Path.GetFileName(docPath)}: {ex.Message}");
+                }
+            }
+
+            return Json(new
+            {
+                success = copiedFiles.Any(),
+                copiedFiles = copiedFiles,
+                errors = errors,
+                message = copiedFiles.Any() 
+                    ? $"Se importaron {copiedFiles.Count} documento(s) correctamente." 
+                    : "No se pudo importar ningún documento."
+            });
+        }
+
+        /// <summary>
+        /// Elimina documentos importados temporalmente si se cancela la creación del paciente
+        /// </summary>
+        [HttpPost]
+        [Authorize(Roles = "Admin,Farmaceutico")]
+        public IActionResult CleanupImportedDocuments([FromBody] CleanupDocumentsRequest request)
+        {
+            if (request?.FilePaths == null || !request.FilePaths.Any())
+            {
+                return Json(new { success = true, message = "No hay archivos para limpiar" });
+            }
+
+            var deletedCount = 0;
+            var errors = new List<string>();
+
+            foreach (var filePath in request.FilePaths)
+            {
+                try
+                {
+                    // Solo permitir eliminar archivos de patient-documents que comiencen con "imported_"
+                    if (!filePath.Contains("/uploads/patient-documents/imported_"))
+                    {
+                        _logger.LogWarning("Intento de eliminar archivo no permitido: {Path}", filePath);
+                        continue;
+                    }
+
+                    var fullPath = Path.Combine(_environment.WebRootPath, filePath.TrimStart('/'));
+                    
+                    if (System.IO.File.Exists(fullPath))
+                    {
+                        System.IO.File.Delete(fullPath);
+                        deletedCount++;
+                        _logger.LogInformation("Documento importado limpiado: {Path}", fullPath);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error limpiando documento importado: {Path}", filePath);
+                    errors.Add($"Error al eliminar {Path.GetFileName(filePath)}");
+                }
+            }
+
+            return Json(new
+            {
+                success = true,
+                deletedCount = deletedCount,
+                errors = errors,
+                message = $"Se limpiaron {deletedCount} archivo(s) importados temporalmente."
+            });
+        }
+
         // POST: Patients/Create
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create(Patient patient, List<IFormFile> documents, List<string> documentTypes, List<string> documentDescriptions)
+        public async Task<IActionResult> Create(
+            Patient patient, 
+            List<IFormFile> documents, 
+            List<string> documentTypes, 
+            List<string> documentDescriptions,
+            List<string>? importedDocumentPaths,
+            List<string>? importedDocumentTypes,
+            List<string>? importedDocumentNames)
         {
             if (ModelState.IsValid)
             {
@@ -177,10 +400,16 @@ namespace FarmaciaSolidariaCristiana.Controllers
                 _context.Add(patient);
                 await _context.SaveChangesAsync();
 
-                // Handle document uploads
+                // Handle document uploads (nuevos archivos)
                 if (documents != null && documents.Count > 0)
                 {
                     await UploadDocuments(patient.Id, documents, documentTypes, documentDescriptions);
+                }
+                
+                // Handle imported documents from turnos (ya copiados al servidor)
+                if (importedDocumentPaths != null && importedDocumentPaths.Count > 0)
+                {
+                    await SaveImportedDocuments(patient.Id, importedDocumentPaths, importedDocumentTypes, importedDocumentNames);
                 }
 
                 TempData["SuccessMessage"] = "Paciente creado exitosamente.";
@@ -455,5 +684,80 @@ namespace FarmaciaSolidariaCristiana.Controllers
 
             await _context.SaveChangesAsync();
         }
+
+        /// <summary>
+        /// Guarda los documentos importados de turnos como documentos del paciente
+        /// Los archivos ya fueron copiados previamente, solo necesitamos crear los registros en BD
+        /// </summary>
+        private async Task SaveImportedDocuments(int patientId, List<string> importedPaths, List<string>? importedTypes, List<string>? importedNames)
+        {
+            for (int i = 0; i < importedPaths.Count; i++)
+            {
+                var filePath = importedPaths[i];
+                var fullPath = Path.Combine(_environment.WebRootPath, filePath.TrimStart('/'));
+                
+                if (!System.IO.File.Exists(fullPath))
+                {
+                    _logger.LogWarning("Archivo importado no encontrado: {Path}", fullPath);
+                    continue;
+                }
+
+                try
+                {
+                    var fileInfo = new FileInfo(fullPath);
+                    var fileName = importedNames != null && i < importedNames.Count 
+                        ? importedNames[i] 
+                        : Path.GetFileName(filePath);
+                    
+                    // Determinar ContentType basado en extensión
+                    var extension = Path.GetExtension(filePath).ToLower();
+                    string contentType = extension switch
+                    {
+                        ".jpg" or ".jpeg" => "image/jpeg",
+                        ".png" => "image/png",
+                        ".pdf" => "application/pdf",
+                        _ => "application/octet-stream"
+                    };
+
+                    var document = new PatientDocument
+                    {
+                        PatientId = patientId,
+                        DocumentType = importedTypes != null && i < importedTypes.Count ? importedTypes[i] : "Importado de Turno",
+                        FileName = fileName,
+                        FilePath = filePath,
+                        FileSize = fileInfo.Length,
+                        ContentType = contentType,
+                        Description = "Documento importado de solicitud de turno",
+                        UploadDate = DateTime.Now
+                    };
+
+                    _context.PatientDocuments.Add(document);
+                    _logger.LogInformation("Documento importado registrado para paciente {PatientId}: {Path}", patientId, filePath);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error guardando documento importado: {Path}", filePath);
+                }
+            }
+
+            await _context.SaveChangesAsync();
+        }
+    }
+
+    /// <summary>
+    /// Request model para importar documentos de turnos
+    /// </summary>
+    public class ImportDocumentsRequest
+    {
+        public List<string> DocumentPaths { get; set; } = new List<string>();
+        public List<string>? DocumentTypes { get; set; }
+    }
+
+    /// <summary>
+    /// Request model para limpiar documentos importados temporalmente
+    /// </summary>
+    public class CleanupDocumentsRequest
+    {
+        public List<string> FilePaths { get; set; } = new List<string>();
     }
 }

@@ -422,6 +422,177 @@ namespace FarmaciaSolidariaCristiana.Services
         }
 
         /// <summary>
+        /// Crea una nueva solicitud de turno con múltiples documentos
+        /// </summary>
+        public async Task<Turno> CreateTurnoWithDocumentsAsync(
+            Turno turno, 
+            List<(int MedicineId, int Quantity)> medicamentos,
+            List<(int SupplyId, int Quantity)> insumos,
+            List<IFormFile> documentFiles, 
+            List<string> documentTypes, 
+            List<string> documentDescriptions)
+        {
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            
+            try
+            {
+                // Validar límite mensual
+                var (canRequest, reason) = await CanUserRequestTurnoAsync(turno.UserId);
+                if (!canRequest)
+                {
+                    throw new InvalidOperationException(reason);
+                }
+
+                // Crear directorio para archivos del turno
+                var uploadsFolder = Path.Combine(_environment.WebRootPath, "uploads", "turnos");
+                
+                try
+                {
+                    if (!Directory.Exists(uploadsFolder))
+                    {
+                        Directory.CreateDirectory(uploadsFolder);
+                        _logger.LogInformation("Directorio creado: {Path}", uploadsFolder);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error creando directorio: {Path}", uploadsFolder);
+                    throw new InvalidOperationException($"No se pudo crear el directorio de uploads: {ex.Message}");
+                }
+
+                // Guardar turno primero para obtener el ID
+                turno.FechaSolicitud = DateTime.Now;
+                turno.Estado = EstadoTurno.Pendiente;
+                
+                _context.Turnos.Add(turno);
+                await _context.SaveChangesAsync();
+
+                // Guardar documentos
+                if (documentFiles != null && documentFiles.Count > 0)
+                {
+                    for (int i = 0; i < documentFiles.Count; i++)
+                    {
+                        var file = documentFiles[i];
+                        if (file == null || file.Length == 0) continue;
+
+                        try
+                        {
+                            var fileName = $"{Guid.NewGuid()}_{Path.GetFileName(file.FileName)}";
+                            var filePath = Path.Combine(uploadsFolder, fileName);
+                            
+                            long fileSize = file.Length;
+                            var originalSize = file.Length;
+                            
+                            _logger.LogInformation("Guardando documento en: {Path}, tamaño original: {Size} bytes", filePath, originalSize);
+                            
+                            // Comprimir imagen si es una imagen
+                            if (_imageCompressionService.IsImage(file.ContentType))
+                            {
+                                _logger.LogInformation("Comprimiendo imagen de documento: {FileName}", file.FileName);
+                                
+                                using (var inputStream = file.OpenReadStream())
+                                {
+                                    using (var compressedStream = await _imageCompressionService.CompressImageAsync(
+                                        inputStream,
+                                        file.ContentType,
+                                        maxWidth: 1920,
+                                        maxHeight: 1920,
+                                        quality: 85))
+                                    {
+                                        using (var fileStream = new FileStream(filePath, FileMode.Create))
+                                        {
+                                            await compressedStream.CopyToAsync(fileStream);
+                                            fileSize = fileStream.Length;
+                                        }
+                                    }
+                                }
+                                
+                                var compressionRatio = originalSize > 0 ? (1 - (double)fileSize / originalSize) * 100 : 0;
+                                _logger.LogInformation("Documento comprimido: {Size} bytes, compresión: {Ratio:F2}%", fileSize, compressionRatio);
+                            }
+                            else
+                            {
+                                // No es imagen, guardar como PDF sin compresión
+                                using (var stream = new FileStream(filePath, FileMode.Create))
+                                {
+                                    await file.CopyToAsync(stream);
+                                }
+                                _logger.LogInformation("Documento PDF guardado: {Size} bytes", fileSize);
+                            }
+
+                            // Crear registro de documento
+                            var documento = new TurnoDocumento
+                            {
+                                TurnoId = turno.Id,
+                                DocumentType = documentTypes != null && i < documentTypes.Count ? documentTypes[i] : "Otro",
+                                FileName = file.FileName,
+                                FilePath = $"/uploads/turnos/{fileName}",
+                                FileSize = fileSize,
+                                ContentType = file.ContentType,
+                                Description = documentDescriptions != null && i < documentDescriptions.Count ? documentDescriptions[i] : null,
+                                UploadDate = DateTime.Now
+                            };
+
+                            _context.TurnoDocumentos.Add(documento);
+                            _logger.LogInformation("Documento guardado exitosamente: {Path}", documento.FilePath);
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogError(ex, "Error guardando documento");
+                            throw new InvalidOperationException($"Error al guardar el documento: {ex.Message}");
+                        }
+                    }
+                }
+
+                // Agregar medicamentos solicitados
+                foreach (var (medicineId, quantity) in medicamentos)
+                {
+                    var medicine = await _context.Medicines.FindAsync(medicineId);
+                    
+                    var turnoMed = new TurnoMedicamento
+                    {
+                        TurnoId = turno.Id,
+                        MedicineId = medicineId,
+                        CantidadSolicitada = quantity,
+                        DisponibleAlSolicitar = medicine?.StockQuantity >= quantity
+                    };
+                    
+                    _context.TurnoMedicamentos.Add(turnoMed);
+                }
+
+                // Agregar insumos solicitados
+                foreach (var (supplyId, quantity) in insumos)
+                {
+                    var supply = await _context.Supplies.FindAsync(supplyId);
+                    
+                    var turnoIns = new TurnoInsumo
+                    {
+                        TurnoId = turno.Id,
+                        SupplyId = supplyId,
+                        CantidadSolicitada = quantity,
+                        DisponibleAlSolicitar = supply?.StockQuantity >= quantity
+                    };
+                    
+                    _context.TurnoInsumos.Add(turnoIns);
+                }
+
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+
+                _logger.LogInformation("Turno #{Id} creado para usuario {UserId} con {MedCount} medicamentos, {InsCount} insumos y {DocCount} documentos", 
+                    turno.Id, turno.UserId, medicamentos.Count, insumos.Count, documentFiles?.Count ?? 0);
+
+                return turno;
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync();
+                _logger.LogError(ex, "Error creando turno con documentos para usuario {UserId}", turno.UserId);
+                throw;
+            }
+        }
+
+        /// <summary>
         /// Obtiene turnos pendientes ordenados por fecha
         /// </summary>
         public async Task<List<Turno>> GetPendingTurnosAsync()
@@ -482,6 +653,7 @@ namespace FarmaciaSolidariaCristiana.Services
                     .ThenInclude(tm => tm.Medicine)
                 .Include(t => t.Insumos)
                     .ThenInclude(ti => ti.Supply)
+                .Include(t => t.Documentos)
                 .FirstOrDefaultAsync(t => t.Id == id);
         }
 
