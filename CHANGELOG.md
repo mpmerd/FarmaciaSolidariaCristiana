@@ -1,5 +1,39 @@
 # Changelog - Farmacia Solidaria Cristiana
 
+## [14 de enero de 2026] - Múltiples Documentos en Turnos e Importación de Documentos
+
+### ✨ Nuevas Funcionalidades
+
+#### 📄 Múltiples Documentos en Solicitud de Turnos
+- **Documentos ilimitados**: Los usuarios con rol ViewerPublic ahora pueden subir múltiples documentos al solicitar un turno
+- **Interfaz dinámica**: Botón "Agregar Otro Documento" para añadir campos de documento adicionales
+- **Tipos de documento**: Receta Médica, Tarjetón Sanitario, Informe Médico, Tratamiento, Otro
+- **Nueva tabla**: `TurnoDocumentos` para almacenar múltiples documentos por turno
+- **Compatibilidad**: Se mantiene compatibilidad con los campos antiguos (RecetaMedicaPath, TarjetonPath)
+
+#### 📥 Importación de Documentos desde Turnos a Fichas de Pacientes
+- **Detección automática**: Al crear un nuevo paciente, el sistema busca automáticamente documentos de turnos asociados al número de identificación
+- **Importación selectiva**: El farmacéutico puede seleccionar qué documentos importar mediante checkboxes
+- **Previsualización**: Los documentos pueden verse antes de importar
+- **Copia automática**: Los documentos se copian de `uploads/turnos` a `uploads/patient-documents`
+- **Limpieza automática**: Si se cancela la creación del paciente, los documentos copiados se eliminan automáticamente
+- **Solo para nuevos pacientes**: La funcionalidad está disponible únicamente al crear pacientes nuevos, no en edición
+
+### 🔧 Cambios Técnicos
+- Nuevo modelo: `TurnoDocumento` con campos: DocumentType, FileName, FilePath, FileSize, ContentType, Description, UploadDate
+- Nueva migración: `AddTurnoDocumentos`
+- Nuevos endpoints en PatientsController:
+  - `SearchTurnoDocuments`: Busca documentos de turnos por identificación
+  - `ImportTurnoDocuments`: Copia documentos al directorio de pacientes
+  - `CleanupImportedDocuments`: Limpia documentos importados temporalmente
+- Nuevo método en TurnoService: `CreateTurnoWithDocumentsAsync`
+- Actualizada vista `Turnos/Details.cshtml` para mostrar documentos del nuevo sistema
+
+### 📋 Archivos SQL de Migración
+- `apply-migration-turno-documentos.sql` - Para aplicar manualmente en producción
+
+---
+
 ## [27 de octubre de 2025] - Módulo de Insumos y Sistema Simétrico Completo
 
 ### ✨ Nuevas Funcionalidades

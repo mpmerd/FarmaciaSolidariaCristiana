@@ -154,23 +154,38 @@
                                 <h5 class="mb-0"><i class="bi bi-file-earmark-medical"></i> Documentos</h5>
                             </div>
                             <div class="card-body">
-                                <div class="mb-3">
-                                    <label for="receta" class="form-label">
-                                        Receta Médica (Opcional)
-                                    </label>
-                                    <input type="file" class="form-control" id="receta" name="receta" accept=".jpg,.jpeg,.png,.pdf" />
-                                    <small class="form-text text-muted">Foto o escaneo de la receta. Formatos: JPG, PNG, PDF (máx 5MB)</small>
-                                </div>
-
-                                <div class="mb-3">
-                                    <label for="tarjeton" class="form-label">
-                                        Tarjetón o Documentos Médicos (Opcional)
-                                    </label>
-                                    <input type="file" class="form-control" id="tarjeton" name="tarjeton" accept=".jpg,.jpeg,.png,.pdf" />
-                                    <small class="form-text text-muted">Foto o escaneo del tarjetón u otros documentos médicos justificantes. Formatos: JPG, PNG, PDF (máx 5MB)</small>
+                                <p class="text-muted mb-3">Puede subir fotos de recetas médicas, tarjetón sanitario, o cualquier otro documento relevante. Formatos: JPG, PNG, PDF (máx 5MB cada uno)</p>
+                                
+                                <div id="documentFields">
+                                    <div class="document-row mb-3">
+                                        <div class="row">
+                                            <div class="col-md-4">
+                                                <label class="form-label">Tipo de Documento</label>
+                                                <select name="documentTypes" class="form-select">
+                                                    <option value="Receta Médica">Receta Médica</option>
+                                                    <option value="Tarjetón Sanitario">Tarjetón Sanitario</option>
+                                                    <option value="Informe Médico">Informe Médico</option>
+                                                    <option value="Tratamiento">Tratamiento</option>
+                                                    <option value="Otro">Otro</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <label class="form-label">Archivo (Foto)</label>
+                                                <input type="file" name="documentFiles" class="form-control" accept=".jpg,.jpeg,.png,.pdf" />
+                                            </div>
+                                            <div class="col-md-4">
+                                                <label class="form-label">Descripción (Opcional)</label>
+                                                <input type="text" name="documentDescriptions" class="form-control" placeholder="Descripción breve" />
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                                 
-                                <div class="alert alert-info">
+                                <button type="button" id="addDocumentBtn" class="btn btn-sm btn-secondary">
+                                    <i class="bi bi-plus-circle"></i> Agregar Otro Documento
+                                </button>
+                                
+                                <div class="alert alert-info mt-3">
                                     <i class="bi bi-info-circle"></i> <strong>Importante:</strong> Al recoger tu turno debes presentar tu <strong>Carnet de Identidad o Pasaporte original</strong>, junto con los documentos médicos (recetas, tarjetón, etc.) que justifiquen tu solicitud.
                                 </div>
                             </div>
@@ -525,12 +540,54 @@
             });
 
             // Validación de archivos
-            $('#receta, #tarjeton').on('change', function() {
+            $(document).on('change', 'input[name="documentFiles"]', function() {
                 const file = this.files[0];
                 if (file && file.size > 5 * 1024 * 1024) {
                     alert('El archivo no puede superar 5MB');
                     $(this).val('');
                 }
+            });
+
+            // ========== DOCUMENTOS DINÁMICOS ==========
+            
+            // Agregar documentos dinámicamente
+            $('#addDocumentBtn').on('click', function() {
+                const documentFields = $('#documentFields');
+                const newRow = $(`
+                    <div class="document-row mb-3">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <label class="form-label">Tipo de Documento</label>
+                                <select name="documentTypes" class="form-select">
+                                    <option value="Receta Médica">Receta Médica</option>
+                                    <option value="Tarjetón Sanitario">Tarjetón Sanitario</option>
+                                    <option value="Informe Médico">Informe Médico</option>
+                                    <option value="Tratamiento">Tratamiento</option>
+                                    <option value="Otro">Otro</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Archivo (Foto)</label>
+                                <input type="file" name="documentFiles" class="form-control" accept=".jpg,.jpeg,.png,.pdf" />
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Descripción</label>
+                                <div class="input-group">
+                                    <input type="text" name="documentDescriptions" class="form-control" placeholder="Opcional" />
+                                    <button type="button" class="btn btn-danger remove-document-btn">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `);
+                documentFields.append(newRow);
+
+                // Add event listener for the remove button
+                newRow.find('.remove-document-btn').on('click', function() {
+                    newRow.remove();
+                });
             });
         });
     </script>

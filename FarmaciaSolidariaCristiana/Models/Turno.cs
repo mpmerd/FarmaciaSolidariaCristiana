@@ -37,6 +37,11 @@ namespace FarmaciaSolidariaCristiana.Models
         public ICollection<TurnoInsumo> Insumos { get; set; } = new List<TurnoInsumo>();
 
         /// <summary>
+        /// Documentos adjuntos a este turno (recetas, tarjetones, informes, etc.)
+        /// </summary>
+        public ICollection<TurnoDocumento> Documentos { get; set; } = new List<TurnoDocumento>();
+
+        /// <summary>
         /// Fecha y hora asignada automáticamente para el turno (se asigna al aprobar)
         /// Sistema: Martes/Jueves 1-4 PM, slots cada 6 minutos (30 turnos/día)
         /// </summary>

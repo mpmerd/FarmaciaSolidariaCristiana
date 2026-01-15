@@ -159,6 +159,27 @@
             </div>
             <div class="card-body">
                 <p class="text-muted">Puede subir fotos de recetas médicas, tarjetón sanitario, o cualquier otro documento relevante.</p>
+                
+                <!-- Área para mostrar documentos importables de turnos -->
+                <div id="turnoDocumentsSection" style="display: none;">
+                    <div class="alert alert-info">
+                        <h6><i class="bi bi-cloud-download"></i> Documentos encontrados en solicitudes de turno</h6>
+                        <p id="turnoDocumentsMessage" class="mb-2"></p>
+                        <div id="turnoDocumentsList" class="mb-3"></div>
+                        <div class="d-flex gap-2">
+                            <button type="button" id="importTurnoDocsBtn" class="btn btn-success btn-sm">
+                                <i class="bi bi-download"></i> Importar Seleccionados
+                            </button>
+                            <button type="button" id="skipTurnoDocsBtn" class="btn btn-outline-secondary btn-sm">
+                                <i class="bi bi-x-circle"></i> No importar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Documentos importados (ocultos, se enviarán al servidor) -->
+                <div id="importedDocumentsContainer"></div>
+                
                 <div id="documentFields">
                     <div class="document-row mb-3">
                         <div class="row">
@@ -228,6 +249,10 @@
 
         // Variable para rastrear si el paciente existe
         let patientExists = false;
+        
+        // Variables para documentos de turnos
+        let turnoDocuments = [];
+        let importedDocumentPaths = []; // Rutas de documentos importados (para limpieza si se cancela)
 
         // Función para deshabilitar todos los campos del formulario
         function disableFormFields() {
@@ -426,6 +451,9 @@
                         
                         // HABILITAR TODOS LOS CAMPOS DEL FORMULARIO
                         enableFormFields();
+                        
+                        // Buscar documentos de turnos para este número de identificación
+                        searchTurnoDocuments(identification);
                     }
                 })
                 .catch(error => {
@@ -433,6 +461,163 @@
                     feedbackDiv.innerHTML = '<div class="alert alert-danger"><i class="bi bi-x-circle"></i> Error al buscar paciente.</div>';
                     existingPatientInfo.style.display = 'none';
                 });
+        });
+
+        // ========== FUNCIONALIDAD DE IMPORTAR DOCUMENTOS DE TURNOS ==========
+        
+        function searchTurnoDocuments(identification) {
+            fetch(`/Patients/SearchTurnoDocuments?identification=${encodeURIComponent(identification)}`)
+                .then(response => response.json())
+                .then(data => {
+                    const turnoDocumentsSection = document.getElementById('turnoDocumentsSection');
+                    const turnoDocumentsList = document.getElementById('turnoDocumentsList');
+                    const turnoDocumentsMessage = document.getElementById('turnoDocumentsMessage');
+                    
+                    if (data.success && data.documents && data.documents.length > 0) {
+                        turnoDocuments = data.documents;
+                        turnoDocumentsMessage.textContent = data.message;
+                        
+                        // Mostrar lista de documentos con checkboxes
+                        let html = '<div class="list-group">';
+                        data.documents.forEach((doc, index) => {
+                            html += `
+                                <label class="list-group-item d-flex align-items-center">
+                                    <input type="checkbox" class="form-check-input me-2 turno-doc-checkbox" 
+                                           value="${index}" checked data-path="${doc.filePath}" data-type="${doc.type}" />
+                                    <div class="flex-grow-1">
+                                        <strong>${doc.type}</strong><br>
+                                        <small class="text-muted">${doc.fileName} - Solicitud del ${doc.fechaSolicitud}</small>
+                                    </div>
+                                    <a href="${doc.filePath}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                </label>
+                            `;
+                        });
+                        html += '</div>';
+                        turnoDocumentsList.innerHTML = html;
+                        turnoDocumentsSection.style.display = 'block';
+                    } else {
+                        turnoDocumentsSection.style.display = 'none';
+                        turnoDocuments = [];
+                    }
+                })
+                .catch(error => {
+                    console.error('Error buscando documentos de turnos:', error);
+                    document.getElementById('turnoDocumentsSection').style.display = 'none';
+                });
+        }
+
+        // Importar documentos seleccionados
+        document.getElementById('importTurnoDocsBtn').addEventListener('click', function() {
+            const selectedCheckboxes = document.querySelectorAll('.turno-doc-checkbox:checked');
+            if (selectedCheckboxes.length === 0) {
+                alert('Seleccione al menos un documento para importar');
+                return;
+            }
+
+            const pathsToImport = [];
+            const typesToImport = [];
+            
+            selectedCheckboxes.forEach(cb => {
+                pathsToImport.push(cb.dataset.path);
+                typesToImport.push(cb.dataset.type);
+            });
+
+            // Mostrar indicador de carga
+            this.disabled = true;
+            this.innerHTML = '<i class="bi bi-hourglass-split"></i> Importando...';
+
+            fetch('/Patients/ImportTurnoDocuments', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+                },
+                body: JSON.stringify({
+                    documentPaths: pathsToImport,
+                    documentTypes: typesToImport
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.copiedFiles && data.copiedFiles.length > 0) {
+                    // Guardar rutas para posible limpieza
+                    data.copiedFiles.forEach(file => {
+                        importedDocumentPaths.push(file.newPath);
+                    });
+                    
+                    // Agregar campos ocultos para los documentos importados
+                    const container = document.getElementById('importedDocumentsContainer');
+                    container.innerHTML = ''; // Limpiar previos
+                    
+                    let importedHtml = '<div class="alert alert-success mb-3"><h6><i class="bi bi-check-circle"></i> Documentos importados:</h6><ul class="mb-0">';
+                    
+                    data.copiedFiles.forEach(file => {
+                        // Crear inputs ocultos con los datos del documento importado
+                        container.innerHTML += `
+                            <input type="hidden" name="importedDocumentPaths" value="${file.newPath}" />
+                            <input type="hidden" name="importedDocumentTypes" value="${file.documentType}" />
+                            <input type="hidden" name="importedDocumentNames" value="${file.fileName}" />
+                        `;
+                        importedHtml += `<li>${file.documentType}: ${file.fileName}</li>`;
+                    });
+                    importedHtml += '</ul></div>';
+                    
+                    // Mostrar documentos importados
+                    const turnoDocumentsSection = document.getElementById('turnoDocumentsSection');
+                    turnoDocumentsSection.innerHTML = importedHtml;
+                    
+                    alert(`${data.copiedFiles.length} documento(s) importado(s) correctamente. Se agregarán a la ficha del paciente al guardar.`);
+                } else {
+                    alert('No se pudieron importar los documentos. ' + (data.message || ''));
+                }
+            })
+            .catch(error => {
+                console.error('Error importando documentos:', error);
+                alert('Error al importar documentos.');
+            })
+            .finally(() => {
+                this.disabled = false;
+                this.innerHTML = '<i class="bi bi-download"></i> Importar Seleccionados';
+            });
+        });
+
+        // No importar documentos (ocultar sección)
+        document.getElementById('skipTurnoDocsBtn').addEventListener('click', function() {
+            document.getElementById('turnoDocumentsSection').style.display = 'none';
+            turnoDocuments = [];
+        });
+
+        // Limpiar documentos importados si se cancela o se sale de la página
+        window.addEventListener('beforeunload', function(e) {
+            if (importedDocumentPaths.length > 0) {
+                // Limpiar documentos importados de forma síncrona usando navigator.sendBeacon
+                const data = JSON.stringify({ filePaths: importedDocumentPaths });
+                navigator.sendBeacon('/Patients/CleanupImportedDocuments', new Blob([data], {type: 'application/json'}));
+            }
+        });
+
+        // Limpiar documentos al hacer clic en cancelar
+        document.querySelector('a[href*="Index"]').addEventListener('click', function(e) {
+            if (importedDocumentPaths.length > 0) {
+                e.preventDefault();
+                
+                fetch('/Patients/CleanupImportedDocuments', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+                    },
+                    body: JSON.stringify({ filePaths: importedDocumentPaths })
+                })
+                .then(() => {
+                    window.location.href = this.href;
+                })
+                .catch(() => {
+                    window.location.href = this.href;
+                });
+            }
         });
 
         // Agregar documentos dinámicamente

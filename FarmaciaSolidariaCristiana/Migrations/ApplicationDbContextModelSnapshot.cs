@@ -513,6 +513,53 @@ namespace FarmaciaSolidariaCristiana.Migrations
                     b.ToTable("Turnos");
                 });
 
+            modelBuilder.Entity("FarmaciaSolidariaCristiana.Models.TurnoDocumento", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("ContentType")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("DocumentType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<string>("FilePath")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<long>("FileSize")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("TurnoId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("UploadDate")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TurnoId");
+
+                    b.ToTable("TurnoDocumentos");
+                });
+
             modelBuilder.Entity("FarmaciaSolidariaCristiana.Models.TurnoInsumo", b =>
                 {
                     b.Property<int>("Id")
@@ -868,6 +915,17 @@ namespace FarmaciaSolidariaCristiana.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("FarmaciaSolidariaCristiana.Models.TurnoDocumento", b =>
+                {
+                    b.HasOne("FarmaciaSolidariaCristiana.Models.Turno", "Turno")
+                        .WithMany("Documentos")
+                        .HasForeignKey("TurnoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Turno");
+                });
+
             modelBuilder.Entity("FarmaciaSolidariaCristiana.Models.TurnoInsumo", b =>
                 {
                     b.HasOne("FarmaciaSolidariaCristiana.Models.Supply", "Supply")
@@ -973,6 +1031,8 @@ namespace FarmaciaSolidariaCristiana.Migrations
 
             modelBuilder.Entity("FarmaciaSolidariaCristiana.Models.Turno", b =>
                 {
+                    b.Navigation("Documentos");
+
                     b.Navigation("Insumos");
 
                     b.Navigation("Medicamentos");
