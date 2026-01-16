@@ -165,8 +165,8 @@ namespace FarmaciaSolidariaCristiana.Controllers
         }
 
         /// <summary>
-        /// Busca documentos de turnos por número de identificación para importar a ficha del paciente
-        /// Solo funciona cuando se está creando un nuevo paciente
+        /// Busca documentos de turnos APROBADOS por número de identificación para importar a ficha del paciente
+        /// Solo muestra documentos de turnos en estado "Aprobado" para evitar importar de turnos antiguos o rechazados
         /// </summary>
         [HttpGet]
         [Authorize(Roles = "Admin,Farmaceutico")]
@@ -182,10 +182,10 @@ namespace FarmaciaSolidariaCristiana.Controllers
             var hashBytes = sha256.ComputeHash(System.Text.Encoding.UTF8.GetBytes(identification));
             var documentHash = Convert.ToBase64String(hashBytes);
 
-            // Buscar turnos con documentos para esta identificación
+            // Buscar solo turnos APROBADOS con documentos para esta identificación
             var turnosConDocumentos = await _context.Turnos
                 .Include(t => t.Documentos)
-                .Where(t => t.DocumentoIdentidadHash == documentHash)
+                .Where(t => t.DocumentoIdentidadHash == documentHash && t.Estado == EstadoTurno.Aprobado)
                 .OrderByDescending(t => t.FechaSolicitud)
                 .ToListAsync();
 
@@ -248,8 +248,8 @@ namespace FarmaciaSolidariaCristiana.Controllers
                 documents = documentos,
                 count = documentos.Count,
                 message = documentos.Any() 
-                    ? $"Se encontraron {documentos.Count} documento(s) en solicitudes de turno anteriores." 
-                    : "No se encontraron documentos de turnos para esta identificación."
+                    ? $"Se encontraron {documentos.Count} documento(s) en turnos APROBADOS." 
+                    : "No se encontraron documentos en turnos aprobados para esta identificación."
             });
         }
 
@@ -443,7 +443,15 @@ namespace FarmaciaSolidariaCristiana.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize(Roles = "Admin,Farmaceutico")]
-        public async Task<IActionResult> Edit(int id, Patient patient, List<IFormFile>? documents, List<string>? documentTypes, List<string>? documentDescriptions)
+        public async Task<IActionResult> Edit(
+            int id, 
+            Patient patient, 
+            List<IFormFile>? documents, 
+            List<string>? documentTypes, 
+            List<string>? documentDescriptions,
+            List<string>? importedDocumentPaths,
+            List<string>? importedDocumentTypes,
+            List<string>? importedDocumentNames)
         {
             if (id != patient.Id)
             {
@@ -509,6 +517,12 @@ namespace FarmaciaSolidariaCristiana.Controllers
                 if (documents != null && documents.Count > 0)
                 {
                     await UploadDocuments(id, documents, documentTypes ?? new List<string>(), documentDescriptions ?? new List<string>());
+                }
+
+                // Handle imported documents from turnos
+                if (importedDocumentPaths != null && importedDocumentPaths.Count > 0)
+                {
+                    await SaveImportedDocuments(id, importedDocumentPaths, importedDocumentTypes, importedDocumentNames);
                 }
 
                 TempData["SuccessMessage"] = $"Paciente actualizado exitosamente. {changes} cambios guardados.";

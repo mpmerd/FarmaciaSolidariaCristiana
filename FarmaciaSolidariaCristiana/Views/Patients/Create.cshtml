@@ -589,9 +589,17 @@
             turnoDocuments = [];
         });
 
-        // Limpiar documentos importados si se cancela o se sale de la página
+        // Variable para controlar si el formulario se está enviando
+        let isSubmitting = false;
+
+        // Marcar cuando el formulario se está enviando
+        document.getElementById('patientForm').addEventListener('submit', function() {
+            isSubmitting = true;
+        });
+
+        // Limpiar documentos importados si se cancela o se sale de la página (pero NO al enviar el form)
         window.addEventListener('beforeunload', function(e) {
-            if (importedDocumentPaths.length > 0) {
+            if (importedDocumentPaths.length > 0 && !isSubmitting) {
                 // Limpiar documentos importados de forma síncrona usando navigator.sendBeacon
                 const data = JSON.stringify({ filePaths: importedDocumentPaths });
                 navigator.sendBeacon('/Patients/CleanupImportedDocuments', new Blob([data], {type: 'application/json'}));

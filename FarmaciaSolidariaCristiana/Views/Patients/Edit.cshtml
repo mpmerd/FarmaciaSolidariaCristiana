@@ -182,34 +182,13 @@
                                             <a href="@doc.FilePath" target="_blank" class="btn btn-sm btn-info">
                                                 <i class="bi bi-eye"></i> Ver
                                             </a>
-                                            <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#deleteDocModal-@doc.Id">
+                                            <button type="button" class="btn btn-sm btn-danger delete-doc-btn" 
+                                                    data-doc-id="@doc.Id" 
+                                                    data-doc-type="@doc.DocumentType" 
+                                                    data-doc-name="@doc.FileName"
+                                                    data-patient-id="@Model.Id">
                                                 <i class="bi bi-trash"></i> Eliminar
                                             </button>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- Delete Document Modal -->
-                                <div class="modal fade" id="deleteDocModal-@doc.Id" tabindex="-1" aria-labelledby="deleteDocModalLabel-@doc.Id" aria-hidden="true">
-                                    <div class="modal-dialog">
-                                        <div class="modal-content">
-                                            <div class="modal-header bg-danger text-white">
-                                                <h5 class="modal-title" id="deleteDocModalLabel-@doc.Id">
-                                                    <i class="bi bi-exclamation-triangle-fill"></i> Confirmar Eliminación
-                                                </h5>
-                                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-                                            </div>
-                                            <div class="modal-body">
-                                                <p>¿Está seguro que desea eliminar este documento?</p>
-                                                <p><strong>@doc.DocumentType:</strong> @doc.FileName</p>
-                                            </div>
-                                            <div class="modal-footer">
-                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                                                <form asp-action="DeleteDocument" asp-route-id="@doc.Id" asp-route-patientId="@Model.Id" method="post" class="d-inline">
-                                                    @Html.AntiForgeryToken()
-                                                    <button type="submit" class="btn btn-danger">Eliminar</button>
-                                                </form>
-                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -220,10 +199,43 @@
             </div>
         }
 
-        <!-- 4. AGREGAR NUEVOS DOCUMENTOS -->
+        <!-- 5. IMPORTAR DOCUMENTOS DE TURNOS -->
+        <div class="card mb-4">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0"><i class="bi bi-cloud-download"></i> 4. Importar Documentos de Solicitudes de Turno</h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted">Si el paciente tiene solicitudes de turno aprobadas, puede importar los documentos que subió.</p>
+                <button type="button" id="searchTurnoDocsBtn" class="btn btn-primary mb-3">
+                    <i class="bi bi-search"></i> Buscar Documentos en Turnos
+                </button>
+                
+                <!-- Área para mostrar documentos importables de turnos -->
+                <div id="turnoDocumentsSection" style="display: none;">
+                    <div class="alert alert-info">
+                        <h6><i class="bi bi-cloud-download"></i> Documentos encontrados en solicitudes de turno</h6>
+                        <p id="turnoDocumentsMessage" class="mb-2"></p>
+                        <div id="turnoDocumentsList" class="mb-3"></div>
+                        <div class="d-flex gap-2">
+                            <button type="button" id="importTurnoDocsBtn" class="btn btn-success btn-sm">
+                                <i class="bi bi-download"></i> Importar Seleccionados
+                            </button>
+                            <button type="button" id="skipTurnoDocsBtn" class="btn btn-outline-secondary btn-sm">
+                                <i class="bi bi-x-circle"></i> No importar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Documentos importados (ocultos, se enviarán al servidor) -->
+                <div id="importedDocumentsContainer"></div>
+            </div>
+        </div>
+
+        <!-- 5. AGREGAR NUEVOS DOCUMENTOS -->
         <div class="card mb-4">
             <div class="card-header bg-warning">
-                <h5 class="mb-0">4. Agregar Nuevos Documentos</h5>
+                <h5 class="mb-0">5. Agregar Nuevos Documentos</h5>
             </div>
             <div class="card-body">
                 <p class="text-muted">Puede agregar fotos adicionales de documentos médicos.</p>
@@ -257,10 +269,10 @@
             </div>
         </div>
 
-        <!-- 5. OBSERVACIONES -->
+        <!-- 6. OBSERVACIONES -->
         <div class="card mb-4">
             <div class="card-header bg-secondary text-white">
-                <h5 class="mb-0">5. Observaciones</h5>
+                <h5 class="mb-0">6. Observaciones</h5>
             </div>
             <div class="card-body">
                 <div class="mb-3">
@@ -282,24 +294,185 @@
     </form>
 </div>
 
+<!-- Modal de confirmación para eliminar documentos (fuera del formulario principal) -->
+<div class="modal fade" id="deleteDocumentModal" tabindex="-1" aria-labelledby="deleteDocumentModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="deleteDocumentModalLabel">
+                    <i class="bi bi-exclamation-triangle-fill"></i> Confirmar Eliminación
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>¿Está seguro que desea eliminar este documento?</p>
+                <p><strong id="deleteDocType"></strong>: <span id="deleteDocName"></span></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <form id="deleteDocumentForm" method="post" class="d-inline">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="btn btn-danger">Eliminar</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
     @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
     <script>
+        // Variables para importación de documentos de turnos
+        let turnoDocuments = [];
+        let importedDocumentPaths = [];
+        let isSubmitting = false;
+        const patientIdentification = '@Model.IdentificationDocument';
+
         // Función para enviar el formulario
         function submitForm() {
             const form = document.getElementById('editPatientForm');
             const submitBtn = document.getElementById('submitBtn');
             
             if (form && submitBtn) {
-                // Deshabilitar botón
+                isSubmitting = true;
                 submitBtn.disabled = true;
                 submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Guardando...';
-                
-                // Enviar formulario
                 form.submit();
             }
         }
 
+        // Buscar documentos en turnos
+        document.getElementById('searchTurnoDocsBtn').addEventListener('click', function() {
+            if (!patientIdentification) {
+                alert('El paciente no tiene documento de identidad registrado.');
+                return;
+            }
+
+            this.disabled = true;
+            this.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Buscando...';
+
+            fetch(`/Patients/SearchTurnoDocuments?identification=${encodeURIComponent(patientIdentification)}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.documents && data.documents.length > 0) {
+                        turnoDocuments = data.documents;
+                        document.getElementById('turnoDocumentsMessage').textContent = data.message;
+                        
+                        let listHtml = '<div class="list-group">';
+                        data.documents.forEach((doc, index) => {
+                            listHtml += `
+                                <label class="list-group-item d-flex align-items-center">
+                                    <input type="checkbox" class="form-check-input me-2 turno-doc-checkbox" 
+                                           data-index="${index}" checked />
+                                    <div>
+                                        <strong>${doc.type}</strong><br/>
+                                        <small class="text-muted">${doc.fileName} (Turno: ${doc.fechaSolicitud})</small>
+                                    </div>
+                                </label>
+                            `;
+                        });
+                        listHtml += '</div>';
+                        
+                        document.getElementById('turnoDocumentsList').innerHTML = listHtml;
+                        document.getElementById('turnoDocumentsSection').style.display = 'block';
+                    } else {
+                        alert(data.message || 'No se encontraron documentos de turnos para este paciente.');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error buscando documentos:', error);
+                    alert('Error al buscar documentos de turnos.');
+                })
+                .finally(() => {
+                    this.disabled = false;
+                    this.innerHTML = '<i class="bi bi-search"></i> Buscar Documentos en Turnos';
+                });
+        });
+
+        // Importar documentos seleccionados
+        document.getElementById('importTurnoDocsBtn').addEventListener('click', function() {
+            const selectedIndexes = [];
+            document.querySelectorAll('.turno-doc-checkbox:checked').forEach(cb => {
+                selectedIndexes.push(parseInt(cb.dataset.index));
+            });
+
+            if (selectedIndexes.length === 0) {
+                alert('Por favor selecciona al menos un documento para importar.');
+                return;
+            }
+
+            const selectedDocs = selectedIndexes.map(i => turnoDocuments[i]);
+            const paths = selectedDocs.map(d => d.filePath);
+            const types = selectedDocs.map(d => d.type);
+
+            this.disabled = true;
+            this.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Importando...';
+
+            fetch('/Patients/ImportTurnoDocuments', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+                },
+                body: JSON.stringify({
+                    documentPaths: paths,
+                    documentTypes: types
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.copiedFiles && data.copiedFiles.length > 0) {
+                    data.copiedFiles.forEach(file => {
+                        importedDocumentPaths.push(file.newPath);
+                    });
+                    
+                    const container = document.getElementById('importedDocumentsContainer');
+                    container.innerHTML = '';
+                    
+                    let importedHtml = '<div class="alert alert-success mb-3"><h6><i class="bi bi-check-circle"></i> Documentos importados:</h6><ul class="mb-0">';
+                    
+                    data.copiedFiles.forEach(file => {
+                        container.innerHTML += `
+                            <input type="hidden" name="importedDocumentPaths" value="${file.newPath}" />
+                            <input type="hidden" name="importedDocumentTypes" value="${file.documentType}" />
+                            <input type="hidden" name="importedDocumentNames" value="${file.fileName}" />
+                        `;
+                        importedHtml += `<li>${file.documentType}: ${file.fileName}</li>`;
+                    });
+                    importedHtml += '</ul><small class="text-muted">Se guardarán al hacer clic en "Guardar Cambios"</small></div>';
+                    
+                    document.getElementById('turnoDocumentsSection').innerHTML = importedHtml;
+                    
+                    alert(`${data.copiedFiles.length} documento(s) importado(s) correctamente. Se agregarán al guardar.`);
+                } else {
+                    alert('No se pudieron importar los documentos. ' + (data.message || ''));
+                }
+            })
+            .catch(error => {
+                console.error('Error importando documentos:', error);
+                alert('Error al importar documentos.');
+            })
+            .finally(() => {
+                this.disabled = false;
+                this.innerHTML = '<i class="bi bi-download"></i> Importar Seleccionados';
+            });
+        });
+
+        // No importar documentos
+        document.getElementById('skipTurnoDocsBtn')?.addEventListener('click', function() {
+            document.getElementById('turnoDocumentsSection').style.display = 'none';
+            turnoDocuments = [];
+        });
+
+        // Limpiar documentos importados si se cancela (pero NO al enviar el form)
+        window.addEventListener('beforeunload', function(e) {
+            if (importedDocumentPaths.length > 0 && !isSubmitting) {
+                const data = JSON.stringify({ filePaths: importedDocumentPaths });
+                navigator.sendBeacon('/Patients/CleanupImportedDocuments', new Blob([data], {type: 'application/json'}));
+            }
+        });
+
+        // Agregar documentos dinámicamente
         document.getElementById('addDocumentBtn').addEventListener('click', function() {
             const documentFields = document.getElementById('documentFields');
             const newRow = document.createElement('div');
@@ -335,6 +508,28 @@
 
             newRow.querySelector('.remove-document-btn').addEventListener('click', function() {
                 newRow.remove();
+            });
+        });
+
+        // Manejar botones de eliminar documento
+        document.querySelectorAll('.delete-doc-btn').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                const docId = this.dataset.docId;
+                const docType = this.dataset.docType;
+                const docName = this.dataset.docName;
+                const patientId = this.dataset.patientId;
+
+                // Actualizar el modal con la información del documento
+                document.getElementById('deleteDocType').textContent = docType;
+                document.getElementById('deleteDocName').textContent = docName;
+                
+                // Actualizar la acción del formulario
+                const form = document.getElementById('deleteDocumentForm');
+                form.action = `/Patients/DeleteDocument?id=${docId}&patientId=${patientId}`;
+
+                // Mostrar el modal
+                const modal = new bootstrap.Modal(document.getElementById('deleteDocumentModal'));
+                modal.show();
             });
         });
     </script>
