@@ -122,21 +122,29 @@ namespace FarmaciaSolidariaCristiana.Controllers
                 var createdAt = DateTime.Now;
                 int deliveriesCount = 0;
 
-                // ✅ NUEVO: Determinar el TurnoId ANTES de crear las entregas
+                // ✅ NUEVO: Determinar el TurnoId y su estado ANTES de crear las entregas
+                // El estado es importante porque:
+                // - Aprobado: el stock YA está reservado, no descontar
+                // - Pendiente: el stock NO está reservado, SÍ descontar
                 int? turnoId = null;
+                bool stockYaReservado = false; // true solo si turno está Aprobado
                 if (hasMedicines)
                 {
                     var firstMedicineId = MedicineIds!.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(int.Parse).First();
-                    turnoId = await FindTurnoIdAsync(PatientIdentification, firstMedicineId, null);
-                    _logger.LogInformation("🔍 Buscando turno para paciente {PatientId} con medicamento {MedicineId}. TurnoId encontrado: {TurnoId}",
-                        PatientIdentification, firstMedicineId, turnoId?.ToString() ?? "NULL");
+                    var turnoInfo = await FindTurnoIdWithStateAsync(PatientIdentification, firstMedicineId, null);
+                    turnoId = turnoInfo.turnoId;
+                    stockYaReservado = turnoInfo.stockReservado;
+                    _logger.LogInformation("🔍 Buscando turno para paciente {PatientId} con medicamento {MedicineId}. TurnoId: {TurnoId}, StockReservado: {StockReservado}",
+                        PatientIdentification, firstMedicineId, turnoId?.ToString() ?? "NULL", stockYaReservado);
                 }
                 else if (hasSupplies)
                 {
                     var firstSupplyId = SupplyIds!.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(int.Parse).First();
-                    turnoId = await FindTurnoIdAsync(PatientIdentification, null, firstSupplyId);
-                    _logger.LogInformation("🔍 Buscando turno para paciente {PatientId} con insumo {SupplyId}. TurnoId encontrado: {TurnoId}",
-                        PatientIdentification, firstSupplyId, turnoId?.ToString() ?? "NULL");
+                    var turnoInfo = await FindTurnoIdWithStateAsync(PatientIdentification, null, firstSupplyId);
+                    turnoId = turnoInfo.turnoId;
+                    stockYaReservado = turnoInfo.stockReservado;
+                    _logger.LogInformation("🔍 Buscando turno para paciente {PatientId} con insumo {SupplyId}. TurnoId: {TurnoId}, StockReservado: {StockReservado}",
+                        PatientIdentification, firstSupplyId, turnoId?.ToString() ?? "NULL", stockYaReservado);
                 }
 
                 if (hasMedicines)
@@ -204,17 +212,19 @@ namespace FarmaciaSolidariaCristiana.Controllers
                             CreatedAt = createdAt
                         };
 
-                        // ✅ CORREGIDO: Solo descontar stock si NO es de un turno aprobado
-                        // Si es de un turno, el stock ya fue reservado al aprobar
-                        if (turnoId == null)
+                        // ✅ CORREGIDO: Descontar stock si:
+                        // - No hay turno asociado, O
+                        // - Hay turno pero está en Pendiente (stock NO reservado)
+                        if (!stockYaReservado)
                         {
                             medicine.StockQuantity -= medicineQuantitiesList[i];
-                            _logger.LogInformation("Stock descontado (entrega sin turno) - Medicine: {MedicineName}, Quantity: {Quantity}",
-                                medicine.Name, medicineQuantitiesList[i]);
+                            string razon = turnoId == null ? "entrega sin turno" : $"turno #{turnoId} en Pendiente (stock no reservado)";
+                            _logger.LogInformation("Stock descontado ({Razon}) - Medicine: {MedicineName}, Quantity: {Quantity}",
+                                razon, medicine.Name, medicineQuantitiesList[i]);
                         }
                         else
                         {
-                            _logger.LogInformation("Stock YA reservado (entrega de turno #{TurnoId}) - Medicine: {MedicineName}, Quantity: {Quantity}",
+                            _logger.LogInformation("Stock YA reservado (turno #{TurnoId} Aprobado) - Medicine: {MedicineName}, Quantity: {Quantity}",
                                 turnoId, medicine.Name, medicineQuantitiesList[i]);
                         }
                         
@@ -282,16 +292,19 @@ namespace FarmaciaSolidariaCristiana.Controllers
                         };
 
                         // ✅ CORREGIDO: Solo descontar stock si NO es de un turno aprobado
-                        // Si es de un turno, el stock ya fue reservado al aprobar
-                        if (turnoId == null)
+                        // ✅ CORREGIDO: Descontar stock si:
+                        // - No hay turno asociado, O
+                        // - Hay turno pero está en Pendiente (stock NO reservado)
+                        if (!stockYaReservado)
                         {
                             supply.StockQuantity -= supplyQuantitiesList[i];
-                            _logger.LogInformation("Stock descontado (entrega sin turno) - Supply: {SupplyName}, Quantity: {Quantity}",
-                                supply.Name, supplyQuantitiesList[i]);
+                            string razon = turnoId == null ? "entrega sin turno" : $"turno #{turnoId} en Pendiente (stock no reservado)";
+                            _logger.LogInformation("Stock descontado ({Razon}) - Supply: {SupplyName}, Quantity: {Quantity}",
+                                razon, supply.Name, supplyQuantitiesList[i]);
                         }
                         else
                         {
-                            _logger.LogInformation("Stock YA reservado (entrega de turno #{TurnoId}) - Supply: {SupplyName}, Quantity: {Quantity}",
+                            _logger.LogInformation("Stock YA reservado (turno #{TurnoId} Aprobado) - Supply: {SupplyName}, Quantity: {Quantity}",
                                 turnoId, supply.Name, supplyQuantitiesList[i]);
                         }
                         
@@ -426,6 +439,111 @@ namespace FarmaciaSolidariaCristiana.Controllers
         }
 
         /// <summary>
+        /// Busca el ID del turno y determina si el stock ya está reservado
+        /// Retorna (turnoId, stockReservado):
+        /// - stockReservado = true si el turno está en "Aprobado" (stock ya descontado)
+        /// - stockReservado = false si el turno está en "Pendiente" o no hay turno
+        /// </summary>
+        private async Task<(int? turnoId, bool stockReservado)> FindTurnoIdWithStateAsync(string documentoIdentidad, int? medicineId, int? supplyId)
+        {
+            try
+            {
+                // Calcular hash del documento
+                using var sha256 = System.Security.Cryptography.SHA256.Create();
+                var hashBytes = sha256.ComputeHash(System.Text.Encoding.UTF8.GetBytes(documentoIdentidad));
+                var documentHash = Convert.ToBase64String(hashBytes);
+
+                _logger.LogInformation("🔍 FindTurnoIdWithStateAsync - Documento: {Documento}, MedicineId: {MedicineId}, SupplyId: {SupplyId}",
+                    documentoIdentidad, medicineId?.ToString() ?? "NULL", supplyId?.ToString() ?? "NULL");
+
+                // ✅ SOLO buscar turnos APROBADOS (nunca Pendientes)
+                // Los turnos Pendientes requieren aprobación de farmacéutico antes de poder entregar
+                var turnos = await _context.Turnos
+                    .Include(t => t.Medicamentos)
+                    .Include(t => t.Insumos)
+                    .Where(t => 
+                        t.DocumentoIdentidadHash == documentHash && 
+                        t.Estado == "Aprobado")
+                    .OrderByDescending(t => t.FechaSolicitud)
+                    .ToListAsync();
+
+                if (!turnos.Any())
+                {
+                    _logger.LogInformation("❌ No se encontraron turnos para este documento");
+                    return (null, false);
+                }
+
+                // Buscar el turno que contiene el item Y que no tenga ya una entrega activa
+                foreach (var turno in turnos)
+                {
+                    if (medicineId.HasValue)
+                    {
+                        var turnoMedicamento = turno.Medicamentos
+                            .FirstOrDefault(tm => tm.MedicineId == medicineId.Value);
+
+                        // ✅ Solo si tiene CantidadAprobada (no fue eliminada/corregida)
+                        if (turnoMedicamento != null && turnoMedicamento.CantidadAprobada.HasValue)
+                        {
+                            // Verificar si este medicamento específico ya tiene entrega activa
+                            var yaEntregado = await _context.Deliveries
+                                .AnyAsync(d => d.TurnoId == turno.Id && d.MedicineId == medicineId.Value);
+
+                            if (!yaEntregado)
+                            {
+                                // Stock reservado porque el turno está Aprobado
+                                _logger.LogInformation(
+                                    "✅ Turno #{TurnoId} encontrado - Estado: Aprobado, StockReservado: true, MedicineId: {MedId}, CantidadAprobada: {Qty}",
+                                    turno.Id, medicineId.Value, turnoMedicamento.CantidadAprobada);
+                                return (turno.Id, true); // Stock siempre reservado para turnos Aprobados
+                            }
+                        }
+                        else if (turnoMedicamento != null)
+                        {
+                            _logger.LogInformation(
+                                "⚠️ Turno #{TurnoId} tiene el medicamento {MedId} pero sin CantidadAprobada (fue eliminado/corregido)",
+                                turno.Id, medicineId.Value);
+                        }
+                    }
+                    else if (supplyId.HasValue)
+                    {
+                        var turnoInsumo = turno.Insumos
+                            .FirstOrDefault(ti => ti.SupplyId == supplyId.Value);
+
+                        // ✅ Solo si tiene CantidadAprobada (no fue eliminada/corregida)
+                        if (turnoInsumo != null && turnoInsumo.CantidadAprobada.HasValue)
+                        {
+                            // Verificar si este insumo específico ya tiene entrega activa
+                            var yaEntregado = await _context.Deliveries
+                                .AnyAsync(d => d.TurnoId == turno.Id && d.SupplyId == supplyId.Value);
+
+                            if (!yaEntregado)
+                            {
+                                _logger.LogInformation(
+                                    "✅ Turno #{TurnoId} encontrado - Estado: Aprobado, StockReservado: true, SupplyId: {SupId}, CantidadAprobada: {Qty}",
+                                    turno.Id, supplyId.Value, turnoInsumo.CantidadAprobada);
+                                return (turno.Id, true); // Stock siempre reservado para turnos Aprobados
+                            }
+                        }
+                        else if (turnoInsumo != null)
+                        {
+                            _logger.LogInformation(
+                                "⚠️ Turno #{TurnoId} tiene el insumo {SupId} pero sin CantidadAprobada (fue eliminado/corregido)",
+                                turno.Id, supplyId.Value);
+                        }
+                    }
+                }
+
+                _logger.LogInformation("❌ No se encontró turno válido para el item especificado");
+                return (null, false);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error finding turno ID with state");
+                return (null, false);
+            }
+        }
+
+        /// <summary>
         /// Busca el ID del turno que contiene el medicamento o insumo especificado
         /// SIN marcar como completado (solo buscar)
         /// </summary>
@@ -441,13 +559,15 @@ namespace FarmaciaSolidariaCristiana.Controllers
                 _logger.LogInformation("🔍 FindTurnoIdAsync - Documento: {Documento}, Hash: {Hash}, MedicineId: {MedicineId}, SupplyId: {SupplyId}",
                     documentoIdentidad, documentHash, medicineId?.ToString() ?? "NULL", supplyId?.ToString() ?? "NULL");
 
-                // Buscar turnos aprobados o pendientes
+                // ✅ SOLO buscar turnos APROBADOS (nunca Pendientes)
+                // Los turnos Pendientes requieren aprobación de farmacéutico antes de poder entregar
                 var turnos = await _context.Turnos
                     .Include(t => t.Medicamentos)
                     .Include(t => t.Insumos)
                     .Where(t => 
                         t.DocumentoIdentidadHash == documentHash && 
-                        (t.Estado == "Aprobado" || t.Estado == "Pendiente" || t.Estado == "Completado"))
+                        t.Estado == "Aprobado")
+                    .OrderByDescending(t => t.FechaSolicitud)
                     .ToListAsync();
 
                 _logger.LogInformation("🔍 Turnos encontrados: {Count}", turnos.Count);
@@ -464,25 +584,80 @@ namespace FarmaciaSolidariaCristiana.Controllers
                     return null;
                 }
 
-                // Buscar el turno que contiene el item
-                Turno? turno = null;
-                
-                if (medicineId.HasValue)
+                // Buscar el turno que contiene el item Y que no tenga ya una entrega activa para ese item
+                // ✅ IMPORTANTE: También verificar que tenga CantidadAprobada
+                foreach (var turno in turnos)
                 {
-                    turno = turnos.FirstOrDefault(t => 
-                        t.Medicamentos.Any(tm => tm.MedicineId == medicineId.Value));
-                    _logger.LogInformation("🔍 Buscando turno con medicamento {MedicineId}: {Found}",
-                        medicineId.Value, turno != null ? $"Encontrado #{turno.Id}" : "No encontrado");
-                }
-                else if (supplyId.HasValue)
-                {
-                    turno = turnos.FirstOrDefault(t => 
-                        t.Insumos.Any(ti => ti.SupplyId == supplyId.Value));
-                    _logger.LogInformation("🔍 Buscando turno con insumo {SupplyId}: {Found}",
-                        supplyId.Value, turno != null ? $"Encontrado #{turno.Id}" : "No encontrado");
+                    if (medicineId.HasValue)
+                    {
+                        var turnoMedicamento = turno.Medicamentos
+                            .FirstOrDefault(tm => tm.MedicineId == medicineId.Value);
+
+                        // ✅ Solo si tiene CantidadAprobada (no fue eliminada/corregida)
+                        if (turnoMedicamento != null && turnoMedicamento.CantidadAprobada.HasValue)
+                        {
+                            // Verificar si este medicamento específico ya tiene entrega activa
+                            var yaEntregado = await _context.Deliveries
+                                .AnyAsync(d => d.TurnoId == turno.Id && d.MedicineId == medicineId.Value);
+
+                            if (!yaEntregado)
+                            {
+                                _logger.LogInformation(
+                                    "✅ Turno #{TurnoId} encontrado para MedicineId {MedId} (cantidad aprobada: {Qty})",
+                                    turno.Id, medicineId.Value, turnoMedicamento.CantidadAprobada);
+                                return turno.Id;
+                            }
+                            else
+                            {
+                                _logger.LogInformation(
+                                    "⚠️ Turno #{TurnoId} tiene el medicamento {MedId} pero ya fue entregado",
+                                    turno.Id, medicineId.Value);
+                            }
+                        }
+                        else if (turnoMedicamento != null)
+                        {
+                            _logger.LogInformation(
+                                "⚠️ Turno #{TurnoId} tiene el medicamento {MedId} pero sin CantidadAprobada (fue eliminado/corregido)",
+                                turno.Id, medicineId.Value);
+                        }
+                    }
+                    else if (supplyId.HasValue)
+                    {
+                        var turnoInsumo = turno.Insumos
+                            .FirstOrDefault(ti => ti.SupplyId == supplyId.Value);
+
+                        // ✅ Solo si tiene CantidadAprobada (no fue eliminada/corregida)
+                        if (turnoInsumo != null && turnoInsumo.CantidadAprobada.HasValue)
+                        {
+                            // Verificar si este insumo específico ya tiene entrega activa
+                            var yaEntregado = await _context.Deliveries
+                                .AnyAsync(d => d.TurnoId == turno.Id && d.SupplyId == supplyId.Value);
+
+                            if (!yaEntregado)
+                            {
+                                _logger.LogInformation(
+                                    "✅ Turno #{TurnoId} encontrado para SupplyId {SupId} (cantidad aprobada: {Qty})",
+                                    turno.Id, supplyId.Value, turnoInsumo.CantidadAprobada);
+                                return turno.Id;
+                            }
+                            else
+                            {
+                                _logger.LogInformation(
+                                    "⚠️ Turno #{TurnoId} tiene el insumo {SupId} pero ya fue entregado",
+                                    turno.Id, supplyId.Value);
+                            }
+                        }
+                        else if (turnoInsumo != null)
+                        {
+                            _logger.LogInformation(
+                                "⚠️ Turno #{TurnoId} tiene el insumo {SupId} pero sin CantidadAprobada (fue eliminado/corregido)",
+                                turno.Id, supplyId.Value);
+                        }
+                    }
                 }
 
-                return turno?.Id;
+                _logger.LogInformation("❌ No se encontró turno válido para el item especificado");
+                return null;
             }
             catch (Exception ex)
             {
@@ -506,52 +681,41 @@ namespace FarmaciaSolidariaCristiana.Controllers
                 var hashBytes = sha256.ComputeHash(System.Text.Encoding.UTF8.GetBytes(documentoIdentidad));
                 var documentHash = Convert.ToBase64String(hashBytes);
 
-                // Buscar TODOS los turnos (Aprobado o Pendiente) para este paciente
+                // ✅ SOLO buscar turnos APROBADOS (nunca Pendientes)
+                // Los turnos Pendientes requieren aprobación de farmacéutico antes de poder entregar
                 var turnos = await _context.Turnos
                     .Include(t => t.Medicamentos)
                     .Include(t => t.Insumos)
                     .Where(t => 
                         t.DocumentoIdentidadHash == documentHash && 
-                        (t.Estado == "Aprobado" || t.Estado == "Pendiente"))
+                        t.Estado == "Aprobado")
                     .ToListAsync();
 
                 if (!turnos.Any())
                 {
-                    return null; // No hay turnos para este paciente
+                    return null; // No hay turnos aprobados para este paciente
                 }
 
                 // Buscar el turno ESPECÍFICO que contiene el item de la entrega
+                // ✅ IMPORTANTE: También verificar que tenga CantidadAprobada
                 Turno? turno = null;
                 
                 if (medicineId.HasValue)
                 {
                     turno = turnos.FirstOrDefault(t => 
-                        t.Medicamentos.Any(tm => tm.MedicineId == medicineId.Value));
+                        t.Medicamentos.Any(tm => tm.MedicineId == medicineId.Value && tm.CantidadAprobada.HasValue));
                 }
                 else if (supplyId.HasValue)
                 {
                     turno = turnos.FirstOrDefault(t => 
-                        t.Insumos.Any(ti => ti.SupplyId == supplyId.Value));
+                        t.Insumos.Any(ti => ti.SupplyId == supplyId.Value && ti.CantidadAprobada.HasValue));
                 }
 
                 if (turno != null)
                 {
-                    // ✅ Asegurar que las cantidades aprobadas estén establecidas
-                    foreach (var tm in turno.Medicamentos)
-                    {
-                        if (!tm.CantidadAprobada.HasValue)
-                        {
-                            tm.CantidadAprobada = tm.CantidadSolicitada;
-                        }
-                    }
-                    
-                    foreach (var ti in turno.Insumos)
-                    {
-                        if (!ti.CantidadAprobada.HasValue)
-                        {
-                            ti.CantidadAprobada = ti.CantidadSolicitada;
-                        }
-                    }
+                    // ✅ NO establecer cantidades aprobadas automáticamente
+                    // Las cantidades ya deben estar establecidas por el farmacéutico al aprobar
+                    // Si no tienen CantidadAprobada, significa que fueron eliminadas/corregidas
                     
                     turno.Estado = "Completado";
                     turno.FechaEntrega = DateTime.Now;
@@ -618,7 +782,10 @@ namespace FarmaciaSolidariaCristiana.Controllers
 
                 if (turnoARevertir != null)
                 {
-                    // ✅ NUEVA LÓGICA: Verificar si quedan más entregas del turno
+                    // ✅ LÓGICA MEJORADA: Verificar cuántas entregas quedan del turno
+                    // Contar total de items en el turno
+                    int totalItemsTurno = turnoARevertir.Medicamentos.Count + turnoARevertir.Insumos.Count;
+                    
                     // Contar cuántas entregas quedan para los items de este turno
                     int entregasRestantes = 0;
 
@@ -627,7 +794,7 @@ namespace FarmaciaSolidariaCristiana.Controllers
                     {
                         var entregas = await _context.Deliveries
                             .Where(d => 
-                                d.PatientIdentification == delivery.PatientIdentification &&
+                                d.TurnoId == turnoARevertir.Id &&
                                 d.MedicineId == tm.MedicineId &&
                                 d.Id != delivery.Id) // Excluir la entrega que se está eliminando
                             .CountAsync();
@@ -639,42 +806,119 @@ namespace FarmaciaSolidariaCristiana.Controllers
                     {
                         var entregas = await _context.Deliveries
                             .Where(d => 
-                                d.PatientIdentification == delivery.PatientIdentification &&
+                                d.TurnoId == turnoARevertir.Id &&
                                 d.SupplyId == ti.SupplyId &&
                                 d.Id != delivery.Id) // Excluir la entrega que se está eliminando
                             .CountAsync();
                         entregasRestantes += entregas;
                     }
 
-                    // ✅ SOLO revertir si NO quedan más entregas
+                    _logger.LogInformation(
+                        "Turno #{TurnoId}: Total items={Total}, Entregas restantes={Restantes}",
+                        turnoARevertir.Id, totalItemsTurno, entregasRestantes);
+
                     if (entregasRestantes == 0)
                     {
-                        // Revertir este turno específico a Pendiente
-                        turnoARevertir.Estado = "Pendiente";
+                        // No quedan entregas - revertir a APROBADO (no Pendiente)
+                        // El turno ya fue aprobado por un farmacéutico, esa es la realidad
+                        turnoARevertir.Estado = "Aprobado";
                         turnoARevertir.FechaEntrega = null;
                         
-                        // Limpiar cantidades aprobadas
+                        // ✅ MANTENER las cantidades aprobadas originales
+                        // NO limpiar CantidadAprobada - el turno sigue siendo válido
+                        
+                        // ✅ RE-RESERVAR el stock (ya fue devuelto al eliminar cada entrega)
+                        // Esto mantiene la consistencia: turno Aprobado = stock reservado
                         foreach (var tm in turnoARevertir.Medicamentos)
                         {
-                            tm.CantidadAprobada = null;
+                            if (tm.CantidadAprobada.HasValue)
+                            {
+                                var medicine = await _context.Medicines.FindAsync(tm.MedicineId);
+                                if (medicine != null)
+                                {
+                                    medicine.StockQuantity -= tm.CantidadAprobada.Value;
+                                    _logger.LogInformation(
+                                        "🔄 Re-reservando stock de {MedicineName}: -{Qty} (Stock resultante: {Stock})",
+                                        medicine.Name, tm.CantidadAprobada.Value, medicine.StockQuantity);
+                                }
+                            }
                         }
                         
                         foreach (var ti in turnoARevertir.Insumos)
                         {
-                            ti.CantidadAprobada = null;
+                            if (ti.CantidadAprobada.HasValue)
+                            {
+                                var supply = await _context.Supplies.FindAsync(ti.SupplyId);
+                                if (supply != null)
+                                {
+                                    supply.StockQuantity -= ti.CantidadAprobada.Value;
+                                    _logger.LogInformation(
+                                        "🔄 Re-reservando stock de {SupplyName}: -{Qty} (Stock resultante: {Stock})",
+                                        supply.Name, ti.CantidadAprobada.Value, supply.StockQuantity);
+                                }
+                            }
                         }
                         
                         await _context.SaveChangesAsync();
                         
-                        _logger.LogInformation("Turno #{TurnoId} revertido a Pendiente tras eliminar ÚLTIMA entrega de {Tipo} ID {ItemId}", 
+                        _logger.LogInformation(
+                            "✅ Turno #{TurnoId} revertido a APROBADO tras eliminar todas las entregas. Stock re-reservado.", 
+                            turnoARevertir.Id);
+                    }
+                    else if (entregasRestantes < totalItemsTurno)
+                    {
+                        // ✅ Quedan algunas entregas pero no todas - revertir a Aprobado
+                        turnoARevertir.Estado = "Aprobado";
+                        turnoARevertir.FechaEntrega = null;
+                        
+                        // ✅ IMPORTANTE: Limpiar CantidadAprobada del item eliminado
+                        // Esto asegura que:
+                        // 1. El stock devuelto no quede "fantasma"
+                        // 2. La nueva entrega será tratada como entrega SIN turno y descontará stock
+                        // 3. Los otros items del turno mantienen su CantidadAprobada
+                        if (delivery.MedicineId.HasValue)
+                        {
+                            var turnoMed = turnoARevertir.Medicamentos
+                                .FirstOrDefault(tm => tm.MedicineId == delivery.MedicineId.Value);
+                            if (turnoMed != null)
+                            {
+                                _logger.LogInformation(
+                                    "🔄 Limpiando CantidadAprobada de MedicineId {MedId} (era {Qty}) en turno #{TurnoId}",
+                                    delivery.MedicineId.Value, turnoMed.CantidadAprobada, turnoARevertir.Id);
+                                turnoMed.CantidadAprobada = null;
+                            }
+                        }
+                        
+                        if (delivery.SupplyId.HasValue)
+                        {
+                            var turnoIns = turnoARevertir.Insumos
+                                .FirstOrDefault(ti => ti.SupplyId == delivery.SupplyId.Value);
+                            if (turnoIns != null)
+                            {
+                                _logger.LogInformation(
+                                    "🔄 Limpiando CantidadAprobada de SupplyId {SupId} (era {Qty}) en turno #{TurnoId}",
+                                    delivery.SupplyId.Value, turnoIns.CantidadAprobada, turnoARevertir.Id);
+                                turnoIns.CantidadAprobada = null;
+                            }
+                        }
+                        
+                        await _context.SaveChangesAsync();
+                        
+                        _logger.LogInformation(
+                            "✅ Turno #{TurnoId} revertido a Aprobado (entrega parcial: {Restantes}/{Total} items entregados). " +
+                            "El item {Tipo} ID {ItemId} ahora se tratará como entrega sin turno.", 
                             turnoARevertir.Id, 
+                            entregasRestantes, 
+                            totalItemsTurno,
                             delivery.MedicineId.HasValue ? "Medicamento" : "Insumo",
                             delivery.MedicineId ?? delivery.SupplyId);
                     }
                     else
                     {
-                        _logger.LogInformation("Turno #{TurnoId} mantiene estado Completado porque quedan {EntregasRestantes} entrega(s) asociadas", 
-                            turnoARevertir.Id, entregasRestantes);
+                        // Todas las entregas siguen activas (no debería pasar, pero por seguridad)
+                        _logger.LogInformation(
+                            "Turno #{TurnoId} mantiene estado porque todas las entregas ({Restantes}/{Total}) siguen activas", 
+                            turnoARevertir.Id, entregasRestantes, totalItemsTurno);
                     }
                 }
             }
