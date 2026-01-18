@@ -224,8 +224,39 @@ namespace FarmaciaSolidariaCristiana.Controllers
                         }
                         else
                         {
-                            _logger.LogInformation("Stock YA reservado (turno #{TurnoId} Aprobado) - Medicine: {MedicineName}, Quantity: {Quantity}",
-                                turnoId, medicine.Name, medicineQuantitiesList[i]);
+                            // ✅ NUEVO: Si el turno tiene stock reservado, verificar si se entrega MENOS de lo aprobado
+                            // En ese caso, devolver la diferencia al stock
+                            var turno = await _context.Turnos
+                                .Include(t => t.Medicamentos)
+                                .FirstOrDefaultAsync(t => t.Id == turnoId);
+                            
+                            if (turno != null)
+                            {
+                                var turnoMed = turno.Medicamentos
+                                    .FirstOrDefault(tm => tm.MedicineId == medicineIdsList[i]);
+                                
+                                if (turnoMed?.CantidadAprobada.HasValue == true)
+                                {
+                                    int cantidadAprobada = turnoMed.CantidadAprobada.Value;
+                                    int cantidadEntregada = medicineQuantitiesList[i];
+                                    
+                                    if (cantidadEntregada < cantidadAprobada)
+                                    {
+                                        int diferencia = cantidadAprobada - cantidadEntregada;
+                                        medicine.StockQuantity += diferencia;
+                                        _logger.LogInformation(
+                                            "⚠️ Entrega parcial - Medicine: {MedicineName}, Aprobado: {Aprobado}, Entregado: {Entregado}, " +
+                                            "Diferencia devuelta al stock: +{Diferencia} (Stock resultante: {Stock})",
+                                            medicine.Name, cantidadAprobada, cantidadEntregada, diferencia, medicine.StockQuantity);
+                                    }
+                                    else
+                                    {
+                                        _logger.LogInformation(
+                                            "Stock YA reservado (turno #{TurnoId} Aprobado) - Medicine: {MedicineName}, Quantity: {Quantity}",
+                                            turnoId, medicine.Name, medicineQuantitiesList[i]);
+                                    }
+                                }
+                            }
                         }
                         
                         _context.Add(delivery);
@@ -291,7 +322,6 @@ namespace FarmaciaSolidariaCristiana.Controllers
                             CreatedAt = createdAt
                         };
 
-                        // ✅ CORREGIDO: Solo descontar stock si NO es de un turno aprobado
                         // ✅ CORREGIDO: Descontar stock si:
                         // - No hay turno asociado, O
                         // - Hay turno pero está en Pendiente (stock NO reservado)
@@ -304,8 +334,39 @@ namespace FarmaciaSolidariaCristiana.Controllers
                         }
                         else
                         {
-                            _logger.LogInformation("Stock YA reservado (turno #{TurnoId} Aprobado) - Supply: {SupplyName}, Quantity: {Quantity}",
-                                turnoId, supply.Name, supplyQuantitiesList[i]);
+                            // ✅ NUEVO: Si el turno tiene stock reservado, verificar si se entrega MENOS de lo aprobado
+                            // En ese caso, devolver la diferencia al stock
+                            var turno = await _context.Turnos
+                                .Include(t => t.Insumos)
+                                .FirstOrDefaultAsync(t => t.Id == turnoId);
+                            
+                            if (turno != null)
+                            {
+                                var turnoIns = turno.Insumos
+                                    .FirstOrDefault(ti => ti.SupplyId == supplyIdsList[i]);
+                                
+                                if (turnoIns?.CantidadAprobada.HasValue == true)
+                                {
+                                    int cantidadAprobada = turnoIns.CantidadAprobada.Value;
+                                    int cantidadEntregada = supplyQuantitiesList[i];
+                                    
+                                    if (cantidadEntregada < cantidadAprobada)
+                                    {
+                                        int diferencia = cantidadAprobada - cantidadEntregada;
+                                        supply.StockQuantity += diferencia;
+                                        _logger.LogInformation(
+                                            "⚠️ Entrega parcial - Supply: {SupplyName}, Aprobado: {Aprobado}, Entregado: {Entregado}, " +
+                                            "Diferencia devuelta al stock: +{Diferencia} (Stock resultante: {Stock})",
+                                            supply.Name, cantidadAprobada, cantidadEntregada, diferencia, supply.StockQuantity);
+                                    }
+                                    else
+                                    {
+                                        _logger.LogInformation(
+                                            "Stock YA reservado (turno #{TurnoId} Aprobado) - Supply: {SupplyName}, Quantity: {Quantity}",
+                                            turnoId, supply.Name, supplyQuantitiesList[i]);
+                                    }
+                                }
+                            }
                         }
                         
                         _context.Add(delivery);
