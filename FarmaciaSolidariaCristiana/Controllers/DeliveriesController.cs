@@ -191,10 +191,39 @@ namespace FarmaciaSolidariaCristiana.Controllers
                             return RedirectToAction(nameof(Create));
                         }
                         
-                        // 🔍 LOG: Informar si se omite validación por turno
-                        if (turnoId != null)
+                        // ✅ VALIDAR: Si es de turno, NO permitir entregar MÁS de lo aprobado
+                        if (stockYaReservado && turnoId.HasValue)
                         {
-                            _logger.LogInformation("✅ Omitiendo validación de stock para {MedicineName} porque es de turno #{TurnoId}. Stock actual: {Stock}",
+                            var turnoValidacion = await _context.Turnos
+                                .Include(t => t.Medicamentos)
+                                .FirstOrDefaultAsync(t => t.Id == turnoId.Value);
+                            
+                            if (turnoValidacion != null)
+                            {
+                                var turnoMed = turnoValidacion.Medicamentos
+                                    .FirstOrDefault(tm => tm.MedicineId == medicineIdsList[i]);
+                                
+                                if (turnoMed?.CantidadAprobada.HasValue == true)
+                                {
+                                    int cantidadAprobada = turnoMed.CantidadAprobada.Value;
+                                    int cantidadAEntregar = medicineQuantitiesList[i];
+                                    
+                                    if (cantidadAEntregar > cantidadAprobada)
+                                    {
+                                        await transaction.RollbackAsync();
+                                        _logger.LogWarning(
+                                            "❌ Intento de entregar MÁS de lo aprobado - Medicine: {MedicineName}, " +
+                                            "Aprobado: {Aprobado}, Solicitado: {Solicitado}",
+                                            medicine.Name, cantidadAprobada, cantidadAEntregar);
+                                        TempData["ErrorMessage"] = $"No se puede entregar {cantidadAEntregar} unidades de {medicine.Name}. " +
+                                            $"El turno solo tiene aprobadas {cantidadAprobada} unidades. " +
+                                            $"Por favor, corrija la cantidad.";
+                                        return RedirectToAction(nameof(Create));
+                                    }
+                                }
+                            }
+                            
+                            _logger.LogInformation("✅ Validación de turno OK para {MedicineName} (turno #{TurnoId}). Stock actual: {Stock}",
                                 medicine.Name, turnoId, medicine.StockQuantity);
                         }
 
@@ -306,6 +335,39 @@ namespace FarmaciaSolidariaCristiana.Controllers
                             await transaction.RollbackAsync();
                             TempData["ErrorMessage"] = $"Stock insuficiente para {supply.Name}. Disponible: {supply.StockQuantity} {supply.Unit}";
                             return RedirectToAction(nameof(Create));
+                        }
+
+                        // ✅ VALIDAR: Si es de turno, NO permitir entregar MÁS de lo aprobado
+                        if (stockYaReservado && turnoId.HasValue)
+                        {
+                            var turnoValidacion = await _context.Turnos
+                                .Include(t => t.Insumos)
+                                .FirstOrDefaultAsync(t => t.Id == turnoId.Value);
+                            
+                            if (turnoValidacion != null)
+                            {
+                                var turnoIns = turnoValidacion.Insumos
+                                    .FirstOrDefault(ti => ti.SupplyId == supplyIdsList[i]);
+                                
+                                if (turnoIns?.CantidadAprobada.HasValue == true)
+                                {
+                                    int cantidadAprobada = turnoIns.CantidadAprobada.Value;
+                                    int cantidadAEntregar = supplyQuantitiesList[i];
+                                    
+                                    if (cantidadAEntregar > cantidadAprobada)
+                                    {
+                                        await transaction.RollbackAsync();
+                                        _logger.LogWarning(
+                                            "❌ Intento de entregar MÁS de lo aprobado - Supply: {SupplyName}, " +
+                                            "Aprobado: {Aprobado}, Solicitado: {Solicitado}",
+                                            supply.Name, cantidadAprobada, cantidadAEntregar);
+                                        TempData["ErrorMessage"] = $"No se puede entregar {cantidadAEntregar} unidades de {supply.Name}. " +
+                                            $"El turno solo tiene aprobadas {cantidadAprobada} unidades. " +
+                                            $"Por favor, corrija la cantidad.";
+                                        return RedirectToAction(nameof(Create));
+                                    }
+                                }
+                            }
                         }
 
                         // Crear entrega
