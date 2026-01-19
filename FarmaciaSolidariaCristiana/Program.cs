@@ -78,7 +78,8 @@ builder.Services.ConfigureApplicationCookie(options =>
     
     // Configuración para compatibilidad con Safari y dispositivos móviles
     options.Cookie.SameSite = SameSiteMode.Lax;
-    options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+    // En producción forzar cookies seguras (solo HTTPS)
+    options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
     options.Cookie.HttpOnly = true;
     options.Cookie.IsEssential = true;
 });
@@ -123,12 +124,15 @@ using (var scope = app.Services.CreateScope())
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Home/Error");
-    // Note: HTTPS redirection is disabled for local HTTP-only use
-    // app.UseHsts();
+    // Enable HSTS for production (tells browsers to only use HTTPS)
+    app.UseHsts();
 }
 
-// Disable HTTPS redirection for local network use
-// app.UseHttpsRedirection();
+// Force HTTPS redirection in production
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
 
 app.UseStaticFiles();
 app.UseRouting();
