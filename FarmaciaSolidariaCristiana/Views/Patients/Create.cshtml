@@ -509,35 +509,37 @@
         }
 
         // Importar documentos seleccionados
-        document.getElementById('importTurnoDocsBtn').addEventListener('click', function() {
-            const selectedCheckboxes = document.querySelectorAll('.turno-doc-checkbox:checked');
-            if (selectedCheckboxes.length === 0) {
-                alert('Seleccione al menos un documento para importar');
-                return;
-            }
+        const importTurnoDocsBtn = document.getElementById('importTurnoDocsBtn');
+        if (importTurnoDocsBtn) {
+            importTurnoDocsBtn.addEventListener('click', function() {
+                const selectedCheckboxes = document.querySelectorAll('.turno-doc-checkbox:checked');
+                if (selectedCheckboxes.length === 0) {
+                    alert('Seleccione al menos un documento para importar');
+                    return;
+                }
 
-            const pathsToImport = [];
-            const typesToImport = [];
-            
-            selectedCheckboxes.forEach(cb => {
-                pathsToImport.push(cb.dataset.path);
-                typesToImport.push(cb.dataset.type);
-            });
+                const pathsToImport = [];
+                const typesToImport = [];
+                
+                selectedCheckboxes.forEach(cb => {
+                    pathsToImport.push(cb.dataset.path);
+                    typesToImport.push(cb.dataset.type);
+                });
 
-            // Mostrar indicador de carga
-            this.disabled = true;
-            this.innerHTML = '<i class="bi bi-hourglass-split"></i> Importando...';
+                // Mostrar indicador de carga
+                this.disabled = true;
+                this.innerHTML = '<i class="bi bi-hourglass-split"></i> Importando...';
 
-            fetch('/Patients/ImportTurnoDocuments', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
-                },
-                body: JSON.stringify({
-                    documentPaths: pathsToImport,
-                    documentTypes: typesToImport
-                })
+                fetch('/Patients/ImportTurnoDocuments', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+                    },
+                    body: JSON.stringify({
+                        documentPaths: pathsToImport,
+                        documentTypes: typesToImport
+                    })
             })
             .then(response => response.json())
             .then(data => {
@@ -582,12 +584,16 @@
                 this.innerHTML = '<i class="bi bi-download"></i> Importar Seleccionados';
             });
         });
+        }
 
         // No importar documentos (ocultar sección)
-        document.getElementById('skipTurnoDocsBtn').addEventListener('click', function() {
-            document.getElementById('turnoDocumentsSection').style.display = 'none';
-            turnoDocuments = [];
-        });
+        const skipTurnoDocsBtn = document.getElementById('skipTurnoDocsBtn');
+        if (skipTurnoDocsBtn) {
+            skipTurnoDocsBtn.addEventListener('click', function() {
+                document.getElementById('turnoDocumentsSection').style.display = 'none';
+                turnoDocuments = [];
+            });
+        }
 
         // Variable para controlar si el formulario se está enviando
         let isSubmitting = false;
@@ -607,31 +613,36 @@
         });
 
         // Limpiar documentos al hacer clic en cancelar
-        document.querySelector('a[href*="Index"]').addEventListener('click', function(e) {
-            if (importedDocumentPaths.length > 0) {
-                e.preventDefault();
-                
-                fetch('/Patients/CleanupImportedDocuments', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
-                    },
-                    body: JSON.stringify({ filePaths: importedDocumentPaths })
-                })
-                .then(() => {
-                    window.location.href = this.href;
-                })
-                .catch(() => {
-                    window.location.href = this.href;
-                });
-            }
-        });
+        const cancelLink = document.querySelector('a[href*="Index"]');
+        if (cancelLink) {
+            cancelLink.addEventListener('click', function(e) {
+                if (importedDocumentPaths.length > 0) {
+                    e.preventDefault();
+                    
+                    fetch('/Patients/CleanupImportedDocuments', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+                        },
+                        body: JSON.stringify({ filePaths: importedDocumentPaths })
+                    })
+                    .then(() => {
+                        window.location.href = this.href;
+                    })
+                    .catch(() => {
+                        window.location.href = this.href;
+                    });
+                }
+            });
+        }
 
         // Agregar documentos dinámicamente
-        document.getElementById('addDocumentBtn').addEventListener('click', function() {
-            const documentFields = document.getElementById('documentFields');
-            const newRow = document.createElement('div');
+        const addDocumentBtn = document.getElementById('addDocumentBtn');
+        if (addDocumentBtn) {
+            addDocumentBtn.addEventListener('click', function() {
+                const documentFields = document.getElementById('documentFields');
+                const newRow = document.createElement('div');
             newRow.className = 'document-row mb-3';
             newRow.innerHTML = `
                 <div class="row">
@@ -667,6 +678,7 @@
             newRow.querySelector('.remove-document-btn').addEventListener('click', function() {
                 newRow.remove();
             });
-        });
+            });
+        }
     </script>
 }

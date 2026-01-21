@@ -473,43 +473,46 @@
         });
 
         // Agregar documentos dinámicamente
-        document.getElementById('addDocumentBtn').addEventListener('click', function() {
-            const documentFields = document.getElementById('documentFields');
-            const newRow = document.createElement('div');
-            newRow.className = 'document-row mb-3';
-            newRow.innerHTML = `
-                <div class="row">
-                    <div class="col-md-4">
-                        <label class="form-label">Tipo de Documento</label>
-                        <select name="documentTypes" class="form-select">
-                            <option value="Receta Médica">Receta Médica</option>
-                            <option value="Tarjetón Sanitario">Tarjetón Sanitario</option>
-                            <option value="Tratamiento">Tratamiento</option>
-                            <option value="Informe Médico">Informe Médico</option>
-                            <option value="Otro">Otro</option>
-                        </select>
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Archivo (Foto)</label>
-                        <input type="file" name="documents" class="form-control" accept="image/*,.pdf" />
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Descripción</label>
-                        <div class="input-group">
-                            <input type="text" name="documentDescriptions" class="form-control" placeholder="Opcional" />
-                            <button type="button" class="btn btn-danger remove-document-btn">
-                                <i class="bi bi-trash"></i>
-                            </button>
+        const addDocumentBtn = document.getElementById('addDocumentBtn');
+        if (addDocumentBtn) {
+            addDocumentBtn.addEventListener('click', function() {
+                const documentFields = document.getElementById('documentFields');
+                const newRow = document.createElement('div');
+                newRow.className = 'document-row mb-3';
+                newRow.innerHTML = `
+                    <div class="row">
+                        <div class="col-md-4">
+                            <label class="form-label">Tipo de Documento</label>
+                            <select name="documentTypes" class="form-select">
+                                <option value="Receta Médica">Receta Médica</option>
+                                <option value="Tarjetón Sanitario">Tarjetón Sanitario</option>
+                                <option value="Tratamiento">Tratamiento</option>
+                                <option value="Informe Médico">Informe Médico</option>
+                                <option value="Otro">Otro</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Archivo (Foto)</label>
+                            <input type="file" name="documents" class="form-control" accept="image/*,.pdf" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Descripción</label>
+                            <div class="input-group">
+                                <input type="text" name="documentDescriptions" class="form-control" placeholder="Opcional" />
+                                <button type="button" class="btn btn-danger remove-document-btn">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
                         </div>
                     </div>
-                </div>
-            `;
-            documentFields.appendChild(newRow);
+                `;
+                documentFields.appendChild(newRow);
 
-            newRow.querySelector('.remove-document-btn').addEventListener('click', function() {
-                newRow.remove();
+                newRow.querySelector('.remove-document-btn').addEventListener('click', function() {
+                    newRow.remove();
+                });
             });
-        });
+        }
 
         // Manejar botones de eliminar documento
         document.querySelectorAll('.delete-doc-btn').forEach(function(btn) {
