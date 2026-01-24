@@ -1,5 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
 using FarmaciaSolidariaCristiana.Data;
 using FarmaciaSolidariaCristiana.Services;
 using FarmaciaSolidariaCristiana.Filters;
@@ -15,8 +18,47 @@ CultureInfo.DefaultThreadCurrentUICulture = cultureInfo;
 // Add services to the container.
 builder.Services.AddControllersWithViews(options =>
 {
-    // Add global filters
+    // Add global filters (solo para MVC, no para API)
     options.Filters.Add<MaintenanceModeFilter>();
+});
+
+// ========================================
+// CONFIGURACIÓN DE JWT PARA API
+// ========================================
+var jwtSettings = builder.Configuration.GetSection("JwtSettings");
+var secretKey = jwtSettings["SecretKey"] ?? throw new InvalidOperationException("JWT SecretKey no está configurada en appsettings.json");
+
+builder.Services.AddAuthentication(options =>
+{
+    // Mantener cookies como default para MVC web
+    options.DefaultScheme = IdentityConstants.ApplicationScheme;
+    options.DefaultSignInScheme = IdentityConstants.ExternalScheme;
+})
+.AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
+{
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuer = true,
+        ValidateAudience = true,
+        ValidateLifetime = true,
+        ValidateIssuerSigningKey = true,
+        ValidIssuer = jwtSettings["Issuer"] ?? "FarmaciaSolidariaCristiana",
+        ValidAudience = jwtSettings["Audience"] ?? "FarmaciaSolidariaCristianaApi",
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey)),
+        ClockSkew = TimeSpan.Zero // Sin tolerancia de tiempo
+    };
+
+    options.Events = new JwtBearerEvents
+    {
+        OnAuthenticationFailed = context =>
+        {
+            if (context.Exception.GetType() == typeof(SecurityTokenExpiredException))
+            {
+                context.Response.Headers.Append("Token-Expired", "true");
+            }
+            return Task.CompletedTask;
+        }
+    };
 });
 
 // Configure DbContext with SQL Server
@@ -140,6 +182,10 @@ app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
 
+// Mapear controladores API (rutas bajo /api/*)
+app.MapControllers();
+
+// Mapear rutas MVC tradicionales
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
