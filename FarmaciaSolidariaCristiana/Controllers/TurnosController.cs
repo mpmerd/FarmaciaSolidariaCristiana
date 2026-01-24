@@ -936,8 +936,8 @@ namespace FarmaciaSolidariaCristiana.Controllers
         [Required(ErrorMessage = "El Carnet de Identidad o Pasaporte es requerido")]
         [Display(Name = "Carnet de Identidad o Pasaporte")]
         [StringLength(20)]
-        [RegularExpression(@"^(\d{11}|[A-Za-z]\d{6,7})$", 
-            ErrorMessage = "Formato inválido. Use 11 dígitos para Carnet de Identidad o letra seguida de 6-7 dígitos para Pasaporte")]
+        [RegularExpression(@"^(\d{11}|[A-Za-z]{1,3}\d{6,7})$", 
+            ErrorMessage = "Formato inválido. Use 11 dígitos para Carnet de Identidad o 1-3 letras seguidas de 6-7 dígitos para Pasaporte")]
         public string DocumentoIdentidad { get; set; } = string.Empty;
 
         [StringLength(1000, ErrorMessage = "Las notas no pueden superar 1000 caracteres")]
