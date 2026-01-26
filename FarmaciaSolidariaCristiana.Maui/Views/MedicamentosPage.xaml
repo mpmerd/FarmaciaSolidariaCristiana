@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:viewmodels="clr-namespace:FarmaciaSolidariaCristiana.Maui.ViewModels"
+             xmlns:models="clr-namespace:FarmaciaSolidariaCristiana.Maui.Models"
+             x:Class="FarmaciaSolidariaCristiana.Maui.Views.MedicamentosPage"
+             x:DataType="viewmodels:MedicamentosViewModel"
+             Title="{Binding Title}">
+
+    <Grid RowDefinitions="Auto,*,Auto">
+        
+        <!-- Search Bar -->
+        <SearchBar Grid.Row="0"
+                   Placeholder="Buscar medicamentos..."
+                   Text="{Binding SearchText}"
+                   SearchCommand="{Binding RefreshCommand}"
+                   Margin="10"/>
+        
+        <!-- Medicamentos List -->
+        <RefreshView Grid.Row="1"
+                     IsRefreshing="{Binding IsBusy}"
+                     Command="{Binding RefreshCommand}">
+            <CollectionView ItemsSource="{Binding Medicamentos}"
+                            SelectionMode="None"
+                            EmptyView="No hay medicamentos para mostrar">
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="models:Medicine">
+                        <Frame Margin="10,5" Padding="15" CornerRadius="10" HasShadow="True">
+                            <Frame.GestureRecognizers>
+                                <TapGestureRecognizer 
+                                    Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:MedicamentosViewModel}}, Path=SelectMedicamentoCommand}"
+                                    CommandParameter="{Binding .}"/>
+                            </Frame.GestureRecognizers>
+                            
+                            <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto">
+                                
+                                <!-- Nombre -->
+                                <Label Grid.Row="0" Grid.Column="0"
+                                       Text="{Binding Name}"
+                                       FontSize="16"
+                                       FontAttributes="Bold"
+                                       LineBreakMode="TailTruncation"/>
+                                
+                                <!-- Principio Activo -->
+                                <Label Grid.Row="1" Grid.Column="0"
+                                       Text="{Binding ActiveIngredient}"
+                                       FontSize="12"
+                                       TextColor="{StaticResource Gray500}"
+                                       LineBreakMode="TailTruncation"/>
+                                
+                                <!-- Laboratorio y Presentación -->
+                                <Label Grid.Row="2" Grid.Column="0"
+                                       FontSize="11"
+                                       TextColor="{StaticResource Gray400}">
+                                    <Label.FormattedText>
+                                        <FormattedString>
+                                            <Span Text="{Binding Laboratory}"/>
+                                            <Span Text=" | "/>
+                                            <Span Text="{Binding Presentation}"/>
+                                        </FormattedString>
+                                    </Label.FormattedText>
+                                </Label>
+                                
+                                <!-- Stock Badge -->
+                                <VerticalStackLayout Grid.RowSpan="3" Grid.Column="1"
+                                                     VerticalOptions="Center"
+                                                     HorizontalOptions="End">
+                                    <Frame BackgroundColor="{Binding StockColor}"
+                                           Padding="10,5"
+                                           CornerRadius="8"
+                                           HasShadow="False">
+                                        <VerticalStackLayout>
+                                            <Label Text="{Binding Stock}"
+                                                   FontSize="20"
+                                                   FontAttributes="Bold"
+                                                   TextColor="White"
+                                                   HorizontalTextAlignment="Center"/>
+                                            <Label Text="Stock"
+                                                   FontSize="10"
+                                                   TextColor="White"
+                                                   HorizontalTextAlignment="Center"/>
+                                        </VerticalStackLayout>
+                                    </Frame>
+                                    <Label Text="{Binding StockStatus}"
+                                           FontSize="10"
+                                           TextColor="{Binding StockColor}"
+                                           HorizontalTextAlignment="Center"/>
+                                </VerticalStackLayout>
+                            </Grid>
+                        </Frame>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+        </RefreshView>
+        
+        <!-- FAB for Create (visible only for admin/farmaceutico) -->
+        <Button Grid.Row="2"
+                Text="+ Nuevo Medicamento"
+                Command="{Binding CreateMedicamentoCommand}"
+                IsVisible="{Binding CanEdit}"
+                BackgroundColor="{StaticResource Primary}"
+                TextColor="White"
+                CornerRadius="25"
+                HeightRequest="50"
+                Margin="20,10"
+                FontAttributes="Bold"/>
+    </Grid>
+</ContentPage>

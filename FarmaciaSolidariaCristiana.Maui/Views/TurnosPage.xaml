@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:viewmodels="clr-namespace:FarmaciaSolidariaCristiana.Maui.ViewModels"
+             xmlns:models="clr-namespace:FarmaciaSolidariaCristiana.Maui.Models"
+             x:Class="FarmaciaSolidariaCristiana.Maui.Views.TurnosPage"
+             x:DataType="viewmodels:TurnosViewModel"
+             Title="{Binding Title}">
+
+    <Grid RowDefinitions="Auto,Auto,*,Auto">
+        
+        <!-- Search Bar -->
+        <SearchBar Grid.Row="0"
+                   Placeholder="Buscar turnos..."
+                   Text="{Binding SearchText}"
+                   SearchCommand="{Binding RefreshCommand}"
+                   Margin="10,10,10,0"/>
+        
+        <!-- Filter Picker -->
+        <HorizontalStackLayout Grid.Row="1" 
+                               Spacing="10" 
+                               Margin="10,5">
+            <Label Text="Filtrar:" 
+                   VerticalOptions="Center"/>
+            <Picker ItemsSource="{Binding FilterOptions}"
+                    SelectedItem="{Binding SelectedFilter}"
+                    WidthRequest="150"/>
+        </HorizontalStackLayout>
+        
+        <!-- Turnos List -->
+        <RefreshView Grid.Row="2"
+                     IsRefreshing="{Binding IsBusy}"
+                     Command="{Binding RefreshCommand}">
+            <CollectionView ItemsSource="{Binding Turnos}"
+                            SelectionMode="None"
+                            EmptyView="No hay turnos para mostrar">
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="models:Turno">
+                        <SwipeView>
+                            <SwipeView.LeftItems>
+                                <SwipeItems>
+                                    <SwipeItem Text="PDF"
+                                               BackgroundColor="{StaticResource Info}"
+                                               Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:TurnosViewModel}}, Path=DescargarPdfCommand}"
+                                               CommandParameter="{Binding .}"/>
+                                </SwipeItems>
+                            </SwipeView.LeftItems>
+                            <SwipeView.RightItems>
+                                <SwipeItems>
+                                    <SwipeItem Text="Cancelar"
+                                               BackgroundColor="{StaticResource Danger}"
+                                               Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:TurnosViewModel}}, Path=CancelarTurnoCommand}"
+                                               CommandParameter="{Binding .}"
+                                               IsVisible="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:TurnosViewModel}}, Path=CanManageTurnos}"/>
+                                </SwipeItems>
+                            </SwipeView.RightItems>
+                            
+                            <Frame Margin="10,5" Padding="15" CornerRadius="10" HasShadow="True">
+                                <Frame.GestureRecognizers>
+                                    <TapGestureRecognizer 
+                                        Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:TurnosViewModel}}, Path=SelectTurnoCommand}"
+                                        CommandParameter="{Binding .}"/>
+                                </Frame.GestureRecognizers>
+                                
+                                <Grid ColumnDefinitions="Auto,*,Auto" RowDefinitions="Auto,Auto,Auto">
+                                    
+                                    <!-- Número de Turno -->
+                                    <Frame Grid.RowSpan="3"
+                                           BackgroundColor="{StaticResource Primary}"
+                                           Padding="10"
+                                           CornerRadius="8"
+                                           WidthRequest="60"
+                                           HeightRequest="60"
+                                           VerticalOptions="Center">
+                                        <Label Text="{Binding NumeroTurno, StringFormat='#{0}'}"
+                                               FontSize="18"
+                                               FontAttributes="Bold"
+                                               TextColor="White"
+                                               HorizontalTextAlignment="Center"
+                                               VerticalTextAlignment="Center"/>
+                                    </Frame>
+                                    
+                                    <!-- Info -->
+                                    <Label Grid.Row="0" Grid.Column="1"
+                                           Text="{Binding UserName}"
+                                           FontSize="16"
+                                           FontAttributes="Bold"
+                                           Margin="10,0,0,0"/>
+                                    
+                                    <Label Grid.Row="1" Grid.Column="1"
+                                           Text="{Binding FechaSolicitud, StringFormat='Solicitado: {0:dd/MM/yyyy}'}"
+                                           FontSize="12"
+                                           TextColor="{StaticResource Gray500}"
+                                           Margin="10,0,0,0"/>
+                                    
+                                    <Label Grid.Row="2" Grid.Column="1"
+                                           Text="{Binding FechaAsignada, StringFormat='Fecha: {0:dd/MM/yyyy HH:mm}'}"
+                                           FontSize="12"
+                                           TextColor="{StaticResource Gray500}"
+                                           Margin="10,0,0,0"
+                                           IsVisible="{Binding FechaAsignada, Converter={StaticResource NullToBoolConverter}}"/>
+                                    
+                                    <!-- Estado Badge -->
+                                    <Frame Grid.Row="0" Grid.Column="2"
+                                           BackgroundColor="{Binding EstadoColor}"
+                                           Padding="8,4"
+                                           CornerRadius="12"
+                                           HasShadow="False"
+                                           VerticalOptions="Start">
+                                        <Label Text="{Binding Estado}"
+                                               FontSize="11"
+                                               TextColor="White"/>
+                                    </Frame>
+                                    
+                                    <!-- Action Buttons for Management -->
+                                    <HorizontalStackLayout Grid.Row="2" Grid.Column="2"
+                                                           Spacing="5"
+                                                           IsVisible="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:TurnosViewModel}}, Path=CanManageTurnos}">
+                                        <ImageButton Source="check.png"
+                                                     HeightRequest="30"
+                                                     WidthRequest="30"
+                                                     BackgroundColor="{StaticResource Success}"
+                                                     Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:TurnosViewModel}}, Path=AprobarTurnoCommand}"
+                                                     CommandParameter="{Binding .}"
+                                                     IsVisible="{Binding Estado, Converter={StaticResource StatusToPendingConverter}}"/>
+                                        <ImageButton Source="close.png"
+                                                     HeightRequest="30"
+                                                     WidthRequest="30"
+                                                     BackgroundColor="{StaticResource Danger}"
+                                                     Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:TurnosViewModel}}, Path=RechazarTurnoCommand}"
+                                                     CommandParameter="{Binding .}"
+                                                     IsVisible="{Binding Estado, Converter={StaticResource StatusToPendingConverter}}"/>
+                                    </HorizontalStackLayout>
+                                </Grid>
+                            </Frame>
+                        </SwipeView>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+        </RefreshView>
+        
+        <!-- FAB for Create -->
+        <Button Grid.Row="3"
+                Text="+ Solicitar Turno"
+                Command="{Binding CreateTurnoCommand}"
+                IsVisible="{Binding CanCreateTurno}"
+                BackgroundColor="{StaticResource Primary}"
+                TextColor="White"
+                CornerRadius="25"
+                HeightRequest="50"
+                Margin="20,10"
+                FontAttributes="Bold"/>
+    </Grid>
+</ContentPage>

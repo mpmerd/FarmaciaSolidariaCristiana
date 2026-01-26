@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:viewmodels="clr-namespace:FarmaciaSolidariaCristiana.Maui.ViewModels"
+             xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
+             x:Class="FarmaciaSolidariaCristiana.Maui.Views.LoginPage"
+             x:DataType="viewmodels:LoginViewModel"
+             Shell.NavBarIsVisible="False"
+             BackgroundColor="{StaticResource BackgroundColor}">
+
+    <ScrollView>
+        <VerticalStackLayout Spacing="20" Padding="30" VerticalOptions="Center">
+            
+            <!-- Logo -->
+            <Image Source="logo.png" 
+                   HeightRequest="120" 
+                   Aspect="AspectFit"
+                   Margin="0,0,0,20"/>
+            
+            <!-- Título -->
+            <Label Text="Farmacia Solidaria Cristiana"
+                   FontSize="24"
+                   FontAttributes="Bold"
+                   HorizontalTextAlignment="Center"
+                   TextColor="{StaticResource Primary}"/>
+            
+            <Label Text="Iniciar Sesión"
+                   FontSize="18"
+                   HorizontalTextAlignment="Center"
+                   TextColor="{StaticResource Gray500}"
+                   Margin="0,0,0,20"/>
+            
+            <!-- Email -->
+            <Frame BorderColor="{StaticResource Gray200}" 
+                   Padding="10" 
+                   CornerRadius="10"
+                   HasShadow="False">
+                <Entry Placeholder="Correo electrónico"
+                       Text="{Binding Email}"
+                       Keyboard="Email"
+                       ReturnType="Next"/>
+            </Frame>
+            
+            <!-- Password -->
+            <Frame BorderColor="{StaticResource Gray200}" 
+                   Padding="10" 
+                   CornerRadius="10"
+                   HasShadow="False">
+                <Grid ColumnDefinitions="*, Auto">
+                    <Entry Placeholder="Contraseña"
+                           Text="{Binding Password}"
+                           IsPassword="{Binding IsPasswordVisible, Converter={toolkit:InvertedBoolConverter}}"
+                           ReturnType="Done"/>
+                    <ImageButton Grid.Column="1"
+                                 Source="{Binding IsPasswordVisible, Converter={StaticResource BoolToPasswordIconConverter}}"
+                                 Command="{Binding TogglePasswordVisibilityCommand}"
+                                 HeightRequest="24"
+                                 WidthRequest="24"/>
+                </Grid>
+            </Frame>
+            
+            <!-- Error Message -->
+            <Label Text="{Binding ErrorMessage}"
+                   TextColor="{StaticResource Danger}"
+                   IsVisible="{Binding HasError}"
+                   HorizontalTextAlignment="Center"/>
+            
+            <!-- Login Button -->
+            <Button Text="Iniciar Sesión"
+                    Command="{Binding LoginCommand}"
+                    IsEnabled="{Binding IsNotBusy}"
+                    BackgroundColor="{StaticResource Primary}"
+                    TextColor="White"
+                    CornerRadius="10"
+                    HeightRequest="50"
+                    FontAttributes="Bold"/>
+            
+            <!-- Loading Indicator -->
+            <ActivityIndicator IsRunning="{Binding IsBusy}"
+                               IsVisible="{Binding IsBusy}"
+                               Color="{StaticResource Primary}"
+                               HeightRequest="40"/>
+            
+            <!-- Links -->
+            <HorizontalStackLayout HorizontalOptions="Center" Spacing="20">
+                <Label Text="¿Olvidó su contraseña?"
+                       TextColor="{StaticResource Primary}"
+                       TextDecorations="Underline">
+                    <Label.GestureRecognizers>
+                        <TapGestureRecognizer Command="{Binding ForgotPasswordCommand}"/>
+                    </Label.GestureRecognizers>
+                </Label>
+            </HorizontalStackLayout>
+            
+            <!-- Footer -->
+            <Label Text="© 2026 Farmacia Solidaria Cristiana"
+                   FontSize="12"
+                   TextColor="{StaticResource Gray400}"
+                   HorizontalTextAlignment="Center"
+                   Margin="0,40,0,0"/>
+            
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

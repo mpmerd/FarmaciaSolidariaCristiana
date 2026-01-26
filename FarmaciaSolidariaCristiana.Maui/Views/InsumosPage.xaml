@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:viewmodels="clr-namespace:FarmaciaSolidariaCristiana.Maui.ViewModels"
+             x:Class="FarmaciaSolidariaCristiana.Maui.Views.InsumosPage"
+             x:DataType="viewmodels:InsumosViewModel"
+             Title="{Binding Title}"
+             BackgroundColor="{StaticResource BackgroundColor}">
+
+    <Grid RowDefinitions="Auto,*">
+        <!-- Search Bar -->
+        <SearchBar Grid.Row="0"
+                   Placeholder="Buscar insumos..."
+                   Text="{Binding SearchText}"
+                   BackgroundColor="White"
+                   Margin="10"/>
+
+        <!-- Loading Indicator -->
+        <ActivityIndicator Grid.Row="1"
+                           IsRunning="{Binding IsBusy}"
+                           IsVisible="{Binding IsBusy}"
+                           Color="{StaticResource Primary}"
+                           VerticalOptions="Center"
+                           HorizontalOptions="Center"/>
+
+        <!-- Insumos List -->
+        <RefreshView Grid.Row="1"
+                     IsRefreshing="{Binding IsRefreshing}"
+                     Command="{Binding RefreshCommand}"
+                     IsVisible="{Binding IsBusy, Converter={StaticResource InverseBoolConverter}}">
+            <CollectionView ItemsSource="{Binding Insumos}"
+                            SelectionMode="None">
+                <CollectionView.EmptyView>
+                    <StackLayout VerticalOptions="Center" HorizontalOptions="Center" Padding="20">
+                        <Label Text="📦" FontSize="48" HorizontalOptions="Center"/>
+                        <Label Text="No hay insumos" 
+                               FontSize="18" 
+                               TextColor="{StaticResource Gray600}"
+                               HorizontalOptions="Center"/>
+                    </StackLayout>
+                </CollectionView.EmptyView>
+
+                <CollectionView.ItemTemplate>
+                    <DataTemplate>
+                        <SwipeView>
+                            <SwipeView.RightItems>
+                                <SwipeItems>
+                                    <SwipeItem Text="Editar"
+                                               BackgroundColor="{StaticResource Info}"
+                                               Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:InsumosViewModel}}, Path=EditInsumoCommand}"
+                                               CommandParameter="{Binding}"/>
+                                    <SwipeItem Text="Eliminar"
+                                               BackgroundColor="{StaticResource Danger}"
+                                               Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:InsumosViewModel}}, Path=DeleteInsumoCommand}"
+                                               CommandParameter="{Binding}"/>
+                                </SwipeItems>
+                            </SwipeView.RightItems>
+
+                            <Frame Margin="10,5" Padding="15" BackgroundColor="White" BorderColor="Transparent" CornerRadius="10">
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <StackLayout Grid.Column="0" Spacing="5">
+                                        <Label Text="{Binding Nombre}" 
+                                               FontSize="16" 
+                                               FontAttributes="Bold"
+                                               TextColor="{StaticResource Dark}"/>
+                                        <Label Text="{Binding Descripcion}" 
+                                               FontSize="14" 
+                                               TextColor="{StaticResource Gray600}"
+                                               LineBreakMode="TailTruncation"
+                                               MaxLines="2"/>
+                                        <Label FontSize="12" TextColor="{StaticResource Gray500}">
+                                            <Label.FormattedText>
+                                                <FormattedString>
+                                                    <Span Text="Unidad: "/>
+                                                    <Span Text="{Binding Unidad}" FontAttributes="Bold"/>
+                                                </FormattedString>
+                                            </Label.FormattedText>
+                                        </Label>
+                                    </StackLayout>
+
+                                    <Frame Grid.Column="1" 
+                                           Padding="10,5" 
+                                           CornerRadius="15"
+                                           BorderColor="Transparent"
+                                           VerticalOptions="Center">
+                                        <Frame.BackgroundColor>
+                                            <Binding Path="Stock">
+                                                <Binding.Converter>
+                                                    <local:StockToColorConverter xmlns:local="clr-namespace:FarmaciaSolidariaCristiana.Maui.Converters"/>
+                                                </Binding.Converter>
+                                            </Binding>
+                                        </Frame.BackgroundColor>
+                                        <Label Text="{Binding Stock, StringFormat='{0}'}" 
+                                               FontSize="16" 
+                                               FontAttributes="Bold"
+                                               TextColor="White"
+                                               HorizontalOptions="Center"/>
+                                    </Frame>
+                                </Grid>
+                            </Frame>
+                        </SwipeView>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+        </RefreshView>
+
+        <!-- FAB Add Button -->
+        <Button Grid.Row="1"
+                Text="+"
+                FontSize="24"
+                WidthRequest="60"
+                HeightRequest="60"
+                CornerRadius="30"
+                BackgroundColor="{StaticResource Primary}"
+                TextColor="White"
+                HorizontalOptions="End"
+                VerticalOptions="End"
+                Margin="20"
+                Command="{Binding AddInsumoCommand}"
+                IsVisible="{Binding CanEdit}"/>
+    </Grid>
+</ContentPage>
