@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<Shell
+    x:Class="FarmaciaSolidariaCristiana.Maui.AppShell"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:views="clr-namespace:FarmaciaSolidariaCristiana.Maui.Views"
+    Title="Farmacia Solidaria"
+    FlyoutBehavior="Flyout"
+    Shell.FlyoutBackgroundColor="#ffffff"
+    FlyoutHeaderBehavior="CollapseOnScroll">
+    
+    <!-- Flyout Header -->
+    <Shell.FlyoutHeader>
+        <Grid HeightRequest="180" BackgroundColor="#0d6efd" Padding="20">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+            
+            <Frame Grid.Row="0" 
+                   WidthRequest="80" 
+                   HeightRequest="80" 
+                   CornerRadius="40" 
+                   BackgroundColor="White" 
+                   BorderColor="Transparent"
+                   Padding="0"
+                   HorizontalOptions="Start"
+                   Margin="0,10,0,10">
+                <Image Source="logo.png" 
+                       Aspect="AspectFit"
+                       WidthRequest="60"
+                       HeightRequest="60"
+                       HorizontalOptions="Center"
+                       VerticalOptions="Center"/>
+            </Frame>
+            
+            <Label Grid.Row="1" 
+                   x:Name="LblUserName"
+                   Text="Usuario"
+                   TextColor="White"
+                   FontSize="18"
+                   FontAttributes="Bold"/>
+            
+            <Label Grid.Row="2" 
+                   x:Name="LblUserRole"
+                   Text="Rol"
+                   TextColor="#B0D4FF"
+                   FontSize="14"/>
+        </Grid>
+    </Shell.FlyoutHeader>
+    
+    <!-- Login Page (separate, no flyout) -->
+    <ShellContent Route="LoginPage"
+                  ContentTemplate="{DataTemplate views:LoginPage}"
+                  FlyoutItemIsVisible="False"/>
+    
+    <!-- Dashboard - All roles -->
+    <FlyoutItem Title="Inicio" Icon="home.png">
+        <ShellContent Route="DashboardPage"
+                      ContentTemplate="{DataTemplate views:DashboardPage}"/>
+    </FlyoutItem>
+    
+    <!-- Turnos - ViewerPublic: Mis Turnos, Others: Gestión Turnos -->
+    <FlyoutItem x:Name="FlyoutTurnos" Title="Turnos" Icon="calendar.png">
+        <ShellContent Route="TurnosPage"
+                      ContentTemplate="{DataTemplate views:TurnosPage}"/>
+    </FlyoutItem>
+    
+    <!-- Medicamentos - All roles (view only for ViewerPublic) -->
+    <FlyoutItem Title="Medicamentos" Icon="pills.png">
+        <ShellContent Route="MedicamentosPage"
+                      ContentTemplate="{DataTemplate views:MedicamentosPage}"/>
+    </FlyoutItem>
+    
+    <!-- Insumos - All roles (view only for ViewerPublic) -->
+    <FlyoutItem Title="Insumos" Icon="supplies.png">
+        <ShellContent Route="InsumosPage"
+                      ContentTemplate="{DataTemplate views:InsumosPage}"/>
+    </FlyoutItem>
+    
+    <!-- Donaciones - All roles (view only for ViewerPublic/Viewer) -->
+    <FlyoutItem Title="Donaciones" Icon="heart.png">
+        <ShellContent Route="DonacionesPage"
+                      ContentTemplate="{DataTemplate views:DonacionesPage}"/>
+    </FlyoutItem>
+    
+    <!-- Entregas - All roles (view only for ViewerPublic/Viewer) -->
+    <FlyoutItem Title="Entregas" Icon="package.png">
+        <ShellContent Route="EntregasPage"
+                      ContentTemplate="{DataTemplate views:EntregasPage}"/>
+    </FlyoutItem>
+    
+    <!-- Pacientes - Viewer, Farmaceutico, Admin -->
+    <FlyoutItem x:Name="FlyoutPacientes" Title="Pacientes" Icon="users.png">
+        <ShellContent Route="PacientesPage"
+                      ContentTemplate="{DataTemplate views:PacientesPage}"/>
+    </FlyoutItem>
+    
+    <!-- Patrocinadores - All roles -->
+    <FlyoutItem Title="Patrocinadores" Icon="star.png">
+        <ShellContent Route="PatrocinadoresPage"
+                      ContentTemplate="{DataTemplate views:PatrocinadoresPage}"/>
+    </FlyoutItem>
+    
+    <!-- Reportes - Viewer, Farmaceutico, Admin -->
+    <FlyoutItem x:Name="FlyoutReportes" Title="Reportes" Icon="chart.png">
+        <ShellContent Route="ReportesPage"
+                      ContentTemplate="{DataTemplate views:ReportesPage}"/>
+    </FlyoutItem>
+    
+    <!-- Avanzado - Admin only -->
+    <FlyoutItem x:Name="FlyoutAvanzado" Title="Avanzado" Icon="settings.png">
+        <ShellContent Route="FechasBloqueadasPage"
+                      Title="Fechas Bloqueadas"
+                      ContentTemplate="{DataTemplate views:FechasBloqueadasPage}"/>
+    </FlyoutItem>
+    
+    <!-- Separator -->
+    <MenuItem Text="─────────────────" IsEnabled="False"/>
+    
+    <!-- Profile -->
+    <FlyoutItem Title="Mi Perfil" Icon="user.png">
+        <ShellContent Route="ProfilePage"
+                      ContentTemplate="{DataTemplate views:ProfilePage}"/>
+    </FlyoutItem>
+    
+    <!-- Logout -->
+    <MenuItem Text="Cerrar Sesión" 
+              IconImageSource="logout.png"
+              Clicked="OnLogoutClicked"/>
+    
+</Shell>

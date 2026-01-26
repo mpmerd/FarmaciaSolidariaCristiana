@@ -1,0 +1,163 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:viewmodels="clr-namespace:FarmaciaSolidariaCristiana.Maui.ViewModels"
+             x:Class="FarmaciaSolidariaCristiana.Maui.Views.DashboardPage"
+             x:DataType="viewmodels:DashboardViewModel"
+             Title="{Binding Title}">
+
+    <RefreshView IsRefreshing="{Binding IsBusy}"
+                 Command="{Binding RefreshCommand}">
+        <ScrollView>
+            <VerticalStackLayout Spacing="15" Padding="15">
+                
+                <!-- Welcome Card -->
+                <Frame BackgroundColor="{StaticResource Primary}"
+                       Padding="20"
+                       CornerRadius="15"
+                       HasShadow="True">
+                    <VerticalStackLayout>
+                        <Label Text="{Binding WelcomeMessage}"
+                               FontSize="22"
+                               FontAttributes="Bold"
+                               TextColor="White"/>
+                        <Label Text="{Binding UserRole}"
+                               FontSize="14"
+                               TextColor="White"
+                               Opacity="0.8"/>
+                    </VerticalStackLayout>
+                </Frame>
+
+                <!-- Stats Grid -->
+                <Label Text="Resumen"
+                       FontSize="18"
+                       FontAttributes="Bold"
+                       Margin="0,10,0,5"/>
+                
+                <Grid ColumnDefinitions="*,*" 
+                      RowDefinitions="Auto,Auto"
+                      ColumnSpacing="10"
+                      RowSpacing="10">
+                    
+                    <!-- Turnos Pendientes -->
+                    <Frame Grid.Row="0" Grid.Column="0"
+                           BackgroundColor="{StaticResource Warning}"
+                           Padding="15"
+                           CornerRadius="10"
+                           HasShadow="True">
+                        <Frame.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding NavigateToTurnosCommand}"/>
+                        </Frame.GestureRecognizers>
+                        <VerticalStackLayout>
+                            <Label Text="📋" FontSize="28"/>
+                            <Label Text="{Binding TurnosPendientes}"
+                                   FontSize="32"
+                                   FontAttributes="Bold"
+                                   TextColor="White"/>
+                            <Label Text="Turnos Pendientes"
+                                   FontSize="12"
+                                   TextColor="White"/>
+                        </VerticalStackLayout>
+                    </Frame>
+                    
+                    <!-- Medicamentos -->
+                    <Frame Grid.Row="0" Grid.Column="1"
+                           BackgroundColor="{StaticResource Success}"
+                           Padding="15"
+                           CornerRadius="10"
+                           HasShadow="True">
+                        <Frame.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding NavigateToMedicamentosCommand}"/>
+                        </Frame.GestureRecognizers>
+                        <VerticalStackLayout>
+                            <Label Text="💊" FontSize="28"/>
+                            <Label Text="{Binding MedicamentosDisponibles}"
+                                   FontSize="32"
+                                   FontAttributes="Bold"
+                                   TextColor="White"/>
+                            <Label Text="Medicamentos"
+                                   FontSize="12"
+                                   TextColor="White"/>
+                        </VerticalStackLayout>
+                    </Frame>
+                    
+                    <!-- Insumos -->
+                    <Frame Grid.Row="1" Grid.Column="0"
+                           BackgroundColor="{StaticResource Info}"
+                           Padding="15"
+                           CornerRadius="10"
+                           HasShadow="True">
+                        <Frame.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding NavigateToInsumosCommand}"/>
+                        </Frame.GestureRecognizers>
+                        <VerticalStackLayout>
+                            <Label Text="📦" FontSize="28"/>
+                            <Label Text="{Binding InsumosDisponibles}"
+                                   FontSize="32"
+                                   FontAttributes="Bold"
+                                   TextColor="White"/>
+                            <Label Text="Insumos"
+                                   FontSize="12"
+                                   TextColor="White"/>
+                        </VerticalStackLayout>
+                    </Frame>
+                    
+                    <!-- Entregas Hoy -->
+                    <Frame Grid.Row="1" Grid.Column="1"
+                           BackgroundColor="{StaticResource Secondary}"
+                           Padding="15"
+                           CornerRadius="10"
+                           HasShadow="True"
+                           IsVisible="{Binding CanManageTurnos}">
+                        <VerticalStackLayout>
+                            <Label Text="📬" FontSize="28"/>
+                            <Label Text="{Binding EntregasHoy}"
+                                   FontSize="32"
+                                   FontAttributes="Bold"
+                                   TextColor="White"/>
+                            <Label Text="Entregas Hoy"
+                                   FontSize="12"
+                                   TextColor="White"/>
+                        </VerticalStackLayout>
+                    </Frame>
+                </Grid>
+
+                <!-- Quick Actions -->
+                <Label Text="Acciones Rápidas"
+                       FontSize="18"
+                       FontAttributes="Bold"
+                       Margin="0,20,0,5"/>
+                
+                <FlexLayout Wrap="Wrap" 
+                            JustifyContent="SpaceEvenly"
+                            AlignItems="Start">
+                    
+                    <Button Text="📋 Ver Turnos"
+                            Command="{Binding NavigateToTurnosCommand}"
+                            BackgroundColor="{StaticResource Primary}"
+                            TextColor="White"
+                            CornerRadius="10"
+                            Margin="5"
+                            WidthRequest="150"/>
+                    
+                    <Button Text="💊 Medicamentos"
+                            Command="{Binding NavigateToMedicamentosCommand}"
+                            BackgroundColor="{StaticResource Success}"
+                            TextColor="White"
+                            CornerRadius="10"
+                            Margin="5"
+                            WidthRequest="150"/>
+                    
+                    <Button Text="📦 Insumos"
+                            Command="{Binding NavigateToInsumosCommand}"
+                            BackgroundColor="{StaticResource Info}"
+                            TextColor="White"
+                            CornerRadius="10"
+                            Margin="5"
+                            WidthRequest="150"/>
+                </FlexLayout>
+
+            </VerticalStackLayout>
+        </ScrollView>
+    </RefreshView>
+</ContentPage>

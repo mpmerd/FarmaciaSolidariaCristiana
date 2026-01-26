@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:viewmodels="clr-namespace:FarmaciaSolidariaCristiana.Maui.ViewModels"
+             x:Class="FarmaciaSolidariaCristiana.Maui.Views.PatrocinadoresPage"
+             x:DataType="viewmodels:PatrocinadoresViewModel"
+             Title="{Binding Title}"
+             BackgroundColor="{StaticResource BackgroundColor}">
+
+    <Grid RowDefinitions="Auto,*">
+        <!-- Header -->
+        <Frame Grid.Row="0" 
+               BackgroundColor="{StaticResource Primary}" 
+               CornerRadius="0" 
+               Padding="20"
+               Margin="0">
+            <StackLayout>
+                <Label Text="⭐ Nuestros Patrocinadores" 
+                       FontSize="20" 
+                       FontAttributes="Bold"
+                       TextColor="White"/>
+                <Label Text="Gracias a quienes hacen posible esta labor" 
+                       FontSize="14" 
+                       TextColor="#B0D4FF"/>
+            </StackLayout>
+        </Frame>
+
+        <!-- Loading Indicator -->
+        <ActivityIndicator Grid.Row="1"
+                           IsRunning="{Binding IsBusy}"
+                           IsVisible="{Binding IsBusy}"
+                           Color="{StaticResource Primary}"
+                           VerticalOptions="Center"
+                           HorizontalOptions="Center"/>
+
+        <!-- Patrocinadores List -->
+        <RefreshView Grid.Row="1"
+                     IsRefreshing="{Binding IsRefreshing}"
+                     Command="{Binding RefreshCommand}"
+                     IsVisible="{Binding IsBusy, Converter={StaticResource InverseBoolConverter}}">
+            <CollectionView ItemsSource="{Binding Patrocinadores}"
+                            SelectionMode="None">
+                <CollectionView.EmptyView>
+                    <StackLayout VerticalOptions="Center" HorizontalOptions="Center" Padding="20">
+                        <Label Text="⭐" FontSize="48" HorizontalOptions="Center"/>
+                        <Label Text="No hay patrocinadores registrados" 
+                               FontSize="18" 
+                               TextColor="{StaticResource Gray600}"
+                               HorizontalOptions="Center"/>
+                    </StackLayout>
+                </CollectionView.EmptyView>
+
+                <CollectionView.ItemTemplate>
+                    <DataTemplate>
+                        <Frame Margin="10,5" Padding="0" BackgroundColor="White" BorderColor="Transparent" CornerRadius="15" HasShadow="True">
+                            <Grid RowDefinitions="Auto,Auto,Auto" Padding="0">
+                                <!-- Logo/Image Area -->
+                                <Frame Grid.Row="0" 
+                                       HeightRequest="120" 
+                                       BackgroundColor="#F0F4F8"
+                                       CornerRadius="15,15,0,0"
+                                       Padding="0">
+                                    <Image Source="{Binding LogoUrl}" 
+                                           Aspect="AspectFit"
+                                           WidthRequest="100"
+                                           HeightRequest="80"
+                                           HorizontalOptions="Center"
+                                           VerticalOptions="Center"/>
+                                </Frame>
+
+                                <!-- Info -->
+                                <StackLayout Grid.Row="1" Padding="15" Spacing="5">
+                                    <Label Text="{Binding Nombre}" 
+                                           FontSize="18" 
+                                           FontAttributes="Bold"
+                                           TextColor="{StaticResource Dark}"
+                                           HorizontalOptions="Center"/>
+                                    
+                                    <Label Text="{Binding Descripcion}" 
+                                           FontSize="14" 
+                                           TextColor="{StaticResource Gray600}"
+                                           HorizontalTextAlignment="Center"
+                                           LineBreakMode="WordWrap"
+                                           MaxLines="3"/>
+                                </StackLayout>
+
+                                <!-- Website Button -->
+                                <Button Grid.Row="2"
+                                        Text="Visitar Sitio Web"
+                                        BackgroundColor="{StaticResource Primary}"
+                                        TextColor="White"
+                                        CornerRadius="10"
+                                        Margin="15,0,15,15"
+                                        HeightRequest="40"
+                                        Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:PatrocinadoresViewModel}}, Path=OpenWebsiteCommand}"
+                                        CommandParameter="{Binding}"
+                                        IsVisible="{Binding SitioWeb, Converter={StaticResource NullToBoolConverter}}"/>
+                            </Grid>
+                        </Frame>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+        </RefreshView>
+    </Grid>
+</ContentPage>

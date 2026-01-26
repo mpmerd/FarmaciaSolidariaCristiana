@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:viewmodels="clr-namespace:FarmaciaSolidariaCristiana.Maui.ViewModels"
+             x:Class="FarmaciaSolidariaCristiana.Maui.Views.ProfilePage"
+             x:DataType="viewmodels:ProfileViewModel"
+             Title="{Binding Title}"
+             BackgroundColor="{StaticResource BackgroundColor}">
+
+    <ScrollView>
+        <StackLayout Padding="20" Spacing="20">
+            <!-- Profile Header -->
+            <Frame BackgroundColor="{StaticResource Primary}" 
+                   CornerRadius="20" 
+                   Padding="30"
+                   HasShadow="True">
+                <StackLayout Spacing="15" HorizontalOptions="Center">
+                    <!-- Avatar -->
+                    <Frame WidthRequest="100" 
+                           HeightRequest="100" 
+                           CornerRadius="50"
+                           BackgroundColor="White"
+                           BorderColor="Transparent"
+                           Padding="0"
+                           HorizontalOptions="Center">
+                        <Label Text="👤" 
+                               FontSize="48" 
+                               HorizontalOptions="Center" 
+                               VerticalOptions="Center"/>
+                    </Frame>
+                    
+                    <Label Text="{Binding UserName}" 
+                           FontSize="24" 
+                           FontAttributes="Bold"
+                           TextColor="White"
+                           HorizontalOptions="Center"/>
+                    
+                    <Label Text="{Binding UserEmail}" 
+                           FontSize="16" 
+                           TextColor="#B0D4FF"
+                           HorizontalOptions="Center"/>
+                    
+                    <Frame BackgroundColor="#1976D2" 
+                           CornerRadius="15" 
+                           Padding="15,8"
+                           BorderColor="Transparent"
+                           HorizontalOptions="Center">
+                        <Label Text="{Binding UserRole}" 
+                               FontSize="14" 
+                               TextColor="White"/>
+                    </Frame>
+                </StackLayout>
+            </Frame>
+
+            <!-- Settings Section -->
+            <Label Text="Configuración" 
+                   FontSize="18" 
+                   FontAttributes="Bold"
+                   TextColor="{StaticResource Dark}"
+                   Margin="0,10,0,0"/>
+
+            <!-- Notifications Toggle -->
+            <Frame BackgroundColor="White" CornerRadius="15" Padding="15" HasShadow="True">
+                <Grid ColumnDefinitions="Auto,*,Auto">
+                    <Frame Grid.Column="0" 
+                           WidthRequest="45" 
+                           HeightRequest="45" 
+                           CornerRadius="22"
+                           BackgroundColor="#E3F2FD"
+                           BorderColor="Transparent"
+                           Padding="0">
+                        <Label Text="🔔" FontSize="20" HorizontalOptions="Center" VerticalOptions="Center"/>
+                    </Frame>
+                    
+                    <StackLayout Grid.Column="1" VerticalOptions="Center" Padding="15,0">
+                        <Label Text="Notificaciones Push" FontSize="16" FontAttributes="Bold" TextColor="{StaticResource Dark}"/>
+                        <Label Text="Recibe alertas de turnos y actualizaciones" FontSize="12" TextColor="{StaticResource Gray600}"/>
+                    </StackLayout>
+                    
+                    <Switch Grid.Column="2" 
+                            IsToggled="{Binding NotificationsEnabled}"
+                            OnColor="{StaticResource Primary}"
+                            VerticalOptions="Center"/>
+                </Grid>
+            </Frame>
+
+            <!-- Change Password -->
+            <Frame BackgroundColor="White" CornerRadius="15" Padding="0" HasShadow="True">
+                <Frame.GestureRecognizers>
+                    <TapGestureRecognizer Command="{Binding ChangePasswordCommand}"/>
+                </Frame.GestureRecognizers>
+                <Grid ColumnDefinitions="Auto,*,Auto" Padding="15">
+                    <Frame Grid.Column="0" 
+                           WidthRequest="45" 
+                           HeightRequest="45" 
+                           CornerRadius="22"
+                           BackgroundColor="#FFF3E0"
+                           BorderColor="Transparent"
+                           Padding="0">
+                        <Label Text="🔐" FontSize="20" HorizontalOptions="Center" VerticalOptions="Center"/>
+                    </Frame>
+                    
+                    <StackLayout Grid.Column="1" VerticalOptions="Center" Padding="15,0">
+                        <Label Text="Cambiar Contraseña" FontSize="16" FontAttributes="Bold" TextColor="{StaticResource Dark}"/>
+                        <Label Text="Actualiza tu contraseña de acceso" FontSize="12" TextColor="{StaticResource Gray600}"/>
+                    </StackLayout>
+                    
+                    <Label Grid.Column="2" Text="›" FontSize="24" TextColor="{StaticResource Gray400}" VerticalOptions="Center"/>
+                </Grid>
+            </Frame>
+
+            <!-- App Info Section -->
+            <Label Text="Información" 
+                   FontSize="18" 
+                   FontAttributes="Bold"
+                   TextColor="{StaticResource Dark}"
+                   Margin="0,10,0,0"/>
+
+            <!-- About App -->
+            <Frame BackgroundColor="White" CornerRadius="15" Padding="15" HasShadow="True">
+                <StackLayout Spacing="10">
+                    <Label Text="Farmacia Solidaria Cristiana" 
+                           FontSize="16" 
+                           FontAttributes="Bold"
+                           TextColor="{StaticResource Dark}"/>
+                    <Label Text="Versión 1.0.0" 
+                           FontSize="14" 
+                           TextColor="{StaticResource Gray600}"/>
+                    <Label Text="Aplicación para la gestión de turnos, medicamentos e insumos de la farmacia solidaria." 
+                           FontSize="13" 
+                           TextColor="{StaticResource Gray500}"
+                           LineBreakMode="WordWrap"/>
+                </StackLayout>
+            </Frame>
+
+            <!-- Logout Button -->
+            <Button Text="Cerrar Sesión"
+                    BackgroundColor="{StaticResource Danger}"
+                    TextColor="White"
+                    CornerRadius="15"
+                    HeightRequest="50"
+                    FontSize="16"
+                    FontAttributes="Bold"
+                    Margin="0,20,0,0"
+                    Command="{Binding LogoutCommand}"/>
+
+            <!-- Loading -->
+            <ActivityIndicator IsRunning="{Binding IsBusy}"
+                               IsVisible="{Binding IsBusy}"
+                               Color="{StaticResource Primary}"
+                               HeightRequest="40"/>
+        </StackLayout>
+    </ScrollView>
+</ContentPage>

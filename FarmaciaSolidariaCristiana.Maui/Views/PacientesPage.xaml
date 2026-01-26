@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:viewmodels="clr-namespace:FarmaciaSolidariaCristiana.Maui.ViewModels"
+             x:Class="FarmaciaSolidariaCristiana.Maui.Views.PacientesPage"
+             x:DataType="viewmodels:PacientesViewModel"
+             Title="{Binding Title}"
+             BackgroundColor="{StaticResource BackgroundColor}">
+
+    <Grid RowDefinitions="Auto,*">
+        <!-- Search Bar -->
+        <SearchBar Grid.Row="0"
+                   Placeholder="Buscar pacientes..."
+                   Text="{Binding SearchText}"
+                   BackgroundColor="White"
+                   Margin="10"/>
+
+        <!-- Loading Indicator -->
+        <ActivityIndicator Grid.Row="1"
+                           IsRunning="{Binding IsBusy}"
+                           IsVisible="{Binding IsBusy}"
+                           Color="{StaticResource Primary}"
+                           VerticalOptions="Center"
+                           HorizontalOptions="Center"/>
+
+        <!-- Pacientes List -->
+        <RefreshView Grid.Row="1"
+                     IsRefreshing="{Binding IsRefreshing}"
+                     Command="{Binding RefreshCommand}"
+                     IsVisible="{Binding IsBusy, Converter={StaticResource InverseBoolConverter}}">
+            <CollectionView ItemsSource="{Binding Pacientes}"
+                            SelectionMode="None">
+                <CollectionView.EmptyView>
+                    <StackLayout VerticalOptions="Center" HorizontalOptions="Center" Padding="20">
+                        <Label Text="👥" FontSize="48" HorizontalOptions="Center"/>
+                        <Label Text="No hay pacientes" 
+                               FontSize="18" 
+                               TextColor="{StaticResource Gray600}"
+                               HorizontalOptions="Center"/>
+                    </StackLayout>
+                </CollectionView.EmptyView>
+
+                <CollectionView.ItemTemplate>
+                    <DataTemplate>
+                        <SwipeView>
+                            <SwipeView.RightItems>
+                                <SwipeItems>
+                                    <SwipeItem Text="Ver"
+                                               BackgroundColor="{StaticResource Info}"
+                                               Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:PacientesViewModel}}, Path=ViewDetailsCommand}"
+                                               CommandParameter="{Binding}"/>
+                                    <SwipeItem Text="Editar"
+                                               BackgroundColor="{StaticResource Warning}"
+                                               Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:PacientesViewModel}}, Path=EditPacienteCommand}"
+                                               CommandParameter="{Binding}"/>
+                                    <SwipeItem Text="Eliminar"
+                                               BackgroundColor="{StaticResource Danger}"
+                                               Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:PacientesViewModel}}, Path=DeletePacienteCommand}"
+                                               CommandParameter="{Binding}"/>
+                                </SwipeItems>
+                            </SwipeView.RightItems>
+
+                            <Frame Margin="10,5" Padding="15" BackgroundColor="White" BorderColor="Transparent" CornerRadius="10">
+                                <Frame.GestureRecognizers>
+                                    <TapGestureRecognizer 
+                                        Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:PacientesViewModel}}, Path=ViewDetailsCommand}"
+                                        CommandParameter="{Binding}"/>
+                                </Frame.GestureRecognizers>
+                                
+                                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="15">
+                                    <!-- Avatar -->
+                                    <Frame Grid.Column="0" 
+                                           WidthRequest="50" 
+                                           HeightRequest="50" 
+                                           CornerRadius="25"
+                                           BackgroundColor="#E3F2FD"
+                                           BorderColor="Transparent"
+                                           Padding="0">
+                                        <Label Text="👤" 
+                                               FontSize="24" 
+                                               HorizontalOptions="Center" 
+                                               VerticalOptions="Center"/>
+                                    </Frame>
+
+                                    <StackLayout Grid.Column="1" Spacing="3" VerticalOptions="Center">
+                                        <Label Text="{Binding NombreCompleto}" 
+                                               FontSize="16" 
+                                               FontAttributes="Bold"
+                                               TextColor="{StaticResource Dark}"/>
+                                        <Label FontSize="14" TextColor="{StaticResource Gray600}">
+                                            <Label.FormattedText>
+                                                <FormattedString>
+                                                    <Span Text="Cédula: "/>
+                                                    <Span Text="{Binding Cedula}"/>
+                                                </FormattedString>
+                                            </Label.FormattedText>
+                                        </Label>
+                                        <Label Text="{Binding Telefono}" 
+                                               FontSize="12" 
+                                               TextColor="{StaticResource Gray500}"/>
+                                    </StackLayout>
+
+                                    <!-- Status -->
+                                    <Frame Grid.Column="2" 
+                                           Padding="8,4" 
+                                           CornerRadius="12"
+                                           BorderColor="Transparent"
+                                           VerticalOptions="Center">
+                                        <Frame.BackgroundColor>
+                                            <Binding Path="Activo">
+                                                <Binding.Converter>
+                                                    <local:BoolToActiveColorConverter xmlns:local="clr-namespace:FarmaciaSolidariaCristiana.Maui.Converters"/>
+                                                </Binding.Converter>
+                                            </Binding>
+                                        </Frame.BackgroundColor>
+                                        <Label FontSize="12" 
+                                               TextColor="White"
+                                               HorizontalOptions="Center">
+                                            <Label.Text>
+                                                <Binding Path="Activo">
+                                                    <Binding.Converter>
+                                                        <local:BoolToActiveTextConverter xmlns:local="clr-namespace:FarmaciaSolidariaCristiana.Maui.Converters"/>
+                                                    </Binding.Converter>
+                                                </Binding>
+                                            </Label.Text>
+                                        </Label>
+                                    </Frame>
+                                </Grid>
+                            </Frame>
+                        </SwipeView>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+        </RefreshView>
+
+        <!-- FAB Add Button -->
+        <Button Grid.Row="1"
+                Text="+"
+                FontSize="24"
+                WidthRequest="60"
+                HeightRequest="60"
+                CornerRadius="30"
+                BackgroundColor="{StaticResource Primary}"
+                TextColor="White"
+                HorizontalOptions="End"
+                VerticalOptions="End"
+                Margin="20"
+                Command="{Binding AddPacienteCommand}"
+                IsVisible="{Binding CanEdit}"/>
+    </Grid>
+</ContentPage>

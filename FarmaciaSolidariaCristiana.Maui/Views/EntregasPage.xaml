@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:viewmodels="clr-namespace:FarmaciaSolidariaCristiana.Maui.ViewModels"
+             x:Class="FarmaciaSolidariaCristiana.Maui.Views.EntregasPage"
+             x:DataType="viewmodels:EntregasViewModel"
+             Title="{Binding Title}"
+             BackgroundColor="{StaticResource BackgroundColor}">
+
+    <Grid RowDefinitions="Auto,*">
+        <!-- Search Bar -->
+        <SearchBar Grid.Row="0"
+                   Placeholder="Buscar entregas..."
+                   Text="{Binding SearchText}"
+                   BackgroundColor="White"
+                   Margin="10"/>
+
+        <!-- Loading Indicator -->
+        <ActivityIndicator Grid.Row="1"
+                           IsRunning="{Binding IsBusy}"
+                           IsVisible="{Binding IsBusy}"
+                           Color="{StaticResource Primary}"
+                           VerticalOptions="Center"
+                           HorizontalOptions="Center"/>
+
+        <!-- Entregas List -->
+        <RefreshView Grid.Row="1"
+                     IsRefreshing="{Binding IsRefreshing}"
+                     Command="{Binding RefreshCommand}"
+                     IsVisible="{Binding IsBusy, Converter={StaticResource InverseBoolConverter}}">
+            <CollectionView ItemsSource="{Binding Entregas}"
+                            SelectionMode="None">
+                <CollectionView.EmptyView>
+                    <StackLayout VerticalOptions="Center" HorizontalOptions="Center" Padding="20">
+                        <Label Text="📦" FontSize="48" HorizontalOptions="Center"/>
+                        <Label Text="No hay entregas" 
+                               FontSize="18" 
+                               TextColor="{StaticResource Gray600}"
+                               HorizontalOptions="Center"/>
+                    </StackLayout>
+                </CollectionView.EmptyView>
+
+                <CollectionView.ItemTemplate>
+                    <DataTemplate>
+                        <SwipeView>
+                            <SwipeView.RightItems>
+                                <SwipeItems>
+                                    <SwipeItem Text="Ver"
+                                               BackgroundColor="{StaticResource Info}"
+                                               Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:EntregasViewModel}}, Path=ViewDetailsCommand}"
+                                               CommandParameter="{Binding}"/>
+                                    <SwipeItem Text="Eliminar"
+                                               BackgroundColor="{StaticResource Danger}"
+                                               Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:EntregasViewModel}}, Path=DeleteEntregaCommand}"
+                                               CommandParameter="{Binding}"/>
+                                </SwipeItems>
+                            </SwipeView.RightItems>
+
+                            <Frame Margin="10,5" Padding="15" BackgroundColor="White" BorderColor="Transparent" CornerRadius="10">
+                                <Frame.GestureRecognizers>
+                                    <TapGestureRecognizer 
+                                        Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:EntregasViewModel}}, Path=ViewDetailsCommand}"
+                                        CommandParameter="{Binding}"/>
+                                </Frame.GestureRecognizers>
+                                
+                                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="15">
+                                    <!-- Package Icon -->
+                                    <Frame Grid.Column="0" 
+                                           WidthRequest="50" 
+                                           HeightRequest="50" 
+                                           CornerRadius="25"
+                                           BackgroundColor="#E8F5E9"
+                                           BorderColor="Transparent"
+                                           Padding="0">
+                                        <Label Text="📦" 
+                                               FontSize="24" 
+                                               HorizontalOptions="Center" 
+                                               VerticalOptions="Center"/>
+                                    </Frame>
+
+                                    <StackLayout Grid.Column="1" Spacing="3" VerticalOptions="Center">
+                                        <Label Text="{Binding NombrePaciente}" 
+                                               FontSize="16" 
+                                               FontAttributes="Bold"
+                                               TextColor="{StaticResource Dark}"/>
+                                        <Label Text="{Binding Observaciones}" 
+                                               FontSize="14" 
+                                               TextColor="{StaticResource Gray600}"
+                                               LineBreakMode="TailTruncation"
+                                               MaxLines="1"/>
+                                        <Label FontSize="12" TextColor="{StaticResource Gray500}">
+                                            <Label.FormattedText>
+                                                <FormattedString>
+                                                    <Span Text="Por: "/>
+                                                    <Span Text="{Binding EntregadoPor}" FontAttributes="Italic"/>
+                                                </FormattedString>
+                                            </Label.FormattedText>
+                                        </Label>
+                                    </StackLayout>
+
+                                    <StackLayout Grid.Column="2" VerticalOptions="Center" HorizontalOptions="End">
+                                        <Label Text="{Binding FechaEntrega, StringFormat='{0:dd/MM}'}" 
+                                               FontSize="14" 
+                                               FontAttributes="Bold"
+                                               TextColor="{StaticResource Primary}"
+                                               HorizontalOptions="End"/>
+                                        <Label Text="{Binding FechaEntrega, StringFormat='{0:yyyy}'}" 
+                                               FontSize="12" 
+                                               TextColor="{StaticResource Gray500}"
+                                               HorizontalOptions="End"/>
+                                    </StackLayout>
+                                </Grid>
+                            </Frame>
+                        </SwipeView>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+        </RefreshView>
+
+        <!-- FAB Add Button -->
+        <Button Grid.Row="1"
+                Text="+"
+                FontSize="24"
+                WidthRequest="60"
+                HeightRequest="60"
+                CornerRadius="30"
+                BackgroundColor="{StaticResource Primary}"
+                TextColor="White"
+                HorizontalOptions="End"
+                VerticalOptions="End"
+                Margin="20"
+                Command="{Binding AddEntregaCommand}"
+                IsVisible="{Binding CanEdit}"/>
+    </Grid>
+</ContentPage>
