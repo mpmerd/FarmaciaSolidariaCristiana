@@ -39,7 +39,7 @@ Este documento describe la integración de OneSignal como proveedor de notificac
 ```json
 {
   "OneSignalSettings": {
-    "AppId": "TU_APP_ID_DE_ONESIGNAL",
+    "AppId": "4d981851-f1a2-4112-8a08-08500e48f196",
     "RestApiKey": "TU_REST_API_KEY_DE_ONESIGNAL",
     "ApiUrl": "https://onesignal.com/api/v1"
   }
