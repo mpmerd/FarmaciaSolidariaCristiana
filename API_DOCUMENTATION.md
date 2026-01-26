@@ -30,7 +30,9 @@ FarmaciaSolidariaCristiana/
 │   │   ├── DeliveriesApiController.cs  # CRUD de entregas
 │   │   ├── PatientsApiController.cs    # CRUD de pacientes
 │   │   ├── SponsorsApiController.cs    # CRUD de patrocinadores
-│   │   └── ReportsApiController.cs     # Generación de reportes PDF
+│   │   ├── ReportsApiController.cs     # Generación de reportes PDF
+│   │   ├── NotificationsApiController.cs  # Notificaciones push OneSignal
+│   │   └── DiagnosticsController.cs      # Diagnóstico y health checks
 │   └── Models/
 │       ├── AuthDtos.cs                 # DTOs de autenticación
 │       ├── MedicineDtos.cs             # DTOs de medicamentos + CIMA
@@ -40,10 +42,13 @@ FarmaciaSolidariaCristiana/
 │       ├── DeliveryDtos.cs             # DTOs de entregas
 │       ├── PatientDtos.cs              # DTOs de pacientes
 │       ├── SponsorDtos.cs              # DTOs de patrocinadores
-│       └── ReportDtos.cs               # DTOs de reportes y dashboard
+│       ├── ReportDtos.cs               # DTOs de reportes y dashboard
+│       └── NotificationDtos.cs         # DTOs de notificaciones push
 ├── Controllers/                         # Controladores MVC (web)
 ├── Models/                              # Entidades EF Core
 ├── Services/                            # Servicios de negocio
+│   ├── IOneSignalNotificationService.cs # Interfaz servicio push
+│   └── OneSignalNotificationService.cs  # Implementación OneSignal
 └── ...
 ```
 
@@ -61,6 +66,7 @@ FarmaciaSolidariaCristiana/
 | `PatientsApiController.cs` | CRUD de pacientes con historial y documentos. |
 | `SponsorsApiController.cs` | CRUD de patrocinadores con logos. |
 | `ReportsApiController.cs` | Generación de PDFs: entregas, donaciones, mensual, inventario y dashboard. |
+| `NotificationsApiController.cs` | Gestión de notificaciones push con OneSignal (registro de dispositivos, envío de notificaciones). |
 
 ---
 
@@ -411,6 +417,65 @@ Para endpoints que retornan listas paginadas:
   "documentosCount": 2
 }
 ```
+
+---
+
+### Notificaciones Push (`/api/notifications`)
+
+> **Nota**: Se utiliza OneSignal como proveedor de notificaciones push porque Firebase Cloud Messaging (FCM) no está disponible en Cuba.
+> Para documentación completa, ver [ONESIGNAL_INTEGRATION.md](ONESIGNAL_INTEGRATION.md)
+
+| Método | Endpoint | Descripción | Rol Requerido |
+|--------|----------|-------------|---------------|
+| `POST` | `/device` | Registrar dispositivo OneSignal | Usuario |
+| `POST` | `/device/unregister` | Eliminar registro de dispositivo | Usuario |
+| `GET` | `/devices` | Listar dispositivos del usuario | Usuario |
+| `GET` | `/push-status` | Estado de notificaciones push | Usuario |
+| `POST` | `/test` | Enviar notificación de prueba | Usuario |
+| `POST` | `/send` | Enviar notificación a usuario | Admin/Farmacéutico |
+| `POST` | `/send/broadcast` | Enviar a todos los usuarios | Admin |
+
+#### Registrar Dispositivo
+
+```json
+POST /api/notifications/device
+{
+  "oneSignalPlayerId": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+  "deviceToken": "token_opcional",
+  "deviceType": "Android",
+  "deviceName": "Samsung Galaxy S21"
+}
+```
+
+#### Respuesta
+```json
+{
+  "success": true,
+  "message": "Dispositivo registrado exitosamente",
+  "data": {
+    "id": 1,
+    "oneSignalPlayerId": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+    "deviceType": "Android",
+    "deviceName": "Samsung Galaxy S21",
+    "isActive": true,
+    "createdAt": "2026-01-25T10:30:00Z",
+    "updatedAt": "2026-01-25T10:30:00Z"
+  }
+}
+```
+
+#### Tipos de Notificación
+
+| Tipo | Descripción |
+|------|-------------|
+| `TurnoSolicitado` | Turno solicitado por el usuario |
+| `TurnoAprobado` | Turno aprobado por farmacéutico |
+| `TurnoRechazado` | Turno rechazado por farmacéutico |
+| `TurnoPdfDisponible` | PDF del turno disponible |
+| `TurnoRecordatorio` | Recordatorio de fecha/hora |
+| `TurnoCancelado` | Turno cancelado |
+| `TurnoReprogramado` | Turno reprogramado |
+| `General` | Notificación general |
 
 ---
 

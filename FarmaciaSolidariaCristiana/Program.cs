@@ -57,6 +57,40 @@ builder.Services.AddAuthentication(options =>
                 context.Response.Headers.Append("Token-Expired", "true");
             }
             return Task.CompletedTask;
+        },
+        // IMPORTANTE: Manejar el challenge para devolver 401 en lugar de redirigir
+        OnChallenge = context =>
+        {
+            // Evitar la redirección por defecto
+            context.HandleResponse();
+            
+            context.Response.StatusCode = 401;
+            context.Response.ContentType = "application/json";
+            
+            var result = System.Text.Json.JsonSerializer.Serialize(new
+            {
+                success = false,
+                message = "No autorizado. Token JWT no proporcionado o inválido.",
+                error = string.IsNullOrEmpty(context.ErrorDescription) 
+                    ? "Unauthorized" 
+                    : context.ErrorDescription
+            });
+            
+            return context.Response.WriteAsync(result);
+        },
+        OnForbidden = context =>
+        {
+            context.Response.StatusCode = 403;
+            context.Response.ContentType = "application/json";
+            
+            var result = System.Text.Json.JsonSerializer.Serialize(new
+            {
+                success = false,
+                message = "Acceso denegado. No tienes permisos para este recurso.",
+                error = "Forbidden"
+            });
+            
+            return context.Response.WriteAsync(result);
         }
     };
 });
@@ -76,6 +110,23 @@ builder.Services.AddScoped<ITurnoService, TurnoService>();
 
 // Register Maintenance Service
 builder.Services.AddScoped<IMaintenanceService, MaintenanceService>();
+
+// Register OneSignal Notification Service for Push Notifications
+// Solo registrar si la configuración de OneSignal está presente y válida
+var oneSignalAppId = builder.Configuration["OneSignalSettings:AppId"];
+var oneSignalApiKey = builder.Configuration["OneSignalSettings:RestApiKey"];
+if (!string.IsNullOrEmpty(oneSignalAppId) && 
+    !string.IsNullOrEmpty(oneSignalApiKey) &&
+    !oneSignalAppId.StartsWith("TU_") && 
+    !oneSignalApiKey.StartsWith("TU_"))
+{
+    builder.Services.AddScoped<IOneSignalNotificationService, OneSignalNotificationService>();
+}
+else
+{
+    // Registrar una implementación nula/vacía para evitar errores de DI
+    builder.Services.AddScoped<IOneSignalNotificationService, NullOneSignalNotificationService>();
+}
 
 // Register Background Services
 builder.Services.AddHostedService<TurnoCleanupService>();

@@ -24,6 +24,7 @@ namespace FarmaciaSolidariaCristiana.Data
         public DbSet<TurnoDocumento> TurnoDocumentos { get; set; }
         public DbSet<FechaBloqueada> FechasBloqueadas { get; set; }
         public DbSet<NavbarDecoration> NavbarDecorations { get; set; }
+        public DbSet<UserDeviceToken> UserDeviceTokens { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -123,6 +124,20 @@ namespace FarmaciaSolidariaCristiana.Data
             // Configure NavbarDecoration - solo una puede estar activa a la vez
             modelBuilder.Entity<NavbarDecoration>()
                 .HasIndex(nd => nd.IsActive);
+
+            // Configure UserDeviceToken
+            modelBuilder.Entity<UserDeviceToken>()
+                .HasIndex(t => new { t.UserId, t.OneSignalPlayerId })
+                .IsUnique();
+
+            modelBuilder.Entity<UserDeviceToken>()
+                .HasIndex(t => t.OneSignalPlayerId);
+
+            modelBuilder.Entity<UserDeviceToken>()
+                .HasOne(t => t.User)
+                .WithMany()
+                .HasForeignKey(t => t.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
         }
     }
 }

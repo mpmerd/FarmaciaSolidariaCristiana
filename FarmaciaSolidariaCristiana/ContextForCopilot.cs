@@ -107,6 +107,28 @@
 // - Modo de mantenimiento persistente (archivo maintenance.json en ContentRootPath).
 // - Permite activar/desactivar mantenimiento con motivo.
 // - Durante mantenimiento: Admin y Farmaceutico pueden acceder, otros ven página de mantenimiento.
+//
+// OneSignalNotificationService (IOneSignalNotificationService):
+// - Servicio para enviar notificaciones push usando OneSignal REST API.
+// - IMPORTANTE: Se usa OneSignal porque Firebase Cloud Messaging (FCM) no está disponible en Cuba.
+// - Gestión de tokens de dispositivo: RegisterDeviceTokenAsync, UnregisterDeviceTokenAsync, GetUserDeviceTokensAsync.
+// - Envío de notificaciones: SendNotificationToUserAsync, SendNotificationToPlayersAsync, SendNotificationToAllAsync.
+// - Notificaciones específicas de turnos:
+//   * SendTurnoSolicitadoNotificationAsync - Notifica que el turno fue solicitado.
+//   * SendTurnoAprobadoNotificationAsync - Notifica aprobación con fecha/hora y PDF.
+//   * SendTurnoRechazadoNotificationAsync - Notifica rechazo con motivo.
+//   * SendTurnoPdfDisponibleNotificationAsync - Notifica que el PDF está listo.
+//   * SendTurnoRecordatorioNotificationAsync - Recordatorio de cita próxima.
+//   * SendTurnoCanceladoNotificationAsync - Notifica cancelación con motivo.
+//   * SendTurnoReprogramadoNotificationAsync - Notifica cambio de fecha.
+//   * SendNuevaSolicitudToFarmaceuticosAsync - Notifica a farmacéuticos sobre nuevas solicitudes.
+// - Configuración en appsettings.json bajo "OneSignalSettings" (AppId, RestApiKey, ApiUrl).
+//
+// USER DEVICE TOKEN (UserDeviceToken):
+// - Modelo para almacenar tokens de dispositivo OneSignal por usuario.
+// - Atributos: UserId, OneSignalPlayerId, DeviceToken, DeviceType (iOS/Android), DeviceName, IsActive.
+// - Un usuario puede tener múltiples dispositivos registrados.
+// - Índice único en (UserId, OneSignalPlayerId).
 
 // ===========================================
 // FILTROS Y MIDDLEWARE
@@ -154,8 +176,21 @@
 // - PatientsApiController (api/patients): CRUD completo, GET /by-identification/{id}, GET /{id}/deliveries para historial.
 // - SponsorsApiController (api/sponsors): CRUD completo, GET /active para patrocinadores activos.
 // - ReportsApiController (api/reports): POST /deliveries, POST /donations, POST /monthly (PDFs en Base64), GET /inventory, GET /dashboard (JSON).
+// - NotificationsApiController (api/notifications): Notificaciones push con OneSignal.
+//   * POST /device - Registrar token de dispositivo OneSignal.
+// - DiagnosticsController (api/diagnostics): Health checks y diagnóstico de la API.
+//   * GET /ping - Verificar que la API está funcionando.
+//   * GET /config - Verificar configuración (JWT, DB, OneSignal).
+//   * GET /services - Verificar servicios DI registrados.
+//   * GET /database - Verificar conexión a base de datos.
+//   * POST /device/unregister - Eliminar registro de dispositivo (logout).
+//   * GET /devices - Listar dispositivos del usuario.
+//   * GET /push-status - Estado de notificaciones push.
+//   * POST /test - Enviar notificación de prueba.
+//   * POST /send - Enviar notificación a usuario (Admin/Farmaceutico).
+//   * POST /send/broadcast - Enviar a todos (Solo Admin).
 //
-// MODELOS DTO (Api/Models - 9 archivos):
+// MODELOS DTO (Api/Models - 10 archivos):
 // - AuthDtos: LoginRequestDto, LoginResponseDto, UserDto, ChangePasswordDto.
 // - MedicineDtos: MedicineDto, CreateMedicineDto, UpdateMedicineDto, PagedResult<T>, CimaMedicineDto.
 // - SupplyDtos: SupplyDto, CreateSupplyDto, UpdateSupplyDto.
@@ -165,6 +200,7 @@
 // - PatientDtos: PatientDto, CreatePatientDto, UpdatePatientDto, PatientSummaryDto.
 // - SponsorDtos: SponsorDto, CreateSponsorDto, UpdateSponsorDto.
 // - ReportDtos: ReportResultDto (PDF en Base64), DeliveriesReportRequest, DonationsReportRequest, MonthlyReportRequest, DashboardStatsDto.
+// - NotificationDtos: RegisterDeviceTokenDto, UnregisterDeviceTokenDto, DeviceTokenResponseDto, SendNotificationDto, NotificationResultDto, NotificationType (enum).
 //
 // RESPUESTAS ESTANDARIZADAS:
 // - Todas las respuestas usan ApiResponse<T> con: Success, Message, Data, Timestamp.
