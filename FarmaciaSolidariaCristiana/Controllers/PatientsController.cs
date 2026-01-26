@@ -32,7 +32,7 @@ namespace FarmaciaSolidariaCristiana.Controllers
         {
             var patients = await _context.Patients
                 .Where(p => p.IsActive)
-                .OrderByDescending(p => p.RegistrationDate)
+                .OrderBy(p => p.FullName)
                 .ToListAsync();
             return View(patients);
         }
