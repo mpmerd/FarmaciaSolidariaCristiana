@@ -1,16 +1,14 @@
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FarmaciaSolidariaCristiana.Api.Controllers
 {
     /// <summary>
     /// Controlador base para todos los endpoints de la API.
-    /// Requiere autenticación JWT por defecto.
+    /// NOTA: La autenticación JWT se aplica a nivel de cada controlador derivado
+    /// para evitar conflictos con el sistema de autenticación por cookies.
     /// </summary>
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
     [Produces("application/json")]
     public abstract class ApiBaseController : ControllerBase
     {
