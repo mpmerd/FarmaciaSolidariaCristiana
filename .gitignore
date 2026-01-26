@@ -513,3 +513,7 @@ apply-migration-somee.sql
 backup-production-*.sql
 *-production-data.sql
 local-data-*.sql
+
+# Scripts de sincronización local (contienen credenciales locales)
+SyncMigrations/
+sync-migrations-local.sql
