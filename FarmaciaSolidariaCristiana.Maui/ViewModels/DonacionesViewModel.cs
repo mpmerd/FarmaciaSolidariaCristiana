@@ -89,8 +89,8 @@ public partial class DonacionesViewModel : BaseViewModel
         else
         {
             var filtered = _allDonaciones
-                .Where(d => (d.DonorName?.Contains(SearchText, StringComparison.OrdinalIgnoreCase) ?? false) ||
-                           (d.Notes?.Contains(SearchText, StringComparison.OrdinalIgnoreCase) ?? false))
+                .Where(d => (d.ItemName?.Contains(SearchText, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                           (d.Comments?.Contains(SearchText, StringComparison.OrdinalIgnoreCase) ?? false))
                 .ToList();
             Donaciones = new ObservableCollection<Donation>(filtered);
         }
@@ -108,9 +108,11 @@ public partial class DonacionesViewModel : BaseViewModel
     {
         if (donacion == null) return;
         
-        var details = $"Donante: {donacion.DonorName}\n" +
+        var details = $"Artículo: {donacion.ItemName}\n" +
+                     $"Tipo: {donacion.ItemType}\n" +
+                     $"Cantidad: {donacion.Quantity}\n" +
                      $"Fecha: {donacion.DonationDate:dd/MM/yyyy}\n" +
-                     $"Descripción: {donacion.Notes ?? "N/A"}";
+                     $"Comentarios: {donacion.Comments ?? "N/A"}";
                      
         await Shell.Current.DisplayAlert("Detalle de Donación", details, "OK");
     }

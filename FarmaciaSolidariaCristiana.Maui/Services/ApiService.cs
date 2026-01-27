@@ -128,6 +128,48 @@ public class ApiService : IApiService
         return result ?? ErrorResponse<T>("Error al procesar respuesta");
     }
 
+    /// <summary>
+    /// Procesa respuestas paginadas y extrae los items
+    /// </summary>
+    private async Task<ApiResponse<List<T>>> GetPagedAsync<T>(string endpoint)
+    {
+        try
+        {
+            await SetAuthHeaderAsync();
+            var response = await _httpClient.GetAsync(endpoint);
+            var content = await response.Content.ReadAsStringAsync();
+
+            if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+            {
+                return ErrorResponse<List<T>>(Constants.SesionExpirada);
+            }
+
+            // Intentar deserializar como PagedResult
+            var pagedResult = JsonSerializer.Deserialize<ApiResponse<PagedResult<T>>>(content, _jsonOptions);
+            if (pagedResult?.Success == true && pagedResult.Data != null)
+            {
+                return new ApiResponse<List<T>> 
+                { 
+                    Success = true, 
+                    Data = pagedResult.Data.Items,
+                    Message = pagedResult.Message 
+                };
+            }
+
+            // Si falla, intentar como lista directa
+            var listResult = JsonSerializer.Deserialize<ApiResponse<List<T>>>(content, _jsonOptions);
+            return listResult ?? ErrorResponse<List<T>>("Error al procesar respuesta");
+        }
+        catch (HttpRequestException)
+        {
+            return ErrorResponse<List<T>>(Constants.ErrorConexion);
+        }
+        catch (Exception ex)
+        {
+            return ErrorResponse<List<T>>(ex.Message);
+        }
+    }
+
     private static ApiResponse<T> ErrorResponse<T>(string message)
     {
         return new ApiResponse<T> { Success = false, Message = message };
@@ -136,10 +178,10 @@ public class ApiService : IApiService
     // === TURNOS ===
     
     public Task<ApiResponse<List<Turno>>> GetTurnosAsync()
-        => GetAsync<List<Turno>>("/api/turnos");
+        => GetPagedAsync<Turno>("/api/turnos?pageSize=100");
 
     public Task<ApiResponse<List<Turno>>> GetMisTurnosAsync()
-        => GetAsync<List<Turno>>("/api/turnos/mis-turnos");
+        => GetAsync<List<Turno>>("/api/turnos/my");
 
     public Task<ApiResponse<Turno>> GetTurnoAsync(int id)
         => GetAsync<Turno>($"/api/turnos/{id}");
@@ -178,7 +220,7 @@ public class ApiService : IApiService
     // === MEDICAMENTOS ===
 
     public Task<ApiResponse<List<Medicine>>> GetMedicamentosAsync()
-        => GetAsync<List<Medicine>>("/api/medicines");
+        => GetPagedAsync<Medicine>("/api/medicines?pageSize=500");
 
     public Task<ApiResponse<Medicine>> GetMedicamentoAsync(int id)
         => GetAsync<Medicine>($"/api/medicines/{id}");
@@ -195,7 +237,7 @@ public class ApiService : IApiService
     // === INSUMOS ===
 
     public Task<ApiResponse<List<Supply>>> GetInsumosAsync()
-        => GetAsync<List<Supply>>("/api/supplies");
+        => GetPagedAsync<Supply>("/api/supplies?pageSize=500");
 
     public Task<ApiResponse<Supply>> GetInsumoAsync(int id)
         => GetAsync<Supply>($"/api/supplies/{id}");
@@ -212,7 +254,7 @@ public class ApiService : IApiService
     // === DONACIONES ===
 
     public Task<ApiResponse<List<Donation>>> GetDonacionesAsync()
-        => GetAsync<List<Donation>>("/api/donations");
+        => GetPagedAsync<Donation>("/api/donations?pageSize=500");
 
     public Task<ApiResponse<Donation>> GetDonacionAsync(int id)
         => GetAsync<Donation>($"/api/donations/{id}");
@@ -229,7 +271,7 @@ public class ApiService : IApiService
     // === ENTREGAS ===
 
     public Task<ApiResponse<List<Delivery>>> GetEntregasAsync()
-        => GetAsync<List<Delivery>>("/api/deliveries");
+        => GetPagedAsync<Delivery>("/api/deliveries?pageSize=500");
 
     public Task<ApiResponse<Delivery>> GetEntregaAsync(int id)
         => GetAsync<Delivery>($"/api/deliveries/{id}");
@@ -243,7 +285,7 @@ public class ApiService : IApiService
     // === PACIENTES ===
 
     public Task<ApiResponse<List<Patient>>> GetPacientesAsync()
-        => GetAsync<List<Patient>>("/api/patients");
+        => GetPagedAsync<Patient>("/api/patients?pageSize=500");
 
     public Task<ApiResponse<Patient>> GetPacienteAsync(int id)
         => GetAsync<Patient>($"/api/patients/{id}");
@@ -293,23 +335,61 @@ public class ApiService : IApiService
             await SetAuthHeaderAsync();
             
             var url = $"/api/reports/{tipoReporte}";
-            if (fechaInicio.HasValue && fechaFin.HasValue)
+            
+            // Construir el objeto de request según el tipo de reporte
+            object requestBody;
+            if (tipoReporte == "monthly" && fechaInicio.HasValue)
             {
-                url += $"?fechaInicio={fechaInicio:yyyy-MM-dd}&fechaFin={fechaFin:yyyy-MM-dd}";
+                requestBody = new
+                {
+                    Year = fechaInicio.Value.Year,
+                    Month = fechaInicio.Value.Month
+                };
+            }
+            else
+            {
+                requestBody = new
+                {
+                    StartDate = fechaInicio,
+                    EndDate = fechaFin
+                };
             }
             
-            var response = await _httpClient.GetAsync(url);
+            var response = await _httpClient.PostAsJsonAsync(url, requestBody);
             
             if (response.IsSuccessStatusCode)
             {
-                return await response.Content.ReadAsByteArrayAsync();
+                var content = await response.Content.ReadAsStringAsync();
+                var apiResponse = JsonSerializer.Deserialize<ApiResponseReport>(content, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                
+                if (apiResponse?.Success == true && apiResponse.Data?.PdfBase64 != null)
+                {
+                    return Convert.FromBase64String(apiResponse.Data.PdfBase64);
+                }
             }
             return null;
         }
-        catch
+        catch (Exception ex)
         {
+            System.Diagnostics.Debug.WriteLine($"Error descargando reporte: {ex.Message}");
             return null;
         }
+    }
+
+    // Clases auxiliares para deserializar respuesta de reportes
+    private class ApiResponseReport
+    {
+        public bool Success { get; set; }
+        public string? Message { get; set; }
+        public ReportResultData? Data { get; set; }
+    }
+
+    private class ReportResultData
+    {
+        public string? PdfBase64 { get; set; }
+        public string? FileName { get; set; }
+        public string? ContentType { get; set; }
+        public DateTime GeneratedAt { get; set; }
     }
 
     // === DIAGNÓSTICO ===

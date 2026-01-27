@@ -19,16 +19,23 @@
                            FontSize="22" 
                            FontAttributes="Bold"
                            TextColor="White"/>
-                    <Label Text="Selecciona el tipo de reporte a generar" 
+                    <Label Text="Genera reportes PDF de actividad" 
                            FontSize="14" 
                            TextColor="#B0D4FF"/>
                 </StackLayout>
             </Frame>
 
-            <!-- Date Range Picker -->
+            <!-- Status Message -->
+            <Label Text="{Binding StatusMessage}" 
+                   IsVisible="{Binding StatusMessage, Converter={StaticResource StringToBoolConverter}}"
+                   FontSize="14"
+                   TextColor="{StaticResource Primary}"
+                   HorizontalOptions="Center"/>
+
+            <!-- Date Range for Entregas and Donaciones -->
             <Frame BackgroundColor="White" CornerRadius="15" Padding="20" HasShadow="True">
                 <StackLayout Spacing="15">
-                    <Label Text="Rango de Fechas" 
+                    <Label Text="📅 Reportes por Rango de Fechas" 
                            FontSize="18" 
                            FontAttributes="Bold"
                            TextColor="{StaticResource Dark}"/>
@@ -49,128 +56,102 @@
                                         MinimumDate="{Binding FechaInicio}"/>
                         </StackLayout>
                     </Grid>
+                    
+                    <!-- Entregas Report -->
+                    <Frame BackgroundColor="{StaticResource Gray100}" CornerRadius="12" Padding="0" HasShadow="False">
+                        <Frame.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding GenerateEntregasReportCommand}"/>
+                        </Frame.GestureRecognizers>
+                        <Grid ColumnDefinitions="Auto,*,Auto" Padding="15">
+                            <Frame Grid.Column="0" 
+                                   WidthRequest="45" 
+                                   HeightRequest="45" 
+                                   CornerRadius="22"
+                                   BackgroundColor="#E0F7FA"
+                                   BorderColor="Transparent"
+                                   Padding="0">
+                                <Label Text="🚚" FontSize="20" HorizontalOptions="Center" VerticalOptions="Center"/>
+                            </Frame>
+                            <StackLayout Grid.Column="1" VerticalOptions="Center" Padding="12,0">
+                                <Label Text="Reporte de Entregas" FontSize="15" FontAttributes="Bold" TextColor="{StaticResource Dark}"/>
+                                <Label Text="Entregas realizadas en el período" FontSize="12" TextColor="{StaticResource Gray600}"/>
+                            </StackLayout>
+                            <Label Grid.Column="2" Text="›" FontSize="24" TextColor="{StaticResource Primary}" VerticalOptions="Center" FontAttributes="Bold"/>
+                        </Grid>
+                    </Frame>
+
+                    <!-- Donaciones Report -->
+                    <Frame BackgroundColor="{StaticResource Gray100}" CornerRadius="12" Padding="0" HasShadow="False">
+                        <Frame.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding GenerateDonacionesReportCommand}"/>
+                        </Frame.GestureRecognizers>
+                        <Grid ColumnDefinitions="Auto,*,Auto" Padding="15">
+                            <Frame Grid.Column="0" 
+                                   WidthRequest="45" 
+                                   HeightRequest="45" 
+                                   CornerRadius="22"
+                                   BackgroundColor="#FCE4EC"
+                                   BorderColor="Transparent"
+                                   Padding="0">
+                                <Label Text="❤️" FontSize="20" HorizontalOptions="Center" VerticalOptions="Center"/>
+                            </Frame>
+                            <StackLayout Grid.Column="1" VerticalOptions="Center" Padding="12,0">
+                                <Label Text="Reporte de Donaciones" FontSize="15" FontAttributes="Bold" TextColor="{StaticResource Dark}"/>
+                                <Label Text="Donaciones recibidas en el período" FontSize="12" TextColor="{StaticResource Gray600}"/>
+                            </StackLayout>
+                            <Label Grid.Column="2" Text="›" FontSize="24" TextColor="{StaticResource Primary}" VerticalOptions="Center" FontAttributes="Bold"/>
+                        </Grid>
+                    </Frame>
                 </StackLayout>
             </Frame>
 
-            <!-- Report Options -->
-            <Label Text="Tipo de Reporte" 
-                   FontSize="18" 
-                   FontAttributes="Bold"
-                   TextColor="{StaticResource Dark}"/>
+            <!-- Monthly Report Section -->
+            <Frame BackgroundColor="White" CornerRadius="15" Padding="20" HasShadow="True">
+                <StackLayout Spacing="15">
+                    <Label Text="📆 Reporte Mensual General" 
+                           FontSize="18" 
+                           FontAttributes="Bold"
+                           TextColor="{StaticResource Dark}"/>
+                    
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="15">
+                        <StackLayout Grid.Column="0" Spacing="5">
+                            <Label Text="Año:" FontSize="14" TextColor="{StaticResource Gray600}"/>
+                            <Picker ItemsSource="{Binding AvailableYears}"
+                                    SelectedItem="{Binding SelectedYear}"
+                                    BackgroundColor="{StaticResource Gray100}"/>
+                        </StackLayout>
+                        
+                        <StackLayout Grid.Column="1" Spacing="5">
+                            <Label Text="Mes:" FontSize="14" TextColor="{StaticResource Gray600}"/>
+                            <Picker ItemsSource="{Binding AvailableMonths}"
+                                    SelectedIndex="{Binding SelectedMonth, Converter={StaticResource MonthIndexConverter}}"
+                                    BackgroundColor="{StaticResource Gray100}"/>
+                        </StackLayout>
+                    </Grid>
 
-            <!-- Turnos Report -->
-            <Frame BackgroundColor="White" CornerRadius="15" Padding="0" HasShadow="True">
-                <Frame.GestureRecognizers>
-                    <TapGestureRecognizer Command="{Binding GenerateTurnosReportCommand}"/>
-                </Frame.GestureRecognizers>
-                <Grid ColumnDefinitions="Auto,*,Auto" Padding="15">
-                    <Frame Grid.Column="0" 
-                           WidthRequest="50" 
-                           HeightRequest="50" 
-                           CornerRadius="25"
-                           BackgroundColor="#E3F2FD"
-                           BorderColor="Transparent"
-                           Padding="0">
-                        <Label Text="📅" FontSize="24" HorizontalOptions="Center" VerticalOptions="Center"/>
+                    <!-- Monthly Report Button -->
+                    <Frame BackgroundColor="{StaticResource Primary}" CornerRadius="12" Padding="0" HasShadow="False">
+                        <Frame.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding GenerateMensualReportCommand}"/>
+                        </Frame.GestureRecognizers>
+                        <Grid ColumnDefinitions="Auto,*,Auto" Padding="15">
+                            <Frame Grid.Column="0" 
+                                   WidthRequest="45" 
+                                   HeightRequest="45" 
+                                   CornerRadius="22"
+                                   BackgroundColor="White"
+                                   BorderColor="Transparent"
+                                   Padding="0">
+                                <Label Text="📊" FontSize="20" HorizontalOptions="Center" VerticalOptions="Center"/>
+                            </Frame>
+                            <StackLayout Grid.Column="1" VerticalOptions="Center" Padding="12,0">
+                                <Label Text="Generar Reporte Mensual" FontSize="15" FontAttributes="Bold" TextColor="White"/>
+                                <Label Text="Resumen completo del mes" FontSize="12" TextColor="#B0D4FF"/>
+                            </StackLayout>
+                            <Label Grid.Column="2" Text="›" FontSize="24" TextColor="White" VerticalOptions="Center" FontAttributes="Bold"/>
+                        </Grid>
                     </Frame>
-                    <StackLayout Grid.Column="1" VerticalOptions="Center" Padding="15,0">
-                        <Label Text="Reporte de Turnos" FontSize="16" FontAttributes="Bold" TextColor="{StaticResource Dark}"/>
-                        <Label Text="Historial de turnos y asistencias" FontSize="12" TextColor="{StaticResource Gray600}"/>
-                    </StackLayout>
-                    <Label Grid.Column="2" Text="›" FontSize="24" TextColor="{StaticResource Gray400}" VerticalOptions="Center"/>
-                </Grid>
-            </Frame>
-
-            <!-- Medicamentos Report -->
-            <Frame BackgroundColor="White" CornerRadius="15" Padding="0" HasShadow="True">
-                <Frame.GestureRecognizers>
-                    <TapGestureRecognizer Command="{Binding GenerateMedicamentosReportCommand}"/>
-                </Frame.GestureRecognizers>
-                <Grid ColumnDefinitions="Auto,*,Auto" Padding="15">
-                    <Frame Grid.Column="0" 
-                           WidthRequest="50" 
-                           HeightRequest="50" 
-                           CornerRadius="25"
-                           BackgroundColor="#E8F5E9"
-                           BorderColor="Transparent"
-                           Padding="0">
-                        <Label Text="💊" FontSize="24" HorizontalOptions="Center" VerticalOptions="Center"/>
-                    </Frame>
-                    <StackLayout Grid.Column="1" VerticalOptions="Center" Padding="15,0">
-                        <Label Text="Inventario de Medicamentos" FontSize="16" FontAttributes="Bold" TextColor="{StaticResource Dark}"/>
-                        <Label Text="Stock actual y movimientos" FontSize="12" TextColor="{StaticResource Gray600}"/>
-                    </StackLayout>
-                    <Label Grid.Column="2" Text="›" FontSize="24" TextColor="{StaticResource Gray400}" VerticalOptions="Center"/>
-                </Grid>
-            </Frame>
-
-            <!-- Insumos Report -->
-            <Frame BackgroundColor="White" CornerRadius="15" Padding="0" HasShadow="True">
-                <Frame.GestureRecognizers>
-                    <TapGestureRecognizer Command="{Binding GenerateInsumosReportCommand}"/>
-                </Frame.GestureRecognizers>
-                <Grid ColumnDefinitions="Auto,*,Auto" Padding="15">
-                    <Frame Grid.Column="0" 
-                           WidthRequest="50" 
-                           HeightRequest="50" 
-                           CornerRadius="25"
-                           BackgroundColor="#FFF3E0"
-                           BorderColor="Transparent"
-                           Padding="0">
-                        <Label Text="📦" FontSize="24" HorizontalOptions="Center" VerticalOptions="Center"/>
-                    </Frame>
-                    <StackLayout Grid.Column="1" VerticalOptions="Center" Padding="15,0">
-                        <Label Text="Inventario de Insumos" FontSize="16" FontAttributes="Bold" TextColor="{StaticResource Dark}"/>
-                        <Label Text="Stock actual de insumos" FontSize="12" TextColor="{StaticResource Gray600}"/>
-                    </StackLayout>
-                    <Label Grid.Column="2" Text="›" FontSize="24" TextColor="{StaticResource Gray400}" VerticalOptions="Center"/>
-                </Grid>
-            </Frame>
-
-            <!-- Donaciones Report -->
-            <Frame BackgroundColor="White" CornerRadius="15" Padding="0" HasShadow="True">
-                <Frame.GestureRecognizers>
-                    <TapGestureRecognizer Command="{Binding GenerateDonacionesReportCommand}"/>
-                </Frame.GestureRecognizers>
-                <Grid ColumnDefinitions="Auto,*,Auto" Padding="15">
-                    <Frame Grid.Column="0" 
-                           WidthRequest="50" 
-                           HeightRequest="50" 
-                           CornerRadius="25"
-                           BackgroundColor="#FCE4EC"
-                           BorderColor="Transparent"
-                           Padding="0">
-                        <Label Text="❤️" FontSize="24" HorizontalOptions="Center" VerticalOptions="Center"/>
-                    </Frame>
-                    <StackLayout Grid.Column="1" VerticalOptions="Center" Padding="15,0">
-                        <Label Text="Reporte de Donaciones" FontSize="16" FontAttributes="Bold" TextColor="{StaticResource Dark}"/>
-                        <Label Text="Historial de donaciones recibidas" FontSize="12" TextColor="{StaticResource Gray600}"/>
-                    </StackLayout>
-                    <Label Grid.Column="2" Text="›" FontSize="24" TextColor="{StaticResource Gray400}" VerticalOptions="Center"/>
-                </Grid>
-            </Frame>
-
-            <!-- Entregas Report -->
-            <Frame BackgroundColor="White" CornerRadius="15" Padding="0" HasShadow="True">
-                <Frame.GestureRecognizers>
-                    <TapGestureRecognizer Command="{Binding GenerateEntregasReportCommand}"/>
-                </Frame.GestureRecognizers>
-                <Grid ColumnDefinitions="Auto,*,Auto" Padding="15">
-                    <Frame Grid.Column="0" 
-                           WidthRequest="50" 
-                           HeightRequest="50" 
-                           CornerRadius="25"
-                           BackgroundColor="#E0F7FA"
-                           BorderColor="Transparent"
-                           Padding="0">
-                        <Label Text="🚚" FontSize="24" HorizontalOptions="Center" VerticalOptions="Center"/>
-                    </Frame>
-                    <StackLayout Grid.Column="1" VerticalOptions="Center" Padding="15,0">
-                        <Label Text="Reporte de Entregas" FontSize="16" FontAttributes="Bold" TextColor="{StaticResource Dark}"/>
-                        <Label Text="Historial de entregas realizadas" FontSize="12" TextColor="{StaticResource Gray600}"/>
-                    </StackLayout>
-                    <Label Grid.Column="2" Text="›" FontSize="24" TextColor="{StaticResource Gray400}" VerticalOptions="Center"/>
-                </Grid>
+                </StackLayout>
             </Frame>
 
             <!-- Loading -->

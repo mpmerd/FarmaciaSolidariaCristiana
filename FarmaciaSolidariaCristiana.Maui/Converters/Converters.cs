@@ -166,3 +166,43 @@ public class BoolToActiveTextConverter : IValueConverter
         throw new NotImplementedException();
     }
 }
+
+/// <summary>
+/// Converts a string to a boolean (true if not null/empty)
+/// </summary>
+public class StringToBoolConverter : IValueConverter
+{
+    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        return !string.IsNullOrEmpty(value?.ToString());
+    }
+
+    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        throw new NotImplementedException();
+    }
+}
+
+/// <summary>
+/// Converts month index (1-12) to picker index (0-11) and vice versa
+/// </summary>
+public class MonthIndexConverter : IValueConverter
+{
+    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        if (value is int month)
+        {
+            return month - 1; // 1-12 to 0-11
+        }
+        return 0;
+    }
+
+    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        if (value is int index)
+        {
+            return index + 1; // 0-11 to 1-12
+        }
+        return 1;
+    }
+}

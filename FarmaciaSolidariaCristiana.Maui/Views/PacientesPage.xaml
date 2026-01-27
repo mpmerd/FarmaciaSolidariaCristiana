@@ -83,7 +83,7 @@
                                     </Frame>
 
                                     <StackLayout Grid.Column="1" Spacing="3" VerticalOptions="Center">
-                                        <Label Text="{Binding NombreCompleto}" 
+                                        <Label Text="{Binding FullName}" 
                                                FontSize="16" 
                                                FontAttributes="Bold"
                                                TextColor="{StaticResource Dark}"/>
@@ -91,11 +91,11 @@
                                             <Label.FormattedText>
                                                 <FormattedString>
                                                     <Span Text="Cédula: "/>
-                                                    <Span Text="{Binding Cedula}"/>
+                                                    <Span Text="{Binding IdentificationDocument}"/>
                                                 </FormattedString>
                                             </Label.FormattedText>
                                         </Label>
-                                        <Label Text="{Binding Telefono}" 
+                                        <Label Text="{Binding Phone}" 
                                                FontSize="12" 
                                                TextColor="{StaticResource Gray500}"/>
                                     </StackLayout>
@@ -107,7 +107,7 @@
                                            BorderColor="Transparent"
                                            VerticalOptions="Center">
                                         <Frame.BackgroundColor>
-                                            <Binding Path="Activo">
+                                            <Binding Path="IsActive">
                                                 <Binding.Converter>
                                                     <local:BoolToActiveColorConverter xmlns:local="clr-namespace:FarmaciaSolidariaCristiana.Maui.Converters"/>
                                                 </Binding.Converter>
@@ -117,7 +117,7 @@
                                                TextColor="White"
                                                HorizontalOptions="Center">
                                             <Label.Text>
-                                                <Binding Path="Activo">
+                                                <Binding Path="IsActive">
                                                     <Binding.Converter>
                                                         <local:BoolToActiveTextConverter xmlns:local="clr-namespace:FarmaciaSolidariaCristiana.Maui.Converters"/>
                                                     </Binding.Converter>

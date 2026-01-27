@@ -79,16 +79,16 @@
                                     </Frame>
 
                                     <StackLayout Grid.Column="1" Spacing="3" VerticalOptions="Center">
-                                        <Label Text="{Binding Donante}" 
+                                        <Label Text="{Binding ItemName}" 
                                                FontSize="16" 
                                                FontAttributes="Bold"
                                                TextColor="{StaticResource Dark}"/>
-                                        <Label Text="{Binding Descripcion}" 
+                                        <Label Text="{Binding Comments}" 
                                                FontSize="14" 
                                                TextColor="{StaticResource Gray600}"
                                                LineBreakMode="TailTruncation"
                                                MaxLines="2"/>
-                                        <Label Text="{Binding FechaDonacion, StringFormat='{0:dd/MM/yyyy}'}" 
+                                        <Label Text="{Binding DonationDate, StringFormat='{0:dd/MM/yyyy}'}" 
                                                FontSize="12" 
                                                TextColor="{StaticResource Gray500}"/>
                                     </StackLayout>
