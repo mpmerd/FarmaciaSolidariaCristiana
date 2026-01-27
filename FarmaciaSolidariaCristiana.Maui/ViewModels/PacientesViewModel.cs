@@ -89,8 +89,8 @@ public partial class PacientesViewModel : BaseViewModel
         else
         {
             var filtered = _allPacientes
-                .Where(p => p.Name.Contains(SearchText, StringComparison.OrdinalIgnoreCase) ||
-                           (p.Identification?.Contains(SearchText, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                .Where(p => p.FullName.Contains(SearchText, StringComparison.OrdinalIgnoreCase) ||
+                           (p.IdentificationDocument?.Contains(SearchText, StringComparison.OrdinalIgnoreCase) ?? false) ||
                            (p.Phone?.Contains(SearchText, StringComparison.OrdinalIgnoreCase) ?? false))
                 .ToList();
             Pacientes = new ObservableCollection<Patient>(filtered);
@@ -109,8 +109,10 @@ public partial class PacientesViewModel : BaseViewModel
     {
         if (paciente == null) return;
         
-        var details = $"Nombre: {paciente.Name}\n" +
-                     $"Cédula: {paciente.Identification ?? "N/A"}\n" +
+        var details = $"Nombre: {paciente.FullName}\n" +
+                     $"Cédula: {paciente.IdentificationDocument}\n" +
+                     $"Edad: {paciente.Age} años\n" +
+                     $"Sexo: {(paciente.Gender == "M" ? "Masculino" : "Femenino")}\n" +
                      $"Teléfono: {paciente.Phone ?? "N/A"}\n" +
                      $"Dirección: {paciente.Address ?? "N/A"}\n" +
                      $"Activo: {(paciente.IsActive ? "Sí" : "No")}";
@@ -122,7 +124,7 @@ public partial class PacientesViewModel : BaseViewModel
     private async Task EditPacienteAsync(Patient paciente)
     {
         if (!CanEdit || paciente == null) return;
-        await Shell.Current.DisplayAlert("Editar Paciente", $"Editando: {paciente.Name}", "OK");
+        await Shell.Current.DisplayAlert("Editar Paciente", $"Editando: {paciente.FullName}", "OK");
     }
 
     [RelayCommand]
@@ -132,7 +134,7 @@ public partial class PacientesViewModel : BaseViewModel
 
         bool confirm = await Shell.Current.DisplayAlert(
             "Eliminar Paciente",
-            $"¿Estás seguro de eliminar a '{paciente.Name}'?",
+            $"¿Estás seguro de eliminar a '{paciente.FullName}'?",
             "Sí, eliminar",
             "Cancelar");
 

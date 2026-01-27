@@ -8,13 +8,29 @@ namespace FarmaciaSolidariaCristiana.Maui.ViewModels;
 public partial class ReportesViewModel : BaseViewModel
 {
     [ObservableProperty]
-    private DateTime fechaInicio = DateTime.Today.AddMonths(-1);
+    private DateTime fechaInicio = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
 
     [ObservableProperty]
     private DateTime fechaFin = DateTime.Today;
 
     [ObservableProperty]
+    private int selectedYear = DateTime.Today.Year;
+
+    [ObservableProperty]
+    private int selectedMonth = DateTime.Today.Month;
+
+    [ObservableProperty]
     private bool canGenerateReports;
+
+    [ObservableProperty]
+    private string statusMessage = string.Empty;
+
+    public List<int> AvailableYears { get; } = Enumerable.Range(2020, DateTime.Today.Year - 2020 + 2).ToList();
+    public List<string> AvailableMonths { get; } = new()
+    {
+        "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+        "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
+    };
 
     public ReportesViewModel(IApiService apiService, IAuthService authService)
         : base(authService, apiService)
@@ -31,76 +47,27 @@ public partial class ReportesViewModel : BaseViewModel
     }
 
     [RelayCommand]
-    private async Task GenerateTurnosReportAsync()
+    private async Task GenerateEntregasReportAsync()
     {
         if (!CanGenerateReports) return;
         
-        try
+        await ExecuteAsync(async () =>
         {
-            IsBusy = true;
+            StatusMessage = "Generando reporte de entregas...";
             
-            // For now, show a message. In the future, this could generate a PDF or navigate to a report view
-            await Shell.Current.DisplayAlert(
-                "Reporte de Turnos",
-                $"Generando reporte del {FechaInicio:dd/MM/yyyy} al {FechaFin:dd/MM/yyyy}\n\nFuncionalidad en desarrollo.",
-                "OK");
-        }
-        catch (Exception ex)
-        {
-            await ShowErrorAsync($"Error: {ex.Message}");
-        }
-        finally
-        {
-            IsBusy = false;
-        }
-    }
-
-    [RelayCommand]
-    private async Task GenerateMedicamentosReportAsync()
-    {
-        if (!CanGenerateReports) return;
-        
-        try
-        {
-            IsBusy = true;
+            var pdfBytes = await ApiService.DescargarReporteAsync("deliveries", FechaInicio, FechaFin);
             
-            await Shell.Current.DisplayAlert(
-                "Reporte de Medicamentos",
-                "Generando reporte de inventario de medicamentos\n\nFuncionalidad en desarrollo.",
-                "OK");
-        }
-        catch (Exception ex)
-        {
-            await ShowErrorAsync($"Error: {ex.Message}");
-        }
-        finally
-        {
-            IsBusy = false;
-        }
-    }
-
-    [RelayCommand]
-    private async Task GenerateInsumosReportAsync()
-    {
-        if (!CanGenerateReports) return;
-        
-        try
-        {
-            IsBusy = true;
-            
-            await Shell.Current.DisplayAlert(
-                "Reporte de Insumos",
-                "Generando reporte de inventario de insumos\n\nFuncionalidad en desarrollo.",
-                "OK");
-        }
-        catch (Exception ex)
-        {
-            await ShowErrorAsync($"Error: {ex.Message}");
-        }
-        finally
-        {
-            IsBusy = false;
-        }
+            if (pdfBytes != null && pdfBytes.Length > 0)
+            {
+                await SaveAndOpenPdfAsync(pdfBytes, $"entregas_{FechaInicio:yyyyMMdd}_{FechaFin:yyyyMMdd}.pdf");
+                StatusMessage = "Reporte generado exitosamente";
+            }
+            else
+            {
+                await ShowErrorAsync("No se pudo generar el reporte de entregas");
+                StatusMessage = string.Empty;
+            }
+        });
     }
 
     [RelayCommand]
@@ -108,46 +75,68 @@ public partial class ReportesViewModel : BaseViewModel
     {
         if (!CanGenerateReports) return;
         
-        try
+        await ExecuteAsync(async () =>
         {
-            IsBusy = true;
+            StatusMessage = "Generando reporte de donaciones...";
             
-            await Shell.Current.DisplayAlert(
-                "Reporte de Donaciones",
-                $"Generando reporte del {FechaInicio:dd/MM/yyyy} al {FechaFin:dd/MM/yyyy}\n\nFuncionalidad en desarrollo.",
-                "OK");
-        }
-        catch (Exception ex)
-        {
-            await ShowErrorAsync($"Error: {ex.Message}");
-        }
-        finally
-        {
-            IsBusy = false;
-        }
+            var pdfBytes = await ApiService.DescargarReporteAsync("donations", FechaInicio, FechaFin);
+            
+            if (pdfBytes != null && pdfBytes.Length > 0)
+            {
+                await SaveAndOpenPdfAsync(pdfBytes, $"donaciones_{FechaInicio:yyyyMMdd}_{FechaFin:yyyyMMdd}.pdf");
+                StatusMessage = "Reporte generado exitosamente";
+            }
+            else
+            {
+                await ShowErrorAsync("No se pudo generar el reporte de donaciones");
+                StatusMessage = string.Empty;
+            }
+        });
     }
 
     [RelayCommand]
-    private async Task GenerateEntregasReportAsync()
+    private async Task GenerateMensualReportAsync()
     {
         if (!CanGenerateReports) return;
         
+        await ExecuteAsync(async () =>
+        {
+            StatusMessage = $"Generando reporte mensual de {AvailableMonths[SelectedMonth - 1]} {SelectedYear}...";
+            
+            // Para el reporte mensual, usamos el mes y año seleccionados
+            var startDate = new DateTime(SelectedYear, SelectedMonth, 1);
+            var endDate = startDate.AddMonths(1).AddDays(-1);
+            
+            var pdfBytes = await ApiService.DescargarReporteAsync("monthly", startDate, endDate);
+            
+            if (pdfBytes != null && pdfBytes.Length > 0)
+            {
+                await SaveAndOpenPdfAsync(pdfBytes, $"reporte_mensual_{SelectedYear}_{SelectedMonth:00}.pdf");
+                StatusMessage = "Reporte generado exitosamente";
+            }
+            else
+            {
+                await ShowErrorAsync("No se pudo generar el reporte mensual");
+                StatusMessage = string.Empty;
+            }
+        });
+    }
+
+    private async Task SaveAndOpenPdfAsync(byte[] pdfBytes, string fileName)
+    {
         try
         {
-            IsBusy = true;
+            var filePath = Path.Combine(FileSystem.CacheDirectory, fileName);
+            await File.WriteAllBytesAsync(filePath, pdfBytes);
             
-            await Shell.Current.DisplayAlert(
-                "Reporte de Entregas",
-                $"Generando reporte del {FechaInicio:dd/MM/yyyy} al {FechaFin:dd/MM/yyyy}\n\nFuncionalidad en desarrollo.",
-                "OK");
+            await Launcher.OpenAsync(new OpenFileRequest
+            {
+                File = new ReadOnlyFile(filePath)
+            });
         }
         catch (Exception ex)
         {
-            await ShowErrorAsync($"Error: {ex.Message}");
-        }
-        finally
-        {
-            IsBusy = false;
+            await ShowErrorAsync($"Error al abrir el PDF: {ex.Message}");
         }
     }
 }

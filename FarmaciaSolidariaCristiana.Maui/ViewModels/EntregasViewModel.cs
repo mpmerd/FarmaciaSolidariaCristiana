@@ -90,7 +90,7 @@ public partial class EntregasViewModel : BaseViewModel
         {
             var filtered = _allEntregas
                 .Where(e => (e.PatientName?.Contains(SearchText, StringComparison.OrdinalIgnoreCase) ?? false) ||
-                           (e.Notes?.Contains(SearchText, StringComparison.OrdinalIgnoreCase) ?? false))
+                           (e.Comments?.Contains(SearchText, StringComparison.OrdinalIgnoreCase) ?? false))
                 .ToList();
             Entregas = new ObservableCollection<Delivery>(filtered);
         }
@@ -109,9 +109,11 @@ public partial class EntregasViewModel : BaseViewModel
         if (entrega == null) return;
         
         var details = $"Paciente: {entrega.PatientName}\n" +
+                     $"Artículo: {entrega.ItemName}\n" +
+                     $"Cantidad: {entrega.Quantity}\n" +
                      $"Fecha: {entrega.DeliveryDate:dd/MM/yyyy}\n" +
                      $"Entregado por: {entrega.DeliveredBy ?? "N/A"}\n" +
-                     $"Observaciones: {entrega.Notes ?? "N/A"}";
+                     $"Observaciones: {entrega.Comments ?? "N/A"}";
                      
         await Shell.Current.DisplayAlert("Detalle de Entrega", details, "OK");
     }

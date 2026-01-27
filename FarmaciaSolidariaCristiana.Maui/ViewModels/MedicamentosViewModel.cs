@@ -45,7 +45,6 @@ public partial class MedicamentosViewModel : BaseViewModel
             if (result.Success && result.Data != null)
             {
                 _allMedicamentos = result.Data
-                    .Where(m => m.IsActive)
                     .OrderBy(m => m.Name)
                     .ToList();
                 ApplyFilters();
@@ -71,8 +70,8 @@ public partial class MedicamentosViewModel : BaseViewModel
             var search = SearchText.ToLower();
             filtered = filtered.Where(m =>
                 m.Name.ToLower().Contains(search) ||
-                (m.ActiveIngredient?.ToLower().Contains(search) ?? false) ||
-                (m.Laboratory?.ToLower().Contains(search) ?? false));
+                (m.Description?.ToLower().Contains(search) ?? false) ||
+                (m.NationalCode?.ToLower().Contains(search) ?? false));
         }
 
         Medicamentos = new ObservableCollection<Medicine>(filtered);
@@ -106,13 +105,10 @@ public partial class MedicamentosViewModel : BaseViewModel
     private async Task ShowMedicamentoDetailsAsync(Medicine m)
     {
         var details = $"Nombre: {m.Name}\n" +
-                      $"Principio activo: {m.ActiveIngredient ?? "N/A"}\n" +
-                      $"Laboratorio: {m.Laboratory ?? "N/A"}\n" +
-                      $"Presentación: {m.Presentation ?? "N/A"}\n" +
-                      $"Stock: {m.Stock}\n" +
-                      $"Stock mínimo: {m.MinimumStock}\n" +
+                      $"Descripción: {m.Description ?? "N/A"}\n" +
+                      $"Stock: {m.StockQuantity} {m.Unit}\n" +
                       $"Estado: {m.StockStatus}\n" +
-                      $"Vencimiento: {m.ExpirationDate?.ToString("dd/MM/yyyy") ?? "N/A"}";
+                      $"Código Nacional: {m.NationalCode ?? "N/A"}";
 
         await Shell.Current.DisplayAlert("Detalles del Medicamento", details, "Cerrar");
     }
@@ -121,8 +117,8 @@ public partial class MedicamentosViewModel : BaseViewModel
     {
         var input = await Shell.Current.DisplayPromptAsync(
             "Ajustar Stock",
-            $"Stock actual: {medicamento.Stock}\nIngrese el nuevo stock:",
-            placeholder: medicamento.Stock.ToString(),
+            $"Stock actual: {medicamento.StockQuantity}\nIngrese el nuevo stock:",
+            placeholder: medicamento.StockQuantity.ToString(),
             keyboard: Keyboard.Numeric);
 
         if (string.IsNullOrEmpty(input)) return;
@@ -135,7 +131,7 @@ public partial class MedicamentosViewModel : BaseViewModel
 
         await ExecuteAsync(async () =>
         {
-            medicamento.Stock = newStock;
+            medicamento.StockQuantity = newStock;
             var result = await ApiService.ActualizarMedicamentoAsync(medicamento);
 
             if (result.Success)

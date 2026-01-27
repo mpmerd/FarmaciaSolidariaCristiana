@@ -72,7 +72,7 @@
                                            WidthRequest="60"
                                            HeightRequest="60"
                                            VerticalOptions="Center">
-                                        <Label Text="{Binding NumeroTurno, StringFormat='#{0}'}"
+                                        <Label Text="{Binding Id, StringFormat='#{0}'}"
                                                FontSize="18"
                                                FontAttributes="Bold"
                                                TextColor="White"
@@ -82,7 +82,7 @@
                                     
                                     <!-- Info -->
                                     <Label Grid.Row="0" Grid.Column="1"
-                                           Text="{Binding UserName}"
+                                           Text="{Binding UserEmail}"
                                            FontSize="16"
                                            FontAttributes="Bold"
                                            Margin="10,0,0,0"/>
@@ -94,11 +94,11 @@
                                            Margin="10,0,0,0"/>
                                     
                                     <Label Grid.Row="2" Grid.Column="1"
-                                           Text="{Binding FechaAsignada, StringFormat='Fecha: {0:dd/MM/yyyy HH:mm}'}"
+                                           Text="{Binding FechaPreferida, StringFormat='Preferida: {0:dd/MM/yyyy}'}"
                                            FontSize="12"
                                            TextColor="{StaticResource Gray500}"
                                            Margin="10,0,0,0"
-                                           IsVisible="{Binding FechaAsignada, Converter={StaticResource NullToBoolConverter}}"/>
+                                           IsVisible="{Binding FechaPreferida, Converter={StaticResource NullToBoolConverter}}"/>
                                     
                                     <!-- Estado Badge -->
                                     <Frame Grid.Row="0" Grid.Column="2"

@@ -17,6 +17,8 @@
             <converters:StatusToPendingConverter x:Key="StatusToPendingConverter"/>
             <converters:BoolToPasswordIconConverter x:Key="BoolToPasswordIconConverter"/>
             <converters:StatusToColorConverter x:Key="StatusToColorConverter"/>
+            <converters:StringToBoolConverter x:Key="StringToBoolConverter"/>
+            <converters:MonthIndexConverter x:Key="MonthIndexConverter"/>
             
             <!-- Additional Colors -->
             <Color x:Key="BackgroundColor">#F5F5F5</Color>

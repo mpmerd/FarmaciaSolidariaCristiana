@@ -59,11 +59,11 @@
                             <Frame Margin="10,5" Padding="15" BackgroundColor="White" BorderColor="Transparent" CornerRadius="10">
                                 <Grid ColumnDefinitions="*,Auto">
                                     <StackLayout Grid.Column="0" Spacing="5">
-                                        <Label Text="{Binding Nombre}" 
+                                        <Label Text="{Binding Name}" 
                                                FontSize="16" 
                                                FontAttributes="Bold"
                                                TextColor="{StaticResource Dark}"/>
-                                        <Label Text="{Binding Descripcion}" 
+                                        <Label Text="{Binding Description}" 
                                                FontSize="14" 
                                                TextColor="{StaticResource Gray600}"
                                                LineBreakMode="TailTruncation"
@@ -72,7 +72,7 @@
                                             <Label.FormattedText>
                                                 <FormattedString>
                                                     <Span Text="Unidad: "/>
-                                                    <Span Text="{Binding Unidad}" FontAttributes="Bold"/>
+                                                    <Span Text="{Binding Unit}" FontAttributes="Bold"/>
                                                 </FormattedString>
                                             </Label.FormattedText>
                                         </Label>
@@ -84,13 +84,13 @@
                                            BorderColor="Transparent"
                                            VerticalOptions="Center">
                                         <Frame.BackgroundColor>
-                                            <Binding Path="Stock">
+                                            <Binding Path="StockQuantity">
                                                 <Binding.Converter>
                                                     <local:StockToColorConverter xmlns:local="clr-namespace:FarmaciaSolidariaCristiana.Maui.Converters"/>
                                                 </Binding.Converter>
                                             </Binding>
                                         </Frame.BackgroundColor>
-                                        <Label Text="{Binding Stock, StringFormat='{0}'}" 
+                                        <Label Text="{Binding StockQuantity, StringFormat='{0}'}" 
                                                FontSize="16" 
                                                FontAttributes="Bold"
                                                TextColor="White"

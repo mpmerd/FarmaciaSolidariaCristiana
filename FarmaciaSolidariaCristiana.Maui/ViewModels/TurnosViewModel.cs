@@ -98,9 +98,8 @@ public partial class TurnosViewModel : BaseViewModel
         {
             var search = SearchText.ToLower();
             filtered = filtered.Where(t => 
-                t.NumeroTurno.ToString().Contains(search) ||
-                t.UserName.ToLower().Contains(search) ||
-                t.UserEmail.ToLower().Contains(search));
+                t.Id.ToString().Contains(search) ||
+                (t.UserEmail?.ToLower().Contains(search) ?? false));
         }
 
         Turnos = new ObservableCollection<Turno>(filtered);
@@ -230,7 +229,7 @@ public partial class TurnosViewModel : BaseViewModel
             if (pdfBytes != null)
             {
                 // Guardar en caché y abrir
-                var fileName = $"turno_{turno.NumeroTurno}.pdf";
+                var fileName = $"turno_{turno.Id}.pdf";
                 var filePath = Path.Combine(FileSystem.CacheDirectory, fileName);
                 await File.WriteAllBytesAsync(filePath, pdfBytes);
                 

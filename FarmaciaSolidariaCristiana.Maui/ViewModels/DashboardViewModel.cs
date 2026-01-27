@@ -81,14 +81,14 @@ public partial class DashboardViewModel : BaseViewModel
         var medsResult = await ApiService.GetMedicamentosAsync();
         if (medsResult.Success && medsResult.Data != null)
         {
-            MedicamentosDisponibles = medsResult.Data.Count(m => m.Stock > 0);
+            MedicamentosDisponibles = medsResult.Data.Count(m => m.StockQuantity > 0);
         }
 
         // Obtener insumos disponibles
         var suppliesResult = await ApiService.GetInsumosAsync();
         if (suppliesResult.Success && suppliesResult.Data != null)
         {
-            InsumosDisponibles = suppliesResult.Data.Count(s => s.Stock > 0);
+            InsumosDisponibles = suppliesResult.Data.Count(s => s.StockQuantity > 0);
         }
 
         // Entregas de hoy (solo para roles con acceso)

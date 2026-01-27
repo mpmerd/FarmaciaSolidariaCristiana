@@ -41,22 +41,22 @@
                                        FontAttributes="Bold"
                                        LineBreakMode="TailTruncation"/>
                                 
-                                <!-- Principio Activo -->
+                                <!-- Descripción -->
                                 <Label Grid.Row="1" Grid.Column="0"
-                                       Text="{Binding ActiveIngredient}"
+                                       Text="{Binding Description}"
                                        FontSize="12"
                                        TextColor="{StaticResource Gray500}"
                                        LineBreakMode="TailTruncation"/>
                                 
-                                <!-- Laboratorio y Presentación -->
+                                <!-- Unidad y Código Nacional -->
                                 <Label Grid.Row="2" Grid.Column="0"
                                        FontSize="11"
                                        TextColor="{StaticResource Gray400}">
                                     <Label.FormattedText>
                                         <FormattedString>
-                                            <Span Text="{Binding Laboratory}"/>
-                                            <Span Text=" | "/>
-                                            <Span Text="{Binding Presentation}"/>
+                                            <Span Text="{Binding Unit}"/>
+                                            <Span Text=" | CN: "/>
+                                            <Span Text="{Binding NationalCode}"/>
                                         </FormattedString>
                                     </Label.FormattedText>
                                 </Label>
@@ -70,7 +70,7 @@
                                            CornerRadius="8"
                                            HasShadow="False">
                                         <VerticalStackLayout>
-                                            <Label Text="{Binding Stock}"
+                                            <Label Text="{Binding StockQuantity}"
                                                    FontSize="20"
                                                    FontAttributes="Bold"
                                                    TextColor="White"

@@ -79,11 +79,11 @@
                                     </Frame>
 
                                     <StackLayout Grid.Column="1" Spacing="3" VerticalOptions="Center">
-                                        <Label Text="{Binding NombrePaciente}" 
+                                        <Label Text="{Binding PatientName}" 
                                                FontSize="16" 
                                                FontAttributes="Bold"
                                                TextColor="{StaticResource Dark}"/>
-                                        <Label Text="{Binding Observaciones}" 
+                                        <Label Text="{Binding Comments}" 
                                                FontSize="14" 
                                                TextColor="{StaticResource Gray600}"
                                                LineBreakMode="TailTruncation"
@@ -92,19 +92,19 @@
                                             <Label.FormattedText>
                                                 <FormattedString>
                                                     <Span Text="Por: "/>
-                                                    <Span Text="{Binding EntregadoPor}" FontAttributes="Italic"/>
+                                                    <Span Text="{Binding DeliveredBy}" FontAttributes="Italic"/>
                                                 </FormattedString>
                                             </Label.FormattedText>
                                         </Label>
                                     </StackLayout>
 
                                     <StackLayout Grid.Column="2" VerticalOptions="Center" HorizontalOptions="End">
-                                        <Label Text="{Binding FechaEntrega, StringFormat='{0:dd/MM}'}" 
+                                        <Label Text="{Binding DeliveryDate, StringFormat='{0:dd/MM}'}" 
                                                FontSize="14" 
                                                FontAttributes="Bold"
                                                TextColor="{StaticResource Primary}"
                                                HorizontalOptions="End"/>
-                                        <Label Text="{Binding FechaEntrega, StringFormat='{0:yyyy}'}" 
+                                        <Label Text="{Binding DeliveryDate, StringFormat='{0:yyyy}'}" 
                                                FontSize="12" 
                                                TextColor="{StaticResource Gray500}"
                                                HorizontalOptions="End"/>
