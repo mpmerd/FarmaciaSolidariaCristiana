@@ -234,10 +234,13 @@ public class ApiService : IApiService
         => PostAsync<Turno>("/api/turnos", request);
 
     public Task<ApiResponse<Turno>> AprobarTurnoAsync(int id, DateTime fechaAsignada, string? notas)
-        => PostAsync<Turno>($"/api/turnos/{id}/aprobar", new { fechaAsignada, notas });
+        => PostAsync<Turno>($"/api/turnos/{id}/approve", new { fechaAsignada, Comentarios = notas });
 
     public Task<ApiResponse<Turno>> RechazarTurnoAsync(int id, string motivo)
-        => PostAsync<Turno>($"/api/turnos/{id}/rechazar", new { motivo });
+        => PostAsync<Turno>($"/api/turnos/{id}/reject", new { motivo });
+
+    public Task<ApiResponse<Turno>> ReprogramarTurnoAsync(int id, DateTime nuevaFecha, string? motivo)
+        => PostAsync<Turno>($"/api/turnos/{id}/reschedule", new { nuevaFecha, motivo });
 
     public Task<ApiResponse<bool>> CancelarTurnoAsync(int id)
         => PostAsync<bool>($"/api/turnos/{id}/cancelar", new { });
@@ -342,6 +345,9 @@ public class ApiService : IApiService
 
     public Task<ApiResponse<bool>> DeletePacienteAsync(int id)
         => DeleteAsync($"/api/patients/{id}");
+
+    public Task<ApiResponse<List<PatientDocument>>> GetDocumentosPacienteAsync(int patientId)
+        => GetAsync<List<PatientDocument>>($"/api/patients/{patientId}/documents");
 
     // === PATROCINADORES ===
 

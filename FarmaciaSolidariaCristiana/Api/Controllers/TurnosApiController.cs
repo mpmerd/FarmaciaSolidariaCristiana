@@ -290,6 +290,60 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
         }
 
         /// <summary>
+        /// Reprograma un turno a una nueva fecha (Admin/Farmaceutico)
+        /// </summary>
+        [HttpPost("{id}/reschedule")]
+        [Authorize(Roles = "Admin,Farmaceutico")]
+        [ProducesResponseType(typeof(ApiResponse<TurnoDto>), 200)]
+        [ProducesResponseType(typeof(ApiResponse<object>), 404)]
+        public async Task<IActionResult> Reschedule(int id, [FromBody] RescheduleTurnoDto model)
+        {
+            if (!ModelState.IsValid)
+            {
+                return ApiError("Datos inválidos");
+            }
+
+            var turno = await _context.Turnos
+                .Include(t => t.User)
+                .Include(t => t.Medicamentos).ThenInclude(tm => tm.Medicine)
+                .Include(t => t.Insumos).ThenInclude(ti => ti.Supply)
+                .FirstOrDefaultAsync(t => t.Id == id);
+
+            if (turno == null)
+            {
+                return ApiError("Turno no encontrado", 404);
+            }
+
+            if (turno.Estado == EstadoTurno.Completado || turno.Estado == EstadoTurno.Cancelado)
+            {
+                return ApiError($"El turno no puede ser reprogramado porque está en estado: {turno.Estado}");
+            }
+
+            // Verificar que la fecha no esté bloqueada
+            var fechaBloqueada = await _context.FechasBloqueadas
+                .AnyAsync(f => f.Fecha.Date == model.NuevaFecha.Date);
+
+            if (fechaBloqueada)
+            {
+                return ApiError("La fecha seleccionada está bloqueada");
+            }
+
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var fechaAnterior = turno.FechaPreferida;
+
+            turno.FechaPreferida = model.NuevaFecha.Date;
+            turno.ComentariosFarmaceutico = model.Motivo ?? $"Reprogramado desde {fechaAnterior:dd/MM/yyyy}";
+            turno.FechaRevision = DateTime.Now;
+
+            await _context.SaveChangesAsync();
+
+            _logger.LogInformation("Turno {Id} reprogramado de {FechaAnterior} a {NuevaFecha} por usuario {UserId}", 
+                id, fechaAnterior, model.NuevaFecha, userId);
+
+            return ApiOk(MapToDto(turno), "Turno reprogramado exitosamente");
+        }
+
+        /// <summary>
         /// Obtiene estadísticas de turnos
         /// </summary>
         [HttpGet("stats")]

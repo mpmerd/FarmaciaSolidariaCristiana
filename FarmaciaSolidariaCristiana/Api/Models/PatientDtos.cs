@@ -157,6 +157,20 @@ namespace FarmaciaSolidariaCristiana.Api.Models
     }
 
     /// <summary>
+    /// DTO de documento de paciente
+    /// </summary>
+    public class PatientDocumentDto
+    {
+        public int Id { get; set; }
+        public int PatientId { get; set; }
+        public string DocumentType { get; set; } = string.Empty;
+        public string FileName { get; set; } = string.Empty;
+        public string? FilePath { get; set; }
+        public string? Notes { get; set; }
+        public DateTime UploadedAt { get; set; }
+    }
+
+    /// <summary>
     /// DTO de estadísticas de pacientes
     /// </summary>
     public class PatientStatsDto

@@ -36,33 +36,14 @@
                             EmptyView="No hay turnos para mostrar">
                 <CollectionView.ItemTemplate>
                     <DataTemplate x:DataType="models:Turno">
-                        <SwipeView>
-                            <SwipeView.LeftItems>
-                                <SwipeItems>
-                                    <SwipeItem Text="PDF"
-                                               BackgroundColor="{StaticResource Info}"
-                                               Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:TurnosViewModel}}, Path=DescargarPdfCommand}"
-                                               CommandParameter="{Binding .}"/>
-                                </SwipeItems>
-                            </SwipeView.LeftItems>
-                            <SwipeView.RightItems>
-                                <SwipeItems>
-                                    <SwipeItem Text="Cancelar"
-                                               BackgroundColor="{StaticResource Danger}"
-                                               Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:TurnosViewModel}}, Path=CancelarTurnoCommand}"
-                                               CommandParameter="{Binding .}"
-                                               IsVisible="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:TurnosViewModel}}, Path=CanManageTurnos}"/>
-                                </SwipeItems>
-                            </SwipeView.RightItems>
+                        <Frame Margin="10,5" Padding="15" CornerRadius="10" HasShadow="True">
+                            <Frame.GestureRecognizers>
+                                <TapGestureRecognizer 
+                                    Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:TurnosViewModel}}, Path=SelectTurnoCommand}"
+                                    CommandParameter="{Binding .}"/>
+                            </Frame.GestureRecognizers>
                             
-                            <Frame Margin="10,5" Padding="15" CornerRadius="10" HasShadow="True">
-                                <Frame.GestureRecognizers>
-                                    <TapGestureRecognizer 
-                                        Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:TurnosViewModel}}, Path=SelectTurnoCommand}"
-                                        CommandParameter="{Binding .}"/>
-                                </Frame.GestureRecognizers>
-                                
-                                <Grid ColumnDefinitions="Auto,*,Auto" RowDefinitions="Auto,Auto,Auto">
+                            <Grid ColumnDefinitions="Auto,*,Auto" RowDefinitions="Auto,Auto,Auto">
                                     
                                     <!-- Número de Turno -->
                                     <Frame Grid.RowSpan="3"
@@ -133,7 +114,6 @@
                                     </HorizontalStackLayout>
                                 </Grid>
                             </Frame>
-                        </SwipeView>
                     </DataTemplate>
                 </CollectionView.ItemTemplate>
             </CollectionView>

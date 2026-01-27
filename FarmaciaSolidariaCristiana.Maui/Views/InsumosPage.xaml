@@ -43,63 +43,53 @@
 
                 <CollectionView.ItemTemplate>
                     <DataTemplate x:DataType="models:Supply">
-                        <SwipeView>
-                            <SwipeView.RightItems>
-                                <SwipeItems>
-                                    <SwipeItem Text="Editar"
-                                               BackgroundColor="{StaticResource Info}"
-                                               Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:InsumosViewModel}}, Path=EditInsumoCommand}"
-                                               CommandParameter="{Binding}"/>
-                                    <SwipeItem Text="Eliminar"
-                                               BackgroundColor="{StaticResource Danger}"
-                                               Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:InsumosViewModel}}, Path=DeleteInsumoCommand}"
-                                               CommandParameter="{Binding}"/>
-                                </SwipeItems>
-                            </SwipeView.RightItems>
+                        <Frame Margin="10,5" Padding="15" BackgroundColor="White" BorderColor="Transparent" CornerRadius="10">
+                            <Frame.GestureRecognizers>
+                                <TapGestureRecognizer 
+                                    Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:InsumosViewModel}}, Path=SelectInsumoCommand}"
+                                    CommandParameter="{Binding}"/>
+                            </Frame.GestureRecognizers>
+                            <Grid ColumnDefinitions="*,Auto">
+                                <StackLayout Grid.Column="0" Spacing="5">
+                                    <Label Text="{Binding Name}" 
+                                           FontSize="16" 
+                                           FontAttributes="Bold"
+                                           TextColor="{StaticResource Dark}"/>
+                                    <Label Text="{Binding Description}" 
+                                           FontSize="14" 
+                                           TextColor="{StaticResource Gray600}"
+                                           LineBreakMode="TailTruncation"
+                                           MaxLines="2"/>
+                                    <Label FontSize="12" TextColor="{StaticResource Gray500}">
+                                        <Label.FormattedText>
+                                            <FormattedString>
+                                                <Span Text="Unidad: "/>
+                                                <Span Text="{Binding Unit}" FontAttributes="Bold"/>
+                                            </FormattedString>
+                                        </Label.FormattedText>
+                                    </Label>
+                                </StackLayout>
 
-                            <Frame Margin="10,5" Padding="15" BackgroundColor="White" BorderColor="Transparent" CornerRadius="10">
-                                <Grid ColumnDefinitions="*,Auto">
-                                    <StackLayout Grid.Column="0" Spacing="5">
-                                        <Label Text="{Binding Name}" 
-                                               FontSize="16" 
-                                               FontAttributes="Bold"
-                                               TextColor="{StaticResource Dark}"/>
-                                        <Label Text="{Binding Description}" 
-                                               FontSize="14" 
-                                               TextColor="{StaticResource Gray600}"
-                                               LineBreakMode="TailTruncation"
-                                               MaxLines="2"/>
-                                        <Label FontSize="12" TextColor="{StaticResource Gray500}">
-                                            <Label.FormattedText>
-                                                <FormattedString>
-                                                    <Span Text="Unidad: "/>
-                                                    <Span Text="{Binding Unit}" FontAttributes="Bold"/>
-                                                </FormattedString>
-                                            </Label.FormattedText>
-                                        </Label>
-                                    </StackLayout>
-
-                                    <Frame Grid.Column="1" 
-                                           Padding="10,5" 
-                                           CornerRadius="15"
-                                           BorderColor="Transparent"
-                                           VerticalOptions="Center">
-                                        <Frame.BackgroundColor>
-                                            <Binding Path="StockQuantity">
-                                                <Binding.Converter>
-                                                    <local:StockToColorConverter xmlns:local="clr-namespace:FarmaciaSolidariaCristiana.Maui.Converters"/>
-                                                </Binding.Converter>
-                                            </Binding>
-                                        </Frame.BackgroundColor>
-                                        <Label Text="{Binding StockQuantity, StringFormat='{0}'}" 
-                                               FontSize="16" 
-                                               FontAttributes="Bold"
-                                               TextColor="White"
-                                               HorizontalOptions="Center"/>
-                                    </Frame>
-                                </Grid>
-                            </Frame>
-                        </SwipeView>
+                                <Frame Grid.Column="1" 
+                                       Padding="10,5" 
+                                       CornerRadius="15"
+                                       BorderColor="Transparent"
+                                       VerticalOptions="Center">
+                                    <Frame.BackgroundColor>
+                                        <Binding Path="StockQuantity">
+                                            <Binding.Converter>
+                                                <local:StockToColorConverter xmlns:local="clr-namespace:FarmaciaSolidariaCristiana.Maui.Converters"/>
+                                            </Binding.Converter>
+                                        </Binding>
+                                    </Frame.BackgroundColor>
+                                    <Label Text="{Binding StockQuantity, StringFormat='{0}'}" 
+                                           FontSize="16" 
+                                           FontAttributes="Bold"
+                                           TextColor="White"
+                                           HorizontalOptions="Center"/>
+                                </Frame>
+                            </Grid>
+                        </Frame>
                     </DataTemplate>
                 </CollectionView.ItemTemplate>
             </CollectionView>

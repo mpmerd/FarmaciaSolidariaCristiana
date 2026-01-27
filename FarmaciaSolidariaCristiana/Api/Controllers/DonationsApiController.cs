@@ -28,7 +28,7 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
         /// Obtiene todas las donaciones con filtros opcionales
         /// </summary>
         [HttpGet]
-        [Authorize(Roles = "Admin,Farmaceutico,Viewer")]
+        [Authorize(Roles = "Admin,Farmaceutico,Viewer,ViewerPublic")]
         [ProducesResponseType(typeof(ApiResponse<PagedResult<DonationDto>>), 200)]
         public async Task<IActionResult> GetAll(
             [FromQuery] int page = 1, 
@@ -108,7 +108,7 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
         /// Obtiene una donación por ID
         /// </summary>
         [HttpGet("{id}")]
-        [Authorize(Roles = "Admin,Farmaceutico,Viewer")]
+        [Authorize(Roles = "Admin,Farmaceutico,Viewer,ViewerPublic")]
         [ProducesResponseType(typeof(ApiResponse<DonationDto>), 200)]
         [ProducesResponseType(typeof(ApiResponse<object>), 404)]
         public async Task<IActionResult> GetById(int id)

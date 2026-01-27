@@ -43,7 +43,8 @@ public partial class ReportesViewModel : BaseViewModel
         var userInfo = await AuthService.GetUserInfoAsync();
         CanGenerateReports = userInfo?.Role == Constants.RoleAdmin || 
                              userInfo?.Role == Constants.RoleFarmaceutico ||
-                             userInfo?.Role == Constants.RoleViewer;
+                             userInfo?.Role == Constants.RoleViewer ||
+                             userInfo?.Role == Constants.RoleViewerPublic;
     }
 
     [RelayCommand]

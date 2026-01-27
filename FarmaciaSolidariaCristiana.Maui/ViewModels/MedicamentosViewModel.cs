@@ -82,19 +82,23 @@ public partial class MedicamentosViewModel : BaseViewModel
     {
         SelectedMedicamento = medicamento;
         
+        var options = CanEdit 
+            ? new[] { "Ver detalles", "Editar nombre/descripción", "Ajustar stock" } 
+            : new[] { "Ver detalles" };
+        
         var action = await Shell.Current.DisplayActionSheet(
             medicamento.Name,
             "Cancelar",
             null,
-            CanEdit ? new[] { "Ver detalles", "Editar", "Ajustar stock" } : new[] { "Ver detalles" });
+            options);
 
         switch (action)
         {
             case "Ver detalles":
                 await ShowMedicamentoDetailsAsync(medicamento);
                 break;
-            case "Editar":
-                await NavigateToAsync($"medicamentoedit?id={medicamento.Id}");
+            case "Editar nombre/descripción":
+                await EditMedicamentoAsync(medicamento);
                 break;
             case "Ajustar stock":
                 await AjustarStockAsync(medicamento);
@@ -111,6 +115,46 @@ public partial class MedicamentosViewModel : BaseViewModel
                       $"Código Nacional: {m.NationalCode ?? "N/A"}";
 
         await Shell.Current.DisplayAlert("Detalles del Medicamento", details, "Cerrar");
+    }
+
+    private async Task EditMedicamentoAsync(Medicine medicamento)
+    {
+        // Editar nombre
+        var nuevoNombre = await Shell.Current.DisplayPromptAsync(
+            "Editar Medicamento",
+            "Nombre del medicamento:",
+            initialValue: medicamento.Name,
+            maxLength: 200);
+
+        if (string.IsNullOrEmpty(nuevoNombre)) return;
+
+        // Editar descripción
+        var nuevaDescripcion = await Shell.Current.DisplayPromptAsync(
+            "Editar Medicamento",
+            "Descripción:",
+            initialValue: medicamento.Description ?? "",
+            maxLength: 500);
+
+        // Puede ser vacía la descripción
+        if (nuevaDescripcion == null) return;
+
+        await ExecuteAsync(async () =>
+        {
+            medicamento.Name = nuevoNombre;
+            medicamento.Description = string.IsNullOrWhiteSpace(nuevaDescripcion) ? null : nuevaDescripcion;
+            
+            var result = await ApiService.ActualizarMedicamentoAsync(medicamento);
+
+            if (result.Success)
+            {
+                await ShowSuccessAsync("Medicamento actualizado");
+                await LoadMedicamentosAsync();
+            }
+            else
+            {
+                await ShowErrorAsync(result.Message ?? "Error al actualizar medicamento");
+            }
+        });
     }
 
     private async Task AjustarStockAsync(Medicine medicamento)
@@ -155,7 +199,58 @@ public partial class MedicamentosViewModel : BaseViewModel
             return;
         }
 
-        await NavigateToAsync("medicamentoedit");
+        // Nombre del nuevo medicamento
+        var nombre = await Shell.Current.DisplayPromptAsync(
+            "Nuevo Medicamento",
+            "Nombre del medicamento:",
+            maxLength: 200);
+
+        if (string.IsNullOrWhiteSpace(nombre)) return;
+
+        // Descripción
+        var descripcion = await Shell.Current.DisplayPromptAsync(
+            "Nuevo Medicamento",
+            "Descripción (opcional):",
+            maxLength: 500);
+
+        if (descripcion == null) return;
+
+        // Stock inicial
+        var stockStr = await Shell.Current.DisplayPromptAsync(
+            "Nuevo Medicamento",
+            "Stock inicial:",
+            placeholder: "0",
+            keyboard: Keyboard.Numeric);
+
+        if (string.IsNullOrEmpty(stockStr)) return;
+        if (!int.TryParse(stockStr, out var stock) || stock < 0)
+        {
+            await ShowErrorAsync("Stock inválido");
+            return;
+        }
+
+        await ExecuteAsync(async () =>
+        {
+            var nuevoMed = new Medicine
+            {
+                Name = nombre,
+                Description = string.IsNullOrWhiteSpace(descripcion) ? null : descripcion,
+                StockQuantity = stock,
+                Unit = "unidades"
+            };
+            
+            var result = await ApiService.CrearMedicamentoAsync(nuevoMed);
+
+            if (result.Success)
+            {
+                await ShowSuccessAsync("Medicamento creado");
+                await LoadMedicamentosAsync();
+            }
+            else
+            {
+                await ShowErrorAsync(result.Message ?? "Error al crear medicamento");
+            }
+        });
     }
 
     [RelayCommand]

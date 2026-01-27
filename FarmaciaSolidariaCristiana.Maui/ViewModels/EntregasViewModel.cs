@@ -123,9 +123,20 @@ public partial class EntregasViewModel : BaseViewModel
     {
         if (!CanEdit || entrega == null) return;
 
+        // Verificar regla de 2 horas
+        var horasTranscurridas = (DateTime.Now - entrega.DeliveryDate).TotalHours;
+        if (horasTranscurridas > 2)
+        {
+            await Shell.Current.DisplayAlert(
+                "No se puede eliminar",
+                $"Solo se pueden eliminar entregas realizadas en las últimas 2 horas.\n\nEsta entrega fue hace {horasTranscurridas:F1} horas.",
+                "Entendido");
+            return;
+        }
+
         bool confirm = await Shell.Current.DisplayAlert(
             "Eliminar Entrega",
-            $"¿Estás seguro de eliminar esta entrega?",
+            $"¿Estás seguro de eliminar esta entrega?\n\n(Tiempo restante para eliminar: {(2 - horasTranscurridas):F0} hora(s))",
             "Sí, eliminar",
             "Cancelar");
 
