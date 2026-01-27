@@ -187,6 +187,41 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
         }
 
         /// <summary>
+        /// Obtiene los documentos médicos de un paciente
+        /// </summary>
+        [HttpGet("{id}/documents")]
+        [Authorize(Roles = "Admin,Farmaceutico,Viewer,ViewerPublic")]
+        [ProducesResponseType(typeof(ApiResponse<List<PatientDocumentDto>>), 200)]
+        [ProducesResponseType(typeof(ApiResponse<object>), 404)]
+        public async Task<IActionResult> GetDocuments(int id)
+        {
+            var patient = await _context.Patients
+                .Include(p => p.Documents)
+                .FirstOrDefaultAsync(p => p.Id == id);
+
+            if (patient == null)
+            {
+                return ApiError("Paciente no encontrado", 404);
+            }
+
+            var documents = patient.Documents?
+                .OrderByDescending(d => d.UploadDate)
+                .Select(d => new PatientDocumentDto
+                {
+                    Id = d.Id,
+                    PatientId = d.PatientId,
+                    DocumentType = d.DocumentType,
+                    FileName = d.FileName,
+                    FilePath = d.FilePath,
+                    Notes = d.Description,
+                    UploadedAt = d.UploadDate
+                })
+                .ToList() ?? new List<PatientDocumentDto>();
+
+            return ApiOk(documents);
+        }
+
+        /// <summary>
         /// Crea un nuevo paciente
         /// </summary>
         [HttpPost]

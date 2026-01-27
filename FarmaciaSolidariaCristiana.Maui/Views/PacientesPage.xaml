@@ -43,41 +43,23 @@
 
                 <CollectionView.ItemTemplate>
                     <DataTemplate x:DataType="models:Patient">
-                        <SwipeView>
-                            <SwipeView.RightItems>
-                                <SwipeItems>
-                                    <SwipeItem Text="Ver"
-                                               BackgroundColor="{StaticResource Info}"
-                                               Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:PacientesViewModel}}, Path=ViewDetailsCommand}"
-                                               CommandParameter="{Binding}"/>
-                                    <SwipeItem Text="Editar"
-                                               BackgroundColor="{StaticResource Warning}"
-                                               Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:PacientesViewModel}}, Path=EditPacienteCommand}"
-                                               CommandParameter="{Binding}"/>
-                                    <SwipeItem Text="Eliminar"
-                                               BackgroundColor="{StaticResource Danger}"
-                                               Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:PacientesViewModel}}, Path=DeletePacienteCommand}"
-                                               CommandParameter="{Binding}"/>
-                                </SwipeItems>
-                            </SwipeView.RightItems>
-
-                            <Frame Margin="10,5" Padding="15" BackgroundColor="White" BorderColor="Transparent" CornerRadius="10">
-                                <Frame.GestureRecognizers>
-                                    <TapGestureRecognizer 
-                                        Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:PacientesViewModel}}, Path=ViewDetailsCommand}"
-                                        CommandParameter="{Binding}"/>
-                                </Frame.GestureRecognizers>
-                                
-                                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="15">
-                                    <!-- Avatar -->
-                                    <Frame Grid.Column="0" 
-                                           WidthRequest="50" 
-                                           HeightRequest="50" 
-                                           CornerRadius="25"
-                                           BackgroundColor="#E3F2FD"
-                                           BorderColor="Transparent"
-                                           Padding="0">
-                                        <Label Text="👤" 
+                        <Frame Margin="10,5" Padding="15" BackgroundColor="White" BorderColor="Transparent" CornerRadius="10">
+                            <Frame.GestureRecognizers>
+                                <TapGestureRecognizer 
+                                    Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:PacientesViewModel}}, Path=SelectPacienteCommand}"
+                                    CommandParameter="{Binding}"/>
+                            </Frame.GestureRecognizers>
+                            
+                            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="15">
+                                <!-- Avatar -->
+                                <Frame Grid.Column="0" 
+                                       WidthRequest="50" 
+                                       HeightRequest="50" 
+                                       CornerRadius="25"
+                                       BackgroundColor="#E3F2FD"
+                                       BorderColor="Transparent"
+                                       Padding="0">
+                                    <Label Text="👤" 
                                                FontSize="24" 
                                                HorizontalOptions="Center" 
                                                VerticalOptions="Center"/>
@@ -128,7 +110,6 @@
                                     </Frame>
                                 </Grid>
                             </Frame>
-                        </SwipeView>
                     </DataTemplate>
                 </CollectionView.ItemTemplate>
             </CollectionView>

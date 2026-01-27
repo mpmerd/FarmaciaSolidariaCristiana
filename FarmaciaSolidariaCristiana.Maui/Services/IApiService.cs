@@ -14,6 +14,7 @@ public interface IApiService
     Task<ApiResponse<Turno>> CrearTurnoAsync(CrearTurnoRequest request);
     Task<ApiResponse<Turno>> AprobarTurnoAsync(int id, DateTime fechaAsignada, string? notas);
     Task<ApiResponse<Turno>> RechazarTurnoAsync(int id, string motivo);
+    Task<ApiResponse<Turno>> ReprogramarTurnoAsync(int id, DateTime nuevaFecha, string? motivo);
     Task<ApiResponse<bool>> CancelarTurnoAsync(int id);
     Task<byte[]?> DescargarTurnoPdfAsync(int id);
     
@@ -50,6 +51,7 @@ public interface IApiService
     Task<ApiResponse<Patient>> CrearPacienteAsync(Patient paciente);
     Task<ApiResponse<Patient>> ActualizarPacienteAsync(Patient paciente);
     Task<ApiResponse<bool>> DeletePacienteAsync(int id);
+    Task<ApiResponse<List<PatientDocument>>> GetDocumentosPacienteAsync(int patientId);
     
     // Patrocinadores
     Task<ApiResponse<List<Sponsor>>> GetPatrocinadoresAsync();

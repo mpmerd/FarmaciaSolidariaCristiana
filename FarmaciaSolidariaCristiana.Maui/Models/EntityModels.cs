@@ -99,6 +99,20 @@ public class Delivery
 }
 
 /// <summary>
+/// Modelo de Documento de Paciente
+/// </summary>
+public class PatientDocument
+{
+    public int Id { get; set; }
+    public int PatientId { get; set; }
+    public string DocumentType { get; set; } = string.Empty;
+    public string FileName { get; set; } = string.Empty;
+    public string? FilePath { get; set; }
+    public string? Notes { get; set; }
+    public DateTime UploadedAt { get; set; }
+}
+
+/// <summary>
 /// Modelo de Paciente (coincide con PatientDto del API)
 /// </summary>
 public class Patient

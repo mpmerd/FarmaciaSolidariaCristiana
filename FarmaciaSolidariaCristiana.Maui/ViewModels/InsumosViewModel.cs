@@ -97,20 +97,202 @@ public partial class InsumosViewModel : BaseViewModel
     }
 
     [RelayCommand]
+    private async Task SelectInsumoAsync(Supply insumo)
+    {
+        if (insumo == null) return;
+        
+        var options = CanEdit 
+            ? new[] { "Ver detalles", "Editar", "Ajustar stock", "Eliminar" } 
+            : new[] { "Ver detalles" };
+        
+        var action = await Shell.Current.DisplayActionSheet(
+            insumo.Name,
+            "Cancelar",
+            null,
+            options);
+
+        switch (action)
+        {
+            case "Ver detalles":
+                await ShowInsumoDetailsAsync(insumo);
+                break;
+            case "Editar":
+                await EditInsumoAsync(insumo);
+                break;
+            case "Ajustar stock":
+                await AjustarStockAsync(insumo);
+                break;
+            case "Eliminar":
+                await DeleteInsumoAsync(insumo);
+                break;
+        }
+    }
+
+    private async Task ShowInsumoDetailsAsync(Supply insumo)
+    {
+        var details = $"Nombre: {insumo.Name}\n" +
+                      $"Descripción: {insumo.Description ?? "N/A"}\n" +
+                      $"Stock: {insumo.StockQuantity} {insumo.Unit}\n" +
+                      $"Estado: {insumo.StockStatus}";
+
+        await Shell.Current.DisplayAlert("Detalles del Insumo", details, "Cerrar");
+    }
+
+    private async Task AjustarStockAsync(Supply insumo)
+    {
+        var input = await Shell.Current.DisplayPromptAsync(
+            "Ajustar Stock",
+            $"Stock actual: {insumo.StockQuantity}\nIngrese el nuevo stock:",
+            placeholder: insumo.StockQuantity.ToString(),
+            keyboard: Keyboard.Numeric);
+
+        if (string.IsNullOrEmpty(input)) return;
+
+        if (!int.TryParse(input, out var newStock) || newStock < 0)
+        {
+            await ShowErrorAsync("Stock inválido");
+            return;
+        }
+
+        try
+        {
+            IsBusy = true;
+            insumo.StockQuantity = newStock;
+            var result = await ApiService.ActualizarInsumoAsync(insumo);
+
+            if (result.Success)
+            {
+                await Shell.Current.DisplayAlert("Éxito", "Stock actualizado", "OK");
+                await LoadInsumosAsync();
+            }
+            else
+            {
+                await ShowErrorAsync(result.Message ?? "Error al actualizar stock");
+            }
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    [RelayCommand]
     private async Task AddInsumoAsync()
     {
-        if (!CanEdit) return;
+        if (!CanEdit)
+        {
+            await ShowErrorAsync("No tiene permisos para crear insumos.");
+            return;
+        }
         
-        // Navigate to add insumo page
-        await Shell.Current.DisplayAlert("Agregar Insumo", "Funcionalidad próximamente", "OK");
+        // Nombre del nuevo insumo
+        var nombre = await Shell.Current.DisplayPromptAsync(
+            "Nuevo Insumo",
+            "Nombre del insumo:",
+            maxLength: 200);
+
+        if (string.IsNullOrWhiteSpace(nombre)) return;
+
+        // Descripción
+        var descripcion = await Shell.Current.DisplayPromptAsync(
+            "Nuevo Insumo",
+            "Descripción (opcional):",
+            maxLength: 500);
+
+        if (descripcion == null) return;
+
+        // Stock inicial
+        var stockStr = await Shell.Current.DisplayPromptAsync(
+            "Nuevo Insumo",
+            "Stock inicial:",
+            placeholder: "0",
+            keyboard: Keyboard.Numeric);
+
+        if (string.IsNullOrEmpty(stockStr)) return;
+        if (!int.TryParse(stockStr, out var stock) || stock < 0)
+        {
+            await ShowErrorAsync("Stock inválido");
+            return;
+        }
+
+        try
+        {
+            IsBusy = true;
+            var nuevoInsumo = new Supply
+            {
+                Name = nombre,
+                Description = string.IsNullOrWhiteSpace(descripcion) ? null : descripcion,
+                StockQuantity = stock,
+                Unit = "unidades"
+            };
+            
+            var result = await ApiService.CrearInsumoAsync(nuevoInsumo);
+
+            if (result.Success)
+            {
+                await Shell.Current.DisplayAlert("Éxito", "Insumo creado", "OK");
+                await LoadInsumosAsync();
+            }
+            else
+            {
+                await ShowErrorAsync(result.Message ?? "Error al crear insumo");
+            }
+        }
+        finally
+        {
+            IsBusy = false;
+        }
     }
 
     [RelayCommand]
     private async Task EditInsumoAsync(Supply insumo)
     {
-        if (!CanEdit || insumo == null) return;
+        if (!CanEdit || insumo == null)
+        {
+            await ShowErrorAsync("No tiene permisos para editar insumos.");
+            return;
+        }
         
-        await Shell.Current.DisplayAlert("Editar Insumo", $"Editando: {insumo.Name}", "OK");
+        // Editar nombre
+        var nuevoNombre = await Shell.Current.DisplayPromptAsync(
+            "Editar Insumo",
+            "Nombre del insumo:",
+            initialValue: insumo.Name,
+            maxLength: 200);
+
+        if (string.IsNullOrEmpty(nuevoNombre)) return;
+
+        // Editar descripción
+        var nuevaDescripcion = await Shell.Current.DisplayPromptAsync(
+            "Editar Insumo",
+            "Descripción:",
+            initialValue: insumo.Description ?? "",
+            maxLength: 500);
+
+        if (nuevaDescripcion == null) return;
+
+        try
+        {
+            IsBusy = true;
+            insumo.Name = nuevoNombre;
+            insumo.Description = string.IsNullOrWhiteSpace(nuevaDescripcion) ? null : nuevaDescripcion;
+            
+            var result = await ApiService.ActualizarInsumoAsync(insumo);
+
+            if (result.Success)
+            {
+                await Shell.Current.DisplayAlert("Éxito", "Insumo actualizado", "OK");
+                await LoadInsumosAsync();
+            }
+            else
+            {
+                await ShowErrorAsync(result.Message ?? "Error al actualizar insumo");
+            }
+        }
+        finally
+        {
+            IsBusy = false;
+        }
     }
 
     [RelayCommand]
