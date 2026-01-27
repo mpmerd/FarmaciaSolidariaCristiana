@@ -7,8 +7,10 @@ namespace FarmaciaSolidariaCristiana.Api.Models
     /// </summary>
     public class LoginRequestDto
     {
-        [Required(ErrorMessage = "El email es requerido")]
-        [EmailAddress(ErrorMessage = "Formato de email inválido")]
+        /// <summary>
+        /// Email o nombre de usuario
+        /// </summary>
+        [Required(ErrorMessage = "El email o usuario es requerido")]
         public string Email { get; set; } = string.Empty;
 
         [Required(ErrorMessage = "La contraseña es requerida")]

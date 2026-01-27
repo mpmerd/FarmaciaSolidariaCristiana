@@ -30,12 +30,12 @@
                    TextColor="{StaticResource Gray500}"
                    Margin="0,0,0,20"/>
             
-            <!-- Email -->
+            <!-- Email/Usuario -->
             <Frame BorderColor="{StaticResource Gray200}" 
                    Padding="10" 
                    CornerRadius="10"
                    HasShadow="False">
-                <Entry Placeholder="Correo electrónico"
+                <Entry Placeholder="Correo electrónico o usuario"
                        Text="{Binding Email}"
                        Keyboard="Email"
                        ReturnType="Next"/>

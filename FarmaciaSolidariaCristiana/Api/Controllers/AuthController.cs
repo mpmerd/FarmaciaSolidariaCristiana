@@ -49,10 +49,16 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
                 return ApiError("Datos de login inválidos");
             }
 
+            // Buscar por email o por username
             var user = await _userManager.FindByEmailAsync(model.Email);
             if (user == null)
             {
-                _logger.LogWarning("Intento de login fallido para email: {Email}", model.Email);
+                user = await _userManager.FindByNameAsync(model.Email);
+            }
+            
+            if (user == null)
+            {
+                _logger.LogWarning("Intento de login fallido para: {Email}", model.Email);
                 return ApiError("Credenciales inválidas", 401);
             }
 
