@@ -9,9 +9,6 @@ namespace FarmaciaSolidariaCristiana.Maui.ViewModels;
 
 public partial class EntregasViewModel : BaseViewModel
 {
-    private readonly IApiService _apiService;
-    private readonly IAuthService _authService;
-
     [ObservableProperty]
     private ObservableCollection<Delivery> entregas = new();
 
@@ -27,15 +24,14 @@ public partial class EntregasViewModel : BaseViewModel
     private List<Delivery> _allEntregas = new();
 
     public EntregasViewModel(IApiService apiService, IAuthService authService)
+        : base(authService, apiService)
     {
-        _apiService = apiService;
-        _authService = authService;
         Title = "Entregas";
     }
 
     public async Task InitializeAsync()
     {
-        var userInfo = await _authService.GetUserInfoAsync();
+        var userInfo = await AuthService.GetUserInfoAsync();
         CanEdit = userInfo?.Role == Constants.RoleAdmin || 
                   userInfo?.Role == Constants.RoleFarmaceutico;
         await LoadEntregasAsync();
@@ -51,7 +47,7 @@ public partial class EntregasViewModel : BaseViewModel
             IsBusy = true;
             IsRefreshing = true;
 
-            var response = await _apiService.GetEntregasAsync();
+            var response = await ApiService.GetEntregasAsync();
             if (response.Success && response.Data != null)
             {
                 _allEntregas = response.Data;
@@ -93,8 +89,8 @@ public partial class EntregasViewModel : BaseViewModel
         else
         {
             var filtered = _allEntregas
-                .Where(e => (e.NombrePaciente?.Contains(SearchText, StringComparison.OrdinalIgnoreCase) ?? false) ||
-                           (e.Observaciones?.Contains(SearchText, StringComparison.OrdinalIgnoreCase) ?? false))
+                .Where(e => (e.PatientName?.Contains(SearchText, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                           (e.Notes?.Contains(SearchText, StringComparison.OrdinalIgnoreCase) ?? false))
                 .ToList();
             Entregas = new ObservableCollection<Delivery>(filtered);
         }
@@ -112,10 +108,10 @@ public partial class EntregasViewModel : BaseViewModel
     {
         if (entrega == null) return;
         
-        var details = $"Paciente: {entrega.NombrePaciente}\n" +
-                     $"Fecha: {entrega.FechaEntrega:dd/MM/yyyy}\n" +
-                     $"Entregado por: {entrega.EntregadoPor ?? "N/A"}\n" +
-                     $"Observaciones: {entrega.Observaciones ?? "N/A"}";
+        var details = $"Paciente: {entrega.PatientName}\n" +
+                     $"Fecha: {entrega.DeliveryDate:dd/MM/yyyy}\n" +
+                     $"Entregado por: {entrega.DeliveredBy ?? "N/A"}\n" +
+                     $"Observaciones: {entrega.Notes ?? "N/A"}";
                      
         await Shell.Current.DisplayAlert("Detalle de Entrega", details, "OK");
     }
@@ -136,7 +132,7 @@ public partial class EntregasViewModel : BaseViewModel
             try
             {
                 IsBusy = true;
-                var response = await _apiService.DeleteEntregaAsync(entrega.Id);
+                var response = await ApiService.DeleteEntregaAsync(entrega.Id);
                 
                 if (response.Success)
                 {

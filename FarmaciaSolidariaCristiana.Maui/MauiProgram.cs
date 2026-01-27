@@ -64,6 +64,9 @@ public static class MauiProgram
         builder.Services.AddTransient<ReportesPage>();
         builder.Services.AddTransient<FechasBloqueadasPage>();
         builder.Services.AddTransient<ProfilePage>();
+        
+        // Register AppShell
+        builder.Services.AddTransient<AppShell>();
 
 #if DEBUG
         builder.Logging.AddDebug();

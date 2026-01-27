@@ -9,9 +9,6 @@ namespace FarmaciaSolidariaCristiana.Maui.ViewModels;
 
 public partial class InsumosViewModel : BaseViewModel
 {
-    private readonly IApiService _apiService;
-    private readonly IAuthService _authService;
-
     [ObservableProperty]
     private ObservableCollection<Supply> insumos = new();
 
@@ -27,15 +24,14 @@ public partial class InsumosViewModel : BaseViewModel
     private List<Supply> _allInsumos = new();
 
     public InsumosViewModel(IApiService apiService, IAuthService authService)
+        : base(authService, apiService)
     {
-        _apiService = apiService;
-        _authService = authService;
         Title = "Insumos";
     }
 
     public async Task InitializeAsync()
     {
-        var userInfo = await _authService.GetUserInfoAsync();
+        var userInfo = await AuthService.GetUserInfoAsync();
         CanEdit = userInfo?.Role == Constants.RoleAdmin || 
                   userInfo?.Role == Constants.RoleFarmaceutico;
         await LoadInsumosAsync();
@@ -51,7 +47,7 @@ public partial class InsumosViewModel : BaseViewModel
             IsBusy = true;
             IsRefreshing = true;
 
-            var response = await _apiService.GetInsumosAsync();
+            var response = await ApiService.GetInsumosAsync();
             if (response.Success && response.Data != null)
             {
                 _allInsumos = response.Data;
@@ -93,8 +89,8 @@ public partial class InsumosViewModel : BaseViewModel
         else
         {
             var filtered = _allInsumos
-                .Where(i => i.Nombre.Contains(SearchText, StringComparison.OrdinalIgnoreCase) ||
-                           (i.Descripcion?.Contains(SearchText, StringComparison.OrdinalIgnoreCase) ?? false))
+                .Where(i => i.Name.Contains(SearchText, StringComparison.OrdinalIgnoreCase) ||
+                           (i.Description?.Contains(SearchText, StringComparison.OrdinalIgnoreCase) ?? false))
                 .ToList();
             Insumos = new ObservableCollection<Supply>(filtered);
         }
@@ -114,7 +110,7 @@ public partial class InsumosViewModel : BaseViewModel
     {
         if (!CanEdit || insumo == null) return;
         
-        await Shell.Current.DisplayAlert("Editar Insumo", $"Editando: {insumo.Nombre}", "OK");
+        await Shell.Current.DisplayAlert("Editar Insumo", $"Editando: {insumo.Name}", "OK");
     }
 
     [RelayCommand]
@@ -124,7 +120,7 @@ public partial class InsumosViewModel : BaseViewModel
 
         bool confirm = await Shell.Current.DisplayAlert(
             "Eliminar Insumo",
-            $"¿Estás seguro de eliminar '{insumo.Nombre}'?",
+            $"¿Estás seguro de eliminar '{insumo.Name}'?",
             "Sí, eliminar",
             "Cancelar");
 
@@ -133,7 +129,7 @@ public partial class InsumosViewModel : BaseViewModel
             try
             {
                 IsBusy = true;
-                var response = await _apiService.DeleteInsumoAsync(insumo.Id);
+                var response = await ApiService.DeleteInsumoAsync(insumo.Id);
                 
                 if (response.Success)
                 {

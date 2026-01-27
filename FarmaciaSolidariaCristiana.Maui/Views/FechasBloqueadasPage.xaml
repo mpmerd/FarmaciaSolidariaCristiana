@@ -42,9 +42,7 @@
                     <StackLayout Grid.Column="0" Spacing="5">
                         <Label Text="Fecha:" FontSize="14" TextColor="{StaticResource Gray600}"/>
                         <DatePicker Date="{Binding NuevaFecha}"
-                                    MinimumDate="{x:Static sys:DateTime.Today}"
-                                    BackgroundColor="{StaticResource Gray100}"
-                                    xmlns:sys="clr-namespace:System;assembly=netstandard"/>
+                                    BackgroundColor="{StaticResource Gray100}"/>
                     </StackLayout>
                     
                     <StackLayout Grid.Column="1" Spacing="5">

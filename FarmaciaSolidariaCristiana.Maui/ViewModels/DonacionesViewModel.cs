@@ -9,9 +9,6 @@ namespace FarmaciaSolidariaCristiana.Maui.ViewModels;
 
 public partial class DonacionesViewModel : BaseViewModel
 {
-    private readonly IApiService _apiService;
-    private readonly IAuthService _authService;
-
     [ObservableProperty]
     private ObservableCollection<Donation> donaciones = new();
 
@@ -26,16 +23,15 @@ public partial class DonacionesViewModel : BaseViewModel
 
     private List<Donation> _allDonaciones = new();
 
-    public DonacionesViewModel(IApiService apiService, IAuthService authService)
+    public DonacionesViewModel(IApiService apiService, IAuthService authService) 
+        : base(authService, apiService)
     {
-        _apiService = apiService;
-        _authService = authService;
         Title = "Donaciones";
     }
 
     public async Task InitializeAsync()
     {
-        var userInfo = await _authService.GetUserInfoAsync();
+        var userInfo = await AuthService.GetUserInfoAsync();
         CanEdit = userInfo?.Role == Constants.RoleAdmin || 
                   userInfo?.Role == Constants.RoleFarmaceutico;
         await LoadDonacionesAsync();
@@ -51,7 +47,7 @@ public partial class DonacionesViewModel : BaseViewModel
             IsBusy = true;
             IsRefreshing = true;
 
-            var response = await _apiService.GetDonacionesAsync();
+            var response = await ApiService.GetDonacionesAsync();
             if (response.Success && response.Data != null)
             {
                 _allDonaciones = response.Data;
@@ -93,8 +89,8 @@ public partial class DonacionesViewModel : BaseViewModel
         else
         {
             var filtered = _allDonaciones
-                .Where(d => (d.Donante?.Contains(SearchText, StringComparison.OrdinalIgnoreCase) ?? false) ||
-                           (d.Descripcion?.Contains(SearchText, StringComparison.OrdinalIgnoreCase) ?? false))
+                .Where(d => (d.DonorName?.Contains(SearchText, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                           (d.Notes?.Contains(SearchText, StringComparison.OrdinalIgnoreCase) ?? false))
                 .ToList();
             Donaciones = new ObservableCollection<Donation>(filtered);
         }
@@ -112,9 +108,9 @@ public partial class DonacionesViewModel : BaseViewModel
     {
         if (donacion == null) return;
         
-        var details = $"Donante: {donacion.Donante}\n" +
-                     $"Fecha: {donacion.FechaDonacion:dd/MM/yyyy}\n" +
-                     $"Descripción: {donacion.Descripcion ?? "N/A"}";
+        var details = $"Donante: {donacion.DonorName}\n" +
+                     $"Fecha: {donacion.DonationDate:dd/MM/yyyy}\n" +
+                     $"Descripción: {donacion.Notes ?? "N/A"}";
                      
         await Shell.Current.DisplayAlert("Detalle de Donación", details, "OK");
     }
@@ -135,7 +131,7 @@ public partial class DonacionesViewModel : BaseViewModel
             try
             {
                 IsBusy = true;
-                var response = await _apiService.DeleteDonacionAsync(donacion.Id);
+                var response = await ApiService.DeleteDonacionAsync(donacion.Id);
                 
                 if (response.Success)
                 {

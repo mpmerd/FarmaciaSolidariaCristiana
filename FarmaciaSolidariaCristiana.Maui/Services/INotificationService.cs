@@ -39,4 +39,14 @@ public interface INotificationService
     /// Establece tags del usuario en OneSignal
     /// </summary>
     Task SetUserTagsAsync(string userId, string role);
+    
+    /// <summary>
+    /// Registra el usuario para notificaciones
+    /// </summary>
+    Task RegisterUserAsync(string userId, string role);
+    
+    /// <summary>
+    /// Desregistra el usuario de notificaciones
+    /// </summary>
+    Task UnregisterUserAsync();
 }

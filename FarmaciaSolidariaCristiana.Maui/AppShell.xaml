@@ -86,7 +86,7 @@
     </FlyoutItem>
     
     <!-- Entregas - All roles (view only for ViewerPublic/Viewer) -->
-    <FlyoutItem Title="Entregas" Icon="package.png">
+    <FlyoutItem Title="Entregas" Icon="delivery.png">
         <ShellContent Route="EntregasPage"
                       ContentTemplate="{DataTemplate views:EntregasPage}"/>
     </FlyoutItem>

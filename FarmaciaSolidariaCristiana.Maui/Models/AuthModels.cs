@@ -32,6 +32,11 @@ public class UserInfo
     public string Email { get; set; } = string.Empty;
     public string UserName { get; set; } = string.Empty;
     public List<string> Roles { get; set; } = new();
+    
+    /// <summary>
+    /// Obtiene el rol principal del usuario
+    /// </summary>
+    public string Role => Roles.FirstOrDefault() ?? string.Empty;
 }
 
 /// <summary>
