@@ -8,17 +8,15 @@ namespace FarmaciaSolidariaCristiana.Maui.ViewModels;
 
 public partial class PatrocinadoresViewModel : BaseViewModel
 {
-    private readonly IApiService _apiService;
-
     [ObservableProperty]
     private ObservableCollection<Sponsor> patrocinadores = new();
 
     [ObservableProperty]
     private bool isRefreshing;
 
-    public PatrocinadoresViewModel(IApiService apiService)
+    public PatrocinadoresViewModel(IApiService apiService, IAuthService authService)
+        : base(authService, apiService)
     {
-        _apiService = apiService;
         Title = "Patrocinadores";
     }
 
@@ -37,11 +35,11 @@ public partial class PatrocinadoresViewModel : BaseViewModel
             IsBusy = true;
             IsRefreshing = true;
 
-            var response = await _apiService.GetPatrocinadoresAsync();
+            var response = await ApiService.GetPatrocinadoresAsync();
             if (response.Success && response.Data != null)
             {
                 Patrocinadores = new ObservableCollection<Sponsor>(
-                    response.Data.Where(p => p.Activo));
+                    response.Data.Where(p => p.IsActive));
             }
             else
             {
@@ -68,16 +66,12 @@ public partial class PatrocinadoresViewModel : BaseViewModel
     [RelayCommand]
     private async Task OpenWebsiteAsync(Sponsor sponsor)
     {
-        if (sponsor == null || string.IsNullOrEmpty(sponsor.SitioWeb)) return;
-
-        try
-        {
-            var uri = new Uri(sponsor.SitioWeb);
-            await Browser.Default.OpenAsync(uri, BrowserLaunchMode.SystemPreferred);
-        }
-        catch (Exception ex)
-        {
-            await ShowErrorAsync($"No se pudo abrir el sitio web: {ex.Message}");
-        }
+        if (sponsor == null) return;
+        
+        // Show sponsor details since we don't have a website field
+        await Shell.Current.DisplayAlert(
+            sponsor.Name, 
+            sponsor.Description ?? "Sin descripción disponible", 
+            "OK");
     }
 }

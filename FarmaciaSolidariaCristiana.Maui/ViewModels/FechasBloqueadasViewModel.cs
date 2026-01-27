@@ -8,9 +8,6 @@ namespace FarmaciaSolidariaCristiana.Maui.ViewModels;
 
 public partial class FechasBloqueadasViewModel : BaseViewModel
 {
-    private readonly IApiService _apiService;
-    private readonly IAuthService _authService;
-
     [ObservableProperty]
     private ObservableCollection<FechaBloqueadaDto> fechasBloqueadas = new();
 
@@ -24,9 +21,8 @@ public partial class FechasBloqueadasViewModel : BaseViewModel
     private string motivo = string.Empty;
 
     public FechasBloqueadasViewModel(IApiService apiService, IAuthService authService)
+        : base(authService, apiService)
     {
-        _apiService = apiService;
-        _authService = authService;
         Title = "Fechas Bloqueadas";
     }
 
@@ -45,7 +41,7 @@ public partial class FechasBloqueadasViewModel : BaseViewModel
             IsBusy = true;
             IsRefreshing = true;
 
-            var response = await _apiService.GetFechasBloqueadasAsync();
+            var response = await ApiService.GetFechasBloqueadasAsync();
             if (response.Success && response.Data != null)
             {
                 FechasBloqueadas = new ObservableCollection<FechaBloqueadaDto>(
@@ -92,7 +88,7 @@ public partial class FechasBloqueadasViewModel : BaseViewModel
                 Motivo = string.IsNullOrWhiteSpace(Motivo) ? "Fecha bloqueada" : Motivo
             };
 
-            var response = await _apiService.CreateFechaBloqueadaAsync(request);
+            var response = await ApiService.CreateFechaBloqueadaAsync(request);
             
             if (response.Success)
             {
@@ -132,7 +128,7 @@ public partial class FechasBloqueadasViewModel : BaseViewModel
             try
             {
                 IsBusy = true;
-                var response = await _apiService.DeleteFechaBloqueadaAsync(fecha.Id);
+                var response = await ApiService.DeleteFechaBloqueadaAsync(fecha.Id);
                 
                 if (response.Success)
                 {

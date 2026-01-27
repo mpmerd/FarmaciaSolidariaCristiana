@@ -13,6 +13,11 @@ public interface IAuthService
     bool IsAuthenticated { get; }
     
     /// <summary>
+    /// Verifica si el usuario está autenticado (async)
+    /// </summary>
+    Task<bool> IsAuthenticatedAsync();
+    
+    /// <summary>
     /// Obtiene el token JWT actual
     /// </summary>
     Task<string?> GetTokenAsync();
@@ -21,6 +26,11 @@ public interface IAuthService
     /// Obtiene la información del usuario actual
     /// </summary>
     Task<UserInfo?> GetCurrentUserAsync();
+    
+    /// <summary>
+    /// Obtiene la información del usuario actual (alias)
+    /// </summary>
+    Task<UserInfo?> GetUserInfoAsync();
     
     /// <summary>
     /// Verifica si el usuario tiene un rol específico

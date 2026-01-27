@@ -7,9 +7,6 @@ namespace FarmaciaSolidariaCristiana.Maui.ViewModels;
 
 public partial class ReportesViewModel : BaseViewModel
 {
-    private readonly IApiService _apiService;
-    private readonly IAuthService _authService;
-
     [ObservableProperty]
     private DateTime fechaInicio = DateTime.Today.AddMonths(-1);
 
@@ -20,15 +17,14 @@ public partial class ReportesViewModel : BaseViewModel
     private bool canGenerateReports;
 
     public ReportesViewModel(IApiService apiService, IAuthService authService)
+        : base(authService, apiService)
     {
-        _apiService = apiService;
-        _authService = authService;
         Title = "Reportes";
     }
 
     public async Task InitializeAsync()
     {
-        var userInfo = await _authService.GetUserInfoAsync();
+        var userInfo = await AuthService.GetUserInfoAsync();
         CanGenerateReports = userInfo?.Role == Constants.RoleAdmin || 
                              userInfo?.Role == Constants.RoleFarmaceutico ||
                              userInfo?.Role == Constants.RoleViewer;

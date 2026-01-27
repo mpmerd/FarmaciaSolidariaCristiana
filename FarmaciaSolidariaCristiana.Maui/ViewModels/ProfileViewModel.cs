@@ -7,7 +7,6 @@ namespace FarmaciaSolidariaCristiana.Maui.ViewModels;
 
 public partial class ProfileViewModel : BaseViewModel
 {
-    private readonly IAuthService _authService;
     private readonly INotificationService _notificationService;
 
     [ObservableProperty]
@@ -22,20 +21,20 @@ public partial class ProfileViewModel : BaseViewModel
     [ObservableProperty]
     private bool notificationsEnabled = true;
 
-    public ProfileViewModel(IAuthService authService, INotificationService notificationService)
+    public ProfileViewModel(IAuthService authService, IApiService apiService, INotificationService notificationService)
+        : base(authService, apiService)
     {
-        _authService = authService;
         _notificationService = notificationService;
         Title = "Mi Perfil";
     }
 
     public async Task InitializeAsync()
     {
-        var userInfo = await _authService.GetUserInfoAsync();
+        var userInfo = await AuthService.GetUserInfoAsync();
         
         if (userInfo != null)
         {
-            UserName = userInfo.NombreCompleto;
+            UserName = userInfo.UserName;
             UserEmail = userInfo.Email;
             UserRole = GetRoleDisplayName(userInfo.Role);
         }
@@ -61,7 +60,7 @@ public partial class ProfileViewModel : BaseViewModel
             if (NotificationsEnabled)
             {
                 // Enable notifications
-                var userInfo = await _authService.GetUserInfoAsync();
+                var userInfo = await AuthService.GetUserInfoAsync();
                 if (userInfo != null)
                 {
                     await _notificationService.RegisterUserAsync(userInfo.Id, userInfo.Role);
@@ -98,7 +97,7 @@ public partial class ProfileViewModel : BaseViewModel
 
         if (confirm)
         {
-            await _authService.LogoutAsync();
+            await AuthService.LogoutAsync();
             await Shell.Current.GoToAsync("//LoginPage");
         }
     }

@@ -26,6 +26,12 @@ public class AuthService : IAuthService
 
     public bool IsAuthenticated => _isAuthenticated;
 
+    public async Task<bool> IsAuthenticatedAsync()
+    {
+        var token = await GetTokenAsync();
+        return !string.IsNullOrEmpty(token);
+    }
+
     public async Task<string?> GetTokenAsync()
     {
         try
@@ -101,6 +107,8 @@ public class AuthService : IAuthService
             return null;
         }
     }
+
+    public Task<UserInfo?> GetUserInfoAsync() => GetCurrentUserAsync();
 
     public async Task<bool> IsInRoleAsync(string role)
     {

@@ -46,9 +46,7 @@
                             <Label Text="Hasta:" FontSize="14" TextColor="{StaticResource Gray600}"/>
                             <DatePicker Date="{Binding FechaFin}"
                                         BackgroundColor="{StaticResource Gray100}"
-                                        MinimumDate="{Binding FechaInicio}"
-                                        MaximumDate="{x:Static sys:DateTime.Today}"
-                                        xmlns:sys="clr-namespace:System;assembly=netstandard"/>
+                                        MinimumDate="{Binding FechaInicio}"/>
                         </StackLayout>
                     </Grid>
                 </StackLayout>

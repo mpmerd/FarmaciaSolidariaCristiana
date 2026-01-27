@@ -9,9 +9,6 @@ namespace FarmaciaSolidariaCristiana.Maui.ViewModels;
 
 public partial class PacientesViewModel : BaseViewModel
 {
-    private readonly IApiService _apiService;
-    private readonly IAuthService _authService;
-
     [ObservableProperty]
     private ObservableCollection<Patient> pacientes = new();
 
@@ -27,15 +24,14 @@ public partial class PacientesViewModel : BaseViewModel
     private List<Patient> _allPacientes = new();
 
     public PacientesViewModel(IApiService apiService, IAuthService authService)
+        : base(authService, apiService)
     {
-        _apiService = apiService;
-        _authService = authService;
         Title = "Pacientes";
     }
 
     public async Task InitializeAsync()
     {
-        var userInfo = await _authService.GetUserInfoAsync();
+        var userInfo = await AuthService.GetUserInfoAsync();
         CanEdit = userInfo?.Role == Constants.RoleAdmin || 
                   userInfo?.Role == Constants.RoleFarmaceutico;
         await LoadPacientesAsync();
@@ -51,7 +47,7 @@ public partial class PacientesViewModel : BaseViewModel
             IsBusy = true;
             IsRefreshing = true;
 
-            var response = await _apiService.GetPacientesAsync();
+            var response = await ApiService.GetPacientesAsync();
             if (response.Success && response.Data != null)
             {
                 _allPacientes = response.Data;
@@ -93,9 +89,9 @@ public partial class PacientesViewModel : BaseViewModel
         else
         {
             var filtered = _allPacientes
-                .Where(p => p.NombreCompleto.Contains(SearchText, StringComparison.OrdinalIgnoreCase) ||
-                           (p.Cedula?.Contains(SearchText, StringComparison.OrdinalIgnoreCase) ?? false) ||
-                           (p.Telefono?.Contains(SearchText, StringComparison.OrdinalIgnoreCase) ?? false))
+                .Where(p => p.Name.Contains(SearchText, StringComparison.OrdinalIgnoreCase) ||
+                           (p.Identification?.Contains(SearchText, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                           (p.Phone?.Contains(SearchText, StringComparison.OrdinalIgnoreCase) ?? false))
                 .ToList();
             Pacientes = new ObservableCollection<Patient>(filtered);
         }
@@ -113,12 +109,11 @@ public partial class PacientesViewModel : BaseViewModel
     {
         if (paciente == null) return;
         
-        var details = $"Nombre: {paciente.NombreCompleto}\n" +
-                     $"Cédula: {paciente.Cedula ?? "N/A"}\n" +
-                     $"Teléfono: {paciente.Telefono ?? "N/A"}\n" +
-                     $"Email: {paciente.Email ?? "N/A"}\n" +
-                     $"Dirección: {paciente.Direccion ?? "N/A"}\n" +
-                     $"Activo: {(paciente.Activo ? "Sí" : "No")}";
+        var details = $"Nombre: {paciente.Name}\n" +
+                     $"Cédula: {paciente.Identification ?? "N/A"}\n" +
+                     $"Teléfono: {paciente.Phone ?? "N/A"}\n" +
+                     $"Dirección: {paciente.Address ?? "N/A"}\n" +
+                     $"Activo: {(paciente.IsActive ? "Sí" : "No")}";
                      
         await Shell.Current.DisplayAlert("Detalle de Paciente", details, "OK");
     }
@@ -127,7 +122,7 @@ public partial class PacientesViewModel : BaseViewModel
     private async Task EditPacienteAsync(Patient paciente)
     {
         if (!CanEdit || paciente == null) return;
-        await Shell.Current.DisplayAlert("Editar Paciente", $"Editando: {paciente.NombreCompleto}", "OK");
+        await Shell.Current.DisplayAlert("Editar Paciente", $"Editando: {paciente.Name}", "OK");
     }
 
     [RelayCommand]
@@ -137,7 +132,7 @@ public partial class PacientesViewModel : BaseViewModel
 
         bool confirm = await Shell.Current.DisplayAlert(
             "Eliminar Paciente",
-            $"¿Estás seguro de eliminar a '{paciente.NombreCompleto}'?",
+            $"¿Estás seguro de eliminar a '{paciente.Name}'?",
             "Sí, eliminar",
             "Cancelar");
 
@@ -146,7 +141,7 @@ public partial class PacientesViewModel : BaseViewModel
             try
             {
                 IsBusy = true;
-                var response = await _apiService.DeletePacienteAsync(paciente.Id);
+                var response = await ApiService.DeletePacienteAsync(paciente.Id);
                 
                 if (response.Success)
                 {

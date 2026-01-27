@@ -63,7 +63,16 @@ public partial class LoginViewModel : BaseViewModel
                 await _notificationService.SetUserTagsAsync(user.Id, primaryRole);
                 
                 // Navegar al Shell principal
-                Application.Current!.MainPage = new AppShell();
+                var appShell = App.Current?.Handler?.MauiContext?.Services.GetService<AppShell>();
+                if (appShell != null)
+                {
+                    Application.Current!.MainPage = appShell;
+                }
+                else
+                {
+                    // Fallback: crear AppShell con el servicio de autenticación
+                    Application.Current!.MainPage = new AppShell(AuthService);
+                }
             }
             else
             {
