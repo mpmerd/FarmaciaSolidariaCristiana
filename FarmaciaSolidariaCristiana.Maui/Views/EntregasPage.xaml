@@ -2,6 +2,7 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:viewmodels="clr-namespace:FarmaciaSolidariaCristiana.Maui.ViewModels"
+             xmlns:models="clr-namespace:FarmaciaSolidariaCristiana.Maui.Models"
              x:Class="FarmaciaSolidariaCristiana.Maui.Views.EntregasPage"
              x:DataType="viewmodels:EntregasViewModel"
              Title="{Binding Title}"
@@ -41,7 +42,7 @@
                 </CollectionView.EmptyView>
 
                 <CollectionView.ItemTemplate>
-                    <DataTemplate>
+                    <DataTemplate x:DataType="models:Delivery">
                         <SwipeView>
                             <SwipeView.RightItems>
                                 <SwipeItems>
