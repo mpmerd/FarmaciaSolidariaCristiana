@@ -119,13 +119,32 @@ public class ApiService : IApiService
     {
         var content = await response.Content.ReadAsStringAsync();
         
+        Console.WriteLine($"[API] ProcessResponse: Status={response.StatusCode}, ContentLength={content?.Length ?? 0}");
+        
         if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
         {
             return ErrorResponse<T>(Constants.SesionExpirada);
         }
+        
+        // Detectar si la respuesta es HTML (redirect de autenticación)
+        if (content.TrimStart().StartsWith("<"))
+        {
+            Console.WriteLine($"[API] WARNING: Received HTML instead of JSON!");
+            return ErrorResponse<T>("Error de autenticación - se recibió HTML en lugar de JSON");
+        }
 
-        var result = JsonSerializer.Deserialize<ApiResponse<T>>(content, _jsonOptions);
-        return result ?? ErrorResponse<T>("Error al procesar respuesta");
+        try
+        {
+            var result = JsonSerializer.Deserialize<ApiResponse<T>>(content, _jsonOptions);
+            Console.WriteLine($"[API] Deserialized: Success={result?.Success}");
+            return result ?? ErrorResponse<T>("Error al procesar respuesta");
+        }
+        catch (JsonException ex)
+        {
+            Console.WriteLine($"[API] JSON Error: {ex.Message}");
+            Console.WriteLine($"[API] Content preview: {content.Substring(0, Math.Min(200, content.Length))}");
+            return ErrorResponse<T>($"Error JSON: {ex.Message}");
+        }
     }
 
     /// <summary>
@@ -136,8 +155,20 @@ public class ApiService : IApiService
         try
         {
             await SetAuthHeaderAsync();
+            Console.WriteLine($"[API] GetPagedAsync<{typeof(T).Name}> -> {endpoint}");
+            
             var response = await _httpClient.GetAsync(endpoint);
             var content = await response.Content.ReadAsStringAsync();
+            
+            Console.WriteLine($"[API] Response status: {response.StatusCode}");
+            Console.WriteLine($"[API] Content length: {content?.Length ?? 0}");
+            
+            // Detectar HTML
+            if (content.TrimStart().StartsWith("<"))
+            {
+                Console.WriteLine($"[API] WARNING: Received HTML instead of JSON!");
+                return ErrorResponse<List<T>>("Error de autenticación - se recibió HTML");
+            }
 
             if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
             {
@@ -145,27 +176,40 @@ public class ApiService : IApiService
             }
 
             // Intentar deserializar como PagedResult
-            var pagedResult = JsonSerializer.Deserialize<ApiResponse<PagedResult<T>>>(content, _jsonOptions);
-            if (pagedResult?.Success == true && pagedResult.Data != null)
+            try
             {
-                return new ApiResponse<List<T>> 
-                { 
-                    Success = true, 
-                    Data = pagedResult.Data.Items,
-                    Message = pagedResult.Message 
-                };
+                var pagedResult = JsonSerializer.Deserialize<ApiResponse<PagedResult<T>>>(content, _jsonOptions);
+                Console.WriteLine($"[API] PagedResult: Success={pagedResult?.Success}, Items={pagedResult?.Data?.Items?.Count ?? 0}");
+                
+                if (pagedResult?.Success == true && pagedResult.Data != null)
+                {
+                    return new ApiResponse<List<T>> 
+                    { 
+                        Success = true, 
+                        Data = pagedResult.Data.Items,
+                        Message = pagedResult.Message 
+                    };
+                }
+            }
+            catch (JsonException jsonEx)
+            {
+                Console.WriteLine($"[API] PagedResult parse error: {jsonEx.Message}");
             }
 
             // Si falla, intentar como lista directa
+            Console.WriteLine($"[API] Trying list deserialization...");
             var listResult = JsonSerializer.Deserialize<ApiResponse<List<T>>>(content, _jsonOptions);
+            Console.WriteLine($"[API] List result: Success={listResult?.Success}, Items={listResult?.Data?.Count ?? 0}");
             return listResult ?? ErrorResponse<List<T>>("Error al procesar respuesta");
         }
-        catch (HttpRequestException)
+        catch (HttpRequestException ex)
         {
+            Console.WriteLine($"[API] HttpRequestException: {ex.Message}");
             return ErrorResponse<List<T>>(Constants.ErrorConexion);
         }
         catch (Exception ex)
         {
+            Console.WriteLine($"[API] Exception: {ex.Message}");
             return ErrorResponse<List<T>>(ex.Message);
         }
     }
