@@ -106,7 +106,7 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
         /// Genera reporte PDF de entregas
         /// </summary>
         [HttpPost("deliveries")]
-        [Authorize(Roles = "Admin,Farmaceutico,Viewer")]
+        [Authorize(Roles = "Admin,Farmaceutico,Viewer,ViewerPublic")]
         [ProducesResponseType(typeof(ApiResponse<ReportResultDto>), 200)]
         public async Task<IActionResult> DeliveriesPdf([FromBody] DeliveriesReportRequest request)
         {
@@ -209,7 +209,7 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
         /// Genera reporte PDF de donaciones
         /// </summary>
         [HttpPost("donations")]
-        [Authorize(Roles = "Admin,Farmaceutico,Viewer")]
+        [Authorize(Roles = "Admin,Farmaceutico,Viewer,ViewerPublic")]
         [ProducesResponseType(typeof(ApiResponse<ReportResultDto>), 200)]
         public async Task<IActionResult> DonationsPdf([FromBody] DonationsReportRequest request)
         {
@@ -310,7 +310,7 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
         /// Genera reporte mensual PDF
         /// </summary>
         [HttpPost("monthly")]
-        [Authorize(Roles = "Admin,Farmaceutico,Viewer")]
+        [Authorize(Roles = "Admin,Farmaceutico,Viewer,ViewerPublic")]
         [ProducesResponseType(typeof(ApiResponse<ReportResultDto>), 200)]
         public async Task<IActionResult> MonthlyPdf([FromBody] MonthlyReportRequest request)
         {

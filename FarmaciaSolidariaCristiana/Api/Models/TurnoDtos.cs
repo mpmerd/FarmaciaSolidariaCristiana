@@ -74,6 +74,18 @@ namespace FarmaciaSolidariaCristiana.Api.Models
     }
 
     /// <summary>
+    /// DTO para reprogramar un turno
+    /// </summary>
+    public class RescheduleTurnoDto
+    {
+        [Required(ErrorMessage = "La nueva fecha es requerida")]
+        public DateTime NuevaFecha { get; set; }
+        
+        [StringLength(500)]
+        public string? Motivo { get; set; }
+    }
+
+    /// <summary>
     /// DTO de estadísticas de turnos
     /// </summary>
     public class TurnoStatsDto
