@@ -118,19 +118,19 @@ public partial class DashboardViewModel : BaseViewModel
     [RelayCommand]
     private async Task NavigateToTurnosAsync()
     {
-        await NavigateToAsync("//turnos");
+        await Shell.Current.GoToAsync("//TurnosPage");
     }
 
     [RelayCommand]
     private async Task NavigateToMedicamentosAsync()
     {
-        await NavigateToAsync("//medicamentos");
+        await Shell.Current.GoToAsync("//MedicamentosPage");
     }
 
     [RelayCommand]
     private async Task NavigateToInsumosAsync()
     {
-        await NavigateToAsync("//insumos");
+        await Shell.Current.GoToAsync("//InsumosPage");
     }
 
     [RelayCommand]
