@@ -70,13 +70,24 @@ namespace FarmaciaSolidariaCristiana.Services
             _logger.LogInformation("TurnoCleanupService: Buscando turnos vencidos. Hora actual: {Now}, Corte: {Cutoff}", 
                 now.ToString("yyyy-MM-dd HH:mm:ss"), cutoffTime.ToString("yyyy-MM-dd HH:mm:ss"));
             
+            // ✅ FIX: No cancelar turnos que ya tienen entregas completadas
+            // Obtener IDs de turnos que ya tienen entregas (medicamentos o insumos entregados)
+            var turnosConEntregas = await context.Deliveries
+                .Where(d => d.TurnoId.HasValue)
+                .Select(d => d.TurnoId!.Value)
+                .Distinct()
+                .ToListAsync();
+            
+            _logger.LogInformation("TurnoCleanupService: Encontrados {Count} turnos con entregas registradas (no se cancelarán)", turnosConEntregas.Count);
+            
             var expiredTurnos = await context.Turnos
                 .Include(t => t.User)
                 .Include(t => t.Medicamentos).ThenInclude(tm => tm.Medicine)
                 .Include(t => t.Insumos).ThenInclude(ti => ti.Supply)
                 .Where(t => t.Estado == EstadoTurno.Aprobado &&
                            t.FechaPreferida.HasValue &&
-                           t.FechaPreferida.Value.Date <= cutoffTime.Date) // Turnos de HOY o anteriores (después de las 6 PM)
+                           t.FechaPreferida.Value.Date <= cutoffTime.Date && // Turnos de HOY o anteriores (después de las 6 PM)
+                           !turnosConEntregas.Contains(t.Id)) // ✅ Excluir turnos que ya tienen entregas
                 .ToListAsync();
 
             if (!expiredTurnos.Any())
