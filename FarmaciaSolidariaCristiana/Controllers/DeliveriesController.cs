@@ -571,6 +571,9 @@ namespace FarmaciaSolidariaCristiana.Controllers
         {
             try
             {
+                // Normalizar documento (igual que TurnoService.HashDocument)
+                documentoIdentidad = documentoIdentidad.Trim().ToUpper();
+                
                 // Calcular hash del documento
                 using var sha256 = System.Security.Cryptography.SHA256.Create();
                 var hashBytes = sha256.ComputeHash(System.Text.Encoding.UTF8.GetBytes(documentoIdentidad));
@@ -674,6 +677,9 @@ namespace FarmaciaSolidariaCristiana.Controllers
         {
             try
             {
+                // Normalizar documento (igual que TurnoService.HashDocument)
+                documentoIdentidad = documentoIdentidad.Trim().ToUpper();
+                
                 // Calcular hash del documento
                 using var sha256 = System.Security.Cryptography.SHA256.Create();
                 var hashBytes = sha256.ComputeHash(System.Text.Encoding.UTF8.GetBytes(documentoIdentidad));
@@ -799,6 +805,9 @@ namespace FarmaciaSolidariaCristiana.Controllers
         {
             try
             {
+                // Normalizar documento (igual que TurnoService.HashDocument)
+                documentoIdentidad = documentoIdentidad.Trim().ToUpper();
+                
                 // Calcular hash del documento (mismo método que usa TurnoService)
                 using var sha256 = System.Security.Cryptography.SHA256.Create();
                 var hashBytes = sha256.ComputeHash(System.Text.Encoding.UTF8.GetBytes(documentoIdentidad));
@@ -1059,6 +1068,9 @@ namespace FarmaciaSolidariaCristiana.Controllers
         {
             try
             {
+                // Normalizar documento (igual que TurnoService.HashDocument)
+                documentoIdentidad = documentoIdentidad.Trim().ToUpper();
+                
                 // Calcular hash del documento (mismo método que usa TurnoService)
                 using var sha256 = System.Security.Cryptography.SHA256.Create();
                 var hashBytes = sha256.ComputeHash(System.Text.Encoding.UTF8.GetBytes(documentoIdentidad));
