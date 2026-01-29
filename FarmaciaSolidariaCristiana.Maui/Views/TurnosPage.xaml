@@ -13,7 +13,6 @@
         <SearchBar Grid.Row="0"
                    Placeholder="Buscar turnos..."
                    Text="{Binding SearchText}"
-                   SearchCommand="{Binding RefreshCommand}"
                    Margin="10,10,10,0"/>
         
         <!-- Filter Picker -->
@@ -29,8 +28,8 @@
         
         <!-- Turnos List -->
         <RefreshView Grid.Row="2"
-                     IsRefreshing="{Binding IsBusy}"
-                     Command="{Binding RefreshCommand}">
+                     IsRefreshing="{Binding IsRefreshing}"
+                     Command="{Binding LoadTurnosCommand}">
             <CollectionView ItemsSource="{Binding Turnos}"
                             SelectionMode="None"
                             EmptyView="No hay turnos para mostrar">
@@ -97,20 +96,30 @@
                                     <HorizontalStackLayout Grid.Row="2" Grid.Column="2"
                                                            Spacing="5"
                                                            IsVisible="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:TurnosViewModel}}, Path=CanManageTurnos}">
-                                        <ImageButton Source="check.png"
-                                                     HeightRequest="30"
-                                                     WidthRequest="30"
-                                                     BackgroundColor="{StaticResource Success}"
-                                                     Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:TurnosViewModel}}, Path=AprobarTurnoCommand}"
-                                                     CommandParameter="{Binding .}"
-                                                     IsVisible="{Binding Estado, Converter={StaticResource StatusToPendingConverter}}"/>
-                                        <ImageButton Source="close.png"
-                                                     HeightRequest="30"
-                                                     WidthRequest="30"
-                                                     BackgroundColor="{StaticResource Danger}"
-                                                     Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:TurnosViewModel}}, Path=RechazarTurnoCommand}"
-                                                     CommandParameter="{Binding .}"
-                                                     IsVisible="{Binding Estado, Converter={StaticResource StatusToPendingConverter}}"/>
+                                        <Button Text="✓"
+                                                HeightRequest="36"
+                                                WidthRequest="36"
+                                                CornerRadius="18"
+                                                Padding="0"
+                                                FontSize="18"
+                                                FontAttributes="Bold"
+                                                TextColor="White"
+                                                BackgroundColor="{StaticResource Success}"
+                                                Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:TurnosViewModel}}, Path=AprobarTurnoCommand}"
+                                                CommandParameter="{Binding .}"
+                                                IsVisible="{Binding Estado, Converter={StaticResource StatusToPendingConverter}}"/>
+                                        <Button Text="✕"
+                                                HeightRequest="36"
+                                                WidthRequest="36"
+                                                CornerRadius="18"
+                                                Padding="0"
+                                                FontSize="18"
+                                                FontAttributes="Bold"
+                                                TextColor="White"
+                                                BackgroundColor="{StaticResource Danger}"
+                                                Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:TurnosViewModel}}, Path=RechazarTurnoCommand}"
+                                                CommandParameter="{Binding .}"
+                                                IsVisible="{Binding Estado, Converter={StaticResource StatusToPendingConverter}}"/>
                                     </HorizontalStackLayout>
                                 </Grid>
                             </Frame>

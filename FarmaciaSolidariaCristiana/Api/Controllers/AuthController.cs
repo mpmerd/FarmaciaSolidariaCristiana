@@ -181,6 +181,138 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
             return ApiOk(true, "Contraseña actualizada exitosamente");
         }
 
+        /// <summary>
+        /// Verifica si el registro público está habilitado
+        /// </summary>
+        [HttpGet("registration-status")]
+        [AllowAnonymous]
+        [ProducesResponseType(typeof(ApiResponse<RegistrationStatusDto>), 200)]
+        public IActionResult GetRegistrationStatus()
+        {
+            var isEnabled = _configuration.GetValue<bool>("AppSettings:EnablePublicRegistration");
+            return ApiOk(new RegistrationStatusDto
+            {
+                IsEnabled = isEnabled,
+                Message = isEnabled ? null : "El registro público está deshabilitado actualmente."
+            });
+        }
+
+        /// <summary>
+        /// Registra un nuevo usuario público (ViewerPublic)
+        /// </summary>
+        [HttpPost("register")]
+        [AllowAnonymous]
+        [ProducesResponseType(typeof(ApiResponse<bool>), 200)]
+        [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+        public async Task<IActionResult> Register([FromBody] RegisterRequestDto model)
+        {
+            // Verificar si el registro está habilitado
+            var isEnabled = _configuration.GetValue<bool>("AppSettings:EnablePublicRegistration");
+            if (!isEnabled)
+            {
+                return ApiError("El registro público está deshabilitado actualmente.");
+            }
+
+            if (!ModelState.IsValid)
+            {
+                var errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage);
+                return ApiError(string.Join(", ", errors));
+            }
+
+            // Verificar si el usuario ya existe
+            var existingUser = await _userManager.FindByEmailAsync(model.Email);
+            if (existingUser != null)
+            {
+                return ApiError("Ya existe una cuenta con ese correo electrónico.");
+            }
+
+            existingUser = await _userManager.FindByNameAsync(model.UserName);
+            if (existingUser != null)
+            {
+                return ApiError("El nombre de usuario ya está en uso.");
+            }
+
+            var user = new IdentityUser
+            {
+                UserName = model.UserName,
+                Email = model.Email,
+                EmailConfirmed = false
+            };
+
+            var result = await _userManager.CreateAsync(user, model.Password);
+
+            if (result.Succeeded)
+            {
+                // Agregar rol ViewerPublic (paciente/público)
+                await _userManager.AddToRoleAsync(user, "ViewerPublic");
+
+                _logger.LogInformation("Nuevo usuario registrado vía API: {Username}", model.UserName);
+
+                return ApiOk(true, "¡Registro exitoso! Ya puedes iniciar sesión.");
+            }
+
+            var createErrors = string.Join(", ", result.Errors.Select(e => e.Description));
+            return ApiError($"Error al crear la cuenta: {createErrors}");
+        }
+
+        /// <summary>
+        /// Solicita el envío de un email para restablecer la contraseña
+        /// </summary>
+        [HttpPost("forgot-password")]
+        [AllowAnonymous]
+        [ProducesResponseType(typeof(ApiResponse<bool>), 200)]
+        [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+        public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequestDto model)
+        {
+            if (!ModelState.IsValid)
+            {
+                return ApiError("Datos inválidos");
+            }
+
+            // Buscar usuario por email o nombre de usuario
+            var user = await _userManager.FindByEmailAsync(model.EmailOrUserName);
+            if (user == null)
+            {
+                user = await _userManager.FindByNameAsync(model.EmailOrUserName);
+            }
+
+            // Por seguridad, siempre devolvemos éxito aunque el usuario no exista
+            if (user == null || string.IsNullOrEmpty(user.Email))
+            {
+                _logger.LogWarning("Solicitud de recuperación para usuario inexistente: {User}", model.EmailOrUserName);
+                return ApiOk(true, "Si el usuario existe, recibirá un correo con instrucciones para restablecer su contraseña.");
+            }
+
+            try
+            {
+                // Generar token de recuperación
+                var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+                
+                // Construir URL de recuperación (apunta a la web MVC)
+                var siteUrl = _configuration.GetValue<string>("AppSettings:SiteUrl") ?? "http://localhost:5003";
+                var callbackUrl = $"{siteUrl}/Account/ResetPassword?userId={user.Id}&token={Uri.EscapeDataString(token)}";
+
+                // Obtener el servicio de email
+                var emailService = HttpContext.RequestServices.GetService<FarmaciaSolidariaCristiana.Services.IEmailService>();
+                if (emailService != null)
+                {
+                    await emailService.SendPasswordResetEmailAsync(user.Email, callbackUrl);
+                    _logger.LogInformation("Email de recuperación enviado a: {Email}", user.Email);
+                }
+                else
+                {
+                    _logger.LogWarning("Servicio de email no disponible para recuperación");
+                }
+
+                return ApiOk(true, "Si el usuario existe, recibirá un correo con instrucciones para restablecer su contraseña.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error enviando email de recuperación a: {Email}", user.Email);
+                return ApiError("Error al enviar el correo. Inténtelo más tarde.");
+            }
+        }
+
         #region Private Methods
 
         private string GenerateJwtToken(IdentityUser user, IList<string> roles)

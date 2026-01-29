@@ -542,6 +542,155 @@ namespace FarmaciaSolidariaCristiana.Services
             }
         }
 
+        public async Task<NotificationResultDto> SendTurnoCanceladoPorPacienteToFarmaceuticosAsync(
+            int turnoId, int numeroTurno, string nombrePaciente, DateTime fechaTurno, string motivo)
+        {
+            try
+            {
+                // Obtener todos los usuarios con rol Farmaceutico o Admin
+                var farmaceuticos = await _userManager.GetUsersInRoleAsync("Farmaceutico");
+                var admins = await _userManager.GetUsersInRoleAsync("Admin");
+
+                var allUserIds = farmaceuticos.Select(u => u.Id)
+                    .Union(admins.Select(u => u.Id))
+                    .Distinct()
+                    .ToList();
+
+                if (!allUserIds.Any())
+                {
+                    return new NotificationResultDto
+                    {
+                        Success = false,
+                        RecipientsCount = 0,
+                        ErrorMessage = "No hay farmacéuticos registrados"
+                    };
+                }
+
+                // Obtener todos los Player IDs de farmacéuticos/admin
+                var playerIds = await _context.UserDeviceTokens
+                    .Where(t => allUserIds.Contains(t.UserId) && t.IsActive)
+                    .Select(t => t.OneSignalPlayerId)
+                    .ToListAsync();
+
+                if (!playerIds.Any())
+                {
+                    _logger.LogInformation("Los farmacéuticos no tienen dispositivos registrados para push");
+                    return new NotificationResultDto
+                    {
+                        Success = false,
+                        RecipientsCount = 0,
+                        ErrorMessage = "Los farmacéuticos no tienen dispositivos registrados"
+                    };
+                }
+
+                var title = "❌ Turno Cancelado por Paciente";
+                var message = $"{nombrePaciente} canceló el turno #{numeroTurno} del {fechaTurno:dd/MM/yyyy}. Motivo: {motivo}";
+                
+                var data = new Dictionary<string, string>
+                {
+                    { "turnoId", turnoId.ToString() },
+                    { "numeroTurno", numeroTurno.ToString() },
+                    { "fechaTurno", fechaTurno.ToString("yyyy-MM-ddTHH:mm:ss") },
+                    { "action", "ver_turnos_cancelados" }
+                };
+
+                return await SendNotificationToPlayersAsync(playerIds, title, message, NotificationType.TurnoCancelado, data);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al enviar notificación de cancelación a farmacéuticos");
+                return new NotificationResultDto
+                {
+                    Success = false,
+                    ErrorMessage = ex.Message
+                };
+            }
+        }
+
+        public async Task<NotificationResultDto> SendTurnoCanceladoNoPresentacionAsync(
+            string userId, int turnoId, int numeroTurno, DateTime fechaTurno)
+        {
+            var title = "⚠️ Turno Cancelado - No Presentación";
+            var message = $"Tu turno #{numeroTurno} del {fechaTurno:dd/MM/yyyy} fue cancelado porque no asististe a la farmacia.";
+            
+            var data = new Dictionary<string, string>
+            {
+                { "turnoId", turnoId.ToString() },
+                { "numeroTurno", numeroTurno.ToString() },
+                { "fechaTurno", fechaTurno.ToString("yyyy-MM-ddTHH:mm:ss") },
+                { "motivo", "No presentación" },
+                { "action", "ver_turnos" }
+            };
+
+            return await SendNotificationToUserAsync(userId, title, message, NotificationType.TurnoCancelado, data);
+        }
+
+        public async Task<NotificationResultDto> SendTurnoCanceladoNoPresentacionToFarmaceuticosAsync(
+            int turnoId, int numeroTurno, string nombrePaciente, DateTime fechaTurno)
+        {
+            try
+            {
+                // Obtener todos los usuarios con rol Farmaceutico o Admin
+                var farmaceuticos = await _userManager.GetUsersInRoleAsync("Farmaceutico");
+                var admins = await _userManager.GetUsersInRoleAsync("Admin");
+
+                var allUserIds = farmaceuticos.Select(u => u.Id)
+                    .Union(admins.Select(u => u.Id))
+                    .Distinct()
+                    .ToList();
+
+                if (!allUserIds.Any())
+                {
+                    return new NotificationResultDto
+                    {
+                        Success = false,
+                        RecipientsCount = 0,
+                        ErrorMessage = "No hay farmacéuticos registrados"
+                    };
+                }
+
+                // Obtener todos los Player IDs de farmacéuticos/admin
+                var playerIds = await _context.UserDeviceTokens
+                    .Where(t => allUserIds.Contains(t.UserId) && t.IsActive)
+                    .Select(t => t.OneSignalPlayerId)
+                    .ToListAsync();
+
+                if (!playerIds.Any())
+                {
+                    _logger.LogInformation("Los farmacéuticos no tienen dispositivos registrados para push");
+                    return new NotificationResultDto
+                    {
+                        Success = false,
+                        RecipientsCount = 0,
+                        ErrorMessage = "Los farmacéuticos no tienen dispositivos registrados"
+                    };
+                }
+
+                var title = "⏰ Turno Cancelado - No Presentación";
+                var message = $"El turno #{numeroTurno} de {nombrePaciente} ({fechaTurno:dd/MM/yyyy}) fue cancelado automáticamente por no asistencia.";
+                
+                var data = new Dictionary<string, string>
+                {
+                    { "turnoId", turnoId.ToString() },
+                    { "numeroTurno", numeroTurno.ToString() },
+                    { "nombrePaciente", nombrePaciente },
+                    { "fechaTurno", fechaTurno.ToString("yyyy-MM-ddTHH:mm:ss") },
+                    { "action", "ver_turnos_cancelados" }
+                };
+
+                return await SendNotificationToPlayersAsync(playerIds, title, message, NotificationType.TurnoCancelado, data);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al enviar notificación de no presentación a farmacéuticos");
+                return new NotificationResultDto
+                {
+                    Success = false,
+                    ErrorMessage = ex.Message
+                };
+            }
+        }
+
         // ========================================
         // Métodos privados auxiliares
         // ========================================

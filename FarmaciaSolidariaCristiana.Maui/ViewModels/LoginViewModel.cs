@@ -84,12 +84,39 @@ public partial class LoginViewModel : BaseViewModel
     [RelayCommand]
     private async Task GoToRegisterAsync()
     {
-        await NavigateToAsync("//register");
+        await Shell.Current.GoToAsync(nameof(Views.RegisterPage));
     }
 
     [RelayCommand]
     private async Task ForgotPasswordAsync()
     {
-        await ShowErrorAsync("Para recuperar su contraseña, contacte al administrador.");
+        // Solicitar el email/usuario
+        var emailOrUserName = await Application.Current!.MainPage!.DisplayPromptAsync(
+            "Recuperar Contraseña",
+            "Ingrese su correo electrónico o nombre de usuario:",
+            "Enviar",
+            "Cancelar",
+            placeholder: "correo@ejemplo.com",
+            keyboard: Keyboard.Email);
+
+        if (string.IsNullOrWhiteSpace(emailOrUserName))
+            return;
+
+        await ExecuteAsync(async () =>
+        {
+            var result = await ApiService.ForgotPasswordAsync(emailOrUserName);
+            
+            if (result.Success)
+            {
+                await Application.Current!.MainPage!.DisplayAlert(
+                    "Correo Enviado",
+                    result.Message ?? "Si el usuario existe, recibirá un correo con instrucciones para restablecer su contraseña.",
+                    "OK");
+            }
+            else
+            {
+                await ShowErrorAsync(result.Message ?? "Error al procesar la solicitud");
+            }
+        });
     }
 }

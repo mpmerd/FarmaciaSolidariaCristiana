@@ -39,8 +39,10 @@ public static class MauiProgram
 
         // Register ViewModels
         builder.Services.AddTransient<LoginViewModel>();
+        builder.Services.AddTransient<RegisterViewModel>();
         builder.Services.AddTransient<DashboardViewModel>();
         builder.Services.AddTransient<TurnosViewModel>();
+        builder.Services.AddTransient<SolicitarTurnoViewModel>();
         builder.Services.AddTransient<MedicamentosViewModel>();
         builder.Services.AddTransient<InsumosViewModel>();
         builder.Services.AddTransient<DonacionesViewModel>();
@@ -53,8 +55,10 @@ public static class MauiProgram
 
         // Register Pages
         builder.Services.AddTransient<LoginPage>();
+        builder.Services.AddTransient<RegisterPage>();
         builder.Services.AddTransient<DashboardPage>();
         builder.Services.AddTransient<TurnosPage>();
+        builder.Services.AddTransient<SolicitarTurnoPage>();
         builder.Services.AddTransient<MedicamentosPage>();
         builder.Services.AddTransient<InsumosPage>();
         builder.Services.AddTransient<DonacionesPage>();

@@ -50,6 +50,7 @@ namespace FarmaciaSolidariaCristiana.Services
             using var scope = _serviceProvider.CreateScope();
             var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
             var emailService = scope.ServiceProvider.GetRequiredService<IEmailService>();
+            var notificationService = scope.ServiceProvider.GetRequiredService<IOneSignalNotificationService>();
             var userManager = scope.ServiceProvider.GetRequiredService<UserManager<IdentityUser>>();
 
             var now = DateTime.Now;
@@ -109,7 +110,7 @@ namespace FarmaciaSolidariaCristiana.Services
             {
                 try
                 {
-                    await CancelExpiredTurno(turno, context, emailService, userManager);
+                    await CancelExpiredTurno(turno, context, emailService, notificationService, userManager);
                 }
                 catch (Exception ex)
                 {
@@ -125,6 +126,7 @@ namespace FarmaciaSolidariaCristiana.Services
             Turno turno,
             ApplicationDbContext context,
             IEmailService emailService,
+            IOneSignalNotificationService notificationService,
             UserManager<IdentityUser> userManager)
         {
             _logger.LogInformation("Cancelando turno vencido #{TurnoId} - Usuario: {UserId}, Fecha: {Fecha}",
@@ -157,16 +159,41 @@ namespace FarmaciaSolidariaCristiana.Services
             turno.ComentariosFarmaceutico += $"\n[CANCELADO AUTOMÁTICAMENTE - {DateTime.Now:dd/MM/yyyy HH:mm}]";
             turno.ComentariosFarmaceutico += "\nMotivo: Usuario no asistió a la farmacia en la fecha programada";
 
-            // 4. Enviar email al usuario
-            if (turno.User?.Email != null)
+            var nombrePaciente = turno.User?.UserName ?? "Paciente";
+            var fechaTurno = turno.FechaPreferida ?? DateTime.Now;
+            var numeroTurno = turno.NumeroTurno ?? 0;
+
+            // 4. Verificar si el paciente tiene la app para enviar push o email
+            var pacienteTienePush = await notificationService.UserHasPushEnabledAsync(turno.UserId);
+
+            if (pacienteTienePush)
             {
+                // Enviar notificación push al paciente
+                try
+                {
+                    await notificationService.SendTurnoCanceladoNoPresentacionAsync(
+                        turno.UserId,
+                        turno.Id,
+                        numeroTurno,
+                        fechaTurno);
+
+                    _logger.LogInformation("Push de no asistencia enviado al paciente: {UserId}", turno.UserId);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error enviando push al paciente del turno {TurnoId}", turno.Id);
+                }
+            }
+            else if (turno.User?.Email != null)
+            {
+                // Enviar email al usuario si no tiene la app
                 try
                 {
                     await emailService.SendTurnoNoAsistenciaUsuarioEmailAsync(
                         turno.User.Email,
-                        turno.User.UserName ?? "Usuario",
-                        turno.NumeroTurno ?? 0,
-                        turno.FechaPreferida ?? DateTime.Now);
+                        nombrePaciente,
+                        numeroTurno,
+                        fechaTurno);
 
                     _logger.LogInformation("Email de no asistencia enviado a usuario: {Email}", turno.User.Email);
                 }
@@ -176,7 +203,23 @@ namespace FarmaciaSolidariaCristiana.Services
                 }
             }
 
-            // 5. Enviar email a todos los farmacéuticos
+            // 5. Enviar notificación push a farmacéuticos y admin
+            try
+            {
+                await notificationService.SendTurnoCanceladoNoPresentacionToFarmaceuticosAsync(
+                    turno.Id,
+                    numeroTurno,
+                    nombrePaciente,
+                    fechaTurno);
+
+                _logger.LogInformation("Push de no asistencia enviado a farmacéuticos para turno #{TurnoId}", turno.Id);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Error enviando push a farmacéuticos para turno {TurnoId}", turno.Id);
+            }
+
+            // 6. También enviar email a farmacéuticos (además del push, por si no todos tienen la app)
             try
             {
                 var farmaceuticos = await userManager.GetUsersInRoleAsync("Farmaceutico");
@@ -190,9 +233,9 @@ namespace FarmaciaSolidariaCristiana.Services
                         await emailService.SendTurnoNoAsistenciaFarmaceuticoEmailAsync(
                             farmaceutico.Email!,
                             farmaceutico.UserName ?? "Farmacéutico",
-                            turno.NumeroTurno ?? 0,
-                            turno.User?.UserName ?? "Usuario",
-                            turno.FechaPreferida ?? DateTime.Now,
+                            numeroTurno,
+                            nombrePaciente,
+                            fechaTurno,
                             GetTurnoItemsSummary(turno));
 
                         _logger.LogInformation("Email de no asistencia enviado a farmacéutico: {Email}", farmaceutico.Email);

@@ -206,3 +206,129 @@ public class MonthIndexConverter : IValueConverter
         return 1;
     }
 }
+
+/// <summary>
+/// Converts bool to color based on parameter
+/// Parameter format: "TrueColor|FalseColor" (e.g., "Primary|LightGray")
+/// </summary>
+public class BoolToColorConverter : IValueConverter
+{
+    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        if (value is bool boolValue && parameter is string param)
+        {
+            var colors = param.Split('|');
+            if (colors.Length == 2)
+            {
+                var colorName = boolValue ? colors[0] : colors[1];
+                return GetColorFromName(colorName);
+            }
+        }
+        return Colors.Gray;
+    }
+
+    private static Color GetColorFromName(string name) => name switch
+    {
+        "Primary" => Color.FromArgb("#0d6efd"),
+        "Secondary" => Color.FromArgb("#6c757d"),
+        "Success" => Color.FromArgb("#198754"),
+        "Danger" => Color.FromArgb("#dc3545"),
+        "Warning" => Color.FromArgb("#ffc107"),
+        "Info" => Color.FromArgb("#0dcaf0"),
+        "White" => Colors.White,
+        "Black" => Colors.Black,
+        "LightGray" => Color.FromArgb("#e9ecef"),
+        _ => Colors.Gray
+    };
+
+    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        throw new NotImplementedException();
+    }
+}
+
+/// <summary>
+/// Converts bool to color (inverse) based on parameter
+/// Parameter format: "TrueColor|FalseColor"
+/// </summary>
+public class BoolToColorInverseConverter : IValueConverter
+{
+    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        if (value is bool boolValue && parameter is string param)
+        {
+            var colors = param.Split('|');
+            if (colors.Length == 2)
+            {
+                // Inverted: use second color when true
+                var colorName = !boolValue ? colors[0] : colors[1];
+                return GetColorFromName(colorName);
+            }
+        }
+        return Colors.Gray;
+    }
+
+    private static Color GetColorFromName(string name) => name switch
+    {
+        "Primary" => Color.FromArgb("#0d6efd"),
+        "Secondary" => Color.FromArgb("#6c757d"),
+        "Success" => Color.FromArgb("#198754"),
+        "Danger" => Color.FromArgb("#dc3545"),
+        "Warning" => Color.FromArgb("#ffc107"),
+        "Info" => Color.FromArgb("#0dcaf0"),
+        "White" => Colors.White,
+        "Black" => Colors.Black,
+        "LightGray" => Color.FromArgb("#e9ecef"),
+        _ => Colors.Gray
+    };
+
+    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        throw new NotImplementedException();
+    }
+}
+
+/// <summary>
+/// Converts bool to text based on parameter
+/// Parameter format: "TrueText|FalseText"
+/// </summary>
+public class BoolToTextConverter : IValueConverter
+{
+    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        if (value is bool boolValue && parameter is string param)
+        {
+            var texts = param.Split('|');
+            if (texts.Length == 2)
+            {
+                return boolValue ? texts[0] : texts[1];
+            }
+        }
+        return string.Empty;
+    }
+
+    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        throw new NotImplementedException();
+    }
+}
+
+/// <summary>
+/// Converts int to bool (true if > 0)
+/// </summary>
+public class IntToBoolConverter : IValueConverter
+{
+    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        if (value is int intValue)
+        {
+            return intValue > 0;
+        }
+        return false;
+    }
+
+    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        throw new NotImplementedException();
+    }
+}

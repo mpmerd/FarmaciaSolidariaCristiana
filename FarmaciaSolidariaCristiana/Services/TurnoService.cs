@@ -22,6 +22,7 @@ namespace FarmaciaSolidariaCristiana.Services
     {
         private readonly ApplicationDbContext _context;
         private readonly IEmailService _emailService;
+        private readonly IOneSignalNotificationService _notificationService;
         private readonly IWebHostEnvironment _environment;
         private readonly IImageCompressionService _imageCompressionService;
         private readonly ILogger<TurnoService> _logger;
@@ -29,12 +30,14 @@ namespace FarmaciaSolidariaCristiana.Services
         public TurnoService(
             ApplicationDbContext context, 
             IEmailService emailService,
+            IOneSignalNotificationService notificationService,
             IWebHostEnvironment environment,
             IImageCompressionService imageCompressionService,
             ILogger<TurnoService> logger)
         {
             _context = context;
             _emailService = emailService;
+            _notificationService = notificationService;
             _environment = environment;
             _imageCompressionService = imageCompressionService;
             _logger = logger;
@@ -799,23 +802,43 @@ namespace FarmaciaSolidariaCristiana.Services
 
                 await _context.SaveChangesAsync();
 
-                // Enviar email de aprobación con PDF adjunto
-                if (turno.User?.Email != null)
+                // Notificar al usuario: Push si tiene app instalada, Email si no
+                if (turno.User != null && turno.NumeroTurno.HasValue && turno.FechaPreferida.HasValue)
                 {
-                    // Convertir ruta relativa a ruta física completa para el adjunto
-                    var pdfPhysicalPath = Path.Combine(_environment.WebRootPath, pdfPath.Replace("/", Path.DirectorySeparatorChar.ToString()));
+                    var hasPushEnabled = await _notificationService.UserHasPushEnabledAsync(turno.UserId);
                     
-                    _logger.LogInformation("Enviando email con PDF: {PhysicalPath}", pdfPhysicalPath);
-                    
-                    var emailSent = await _emailService.SendTurnoAprobadoEmailAsync(
-                        turno.User.Email,
-                        turno.User.UserName ?? "Usuario",
-                        turno.NumeroTurno.Value,
-                        turno.FechaPreferida.Value,
-                        pdfPhysicalPath
-                    );
+                    if (hasPushEnabled)
+                    {
+                        // Usuario tiene la app instalada -> enviar push notification
+                        _logger.LogInformation("Usuario {UserId} tiene push habilitado, enviando notificación push", turno.UserId);
+                        
+                        await _notificationService.SendTurnoAprobadoNotificationAsync(
+                            turno.UserId,
+                            turno.Id,
+                            turno.NumeroTurno.Value,
+                            turno.FechaPreferida.Value,
+                            pdfPath); // URL del PDF
+                        
+                        turno.EmailEnviado = false; // No se envió email, se usó push
+                    }
+                    else if (turno.User.Email != null)
+                    {
+                        // Usuario NO tiene la app -> enviar email con PDF adjunto
+                        _logger.LogInformation("Usuario {UserId} no tiene push, enviando email a {Email}", turno.UserId, turno.User.Email);
+                        
+                        var pdfPhysicalPath = Path.Combine(_environment.WebRootPath, pdfPath.Replace("/", Path.DirectorySeparatorChar.ToString()));
+                        
+                        var emailSent = await _emailService.SendTurnoAprobadoEmailAsync(
+                            turno.User.Email,
+                            turno.User.UserName ?? "Usuario",
+                            turno.NumeroTurno.Value,
+                            turno.FechaPreferida.Value,
+                            pdfPhysicalPath
+                        );
 
-                    turno.EmailEnviado = emailSent;
+                        turno.EmailEnviado = emailSent;
+                    }
+                    
                     await _context.SaveChangesAsync();
                 }
 
@@ -864,16 +887,38 @@ namespace FarmaciaSolidariaCristiana.Services
 
                 await _context.SaveChangesAsync();
 
-                // Enviar email de rechazo
-                if (turno.User?.Email != null)
+                // Notificar al usuario: Push si tiene app instalada, Email si no
+                if (turno.User != null)
                 {
-                    var emailSent = await _emailService.SendTurnoRechazadoEmailAsync(
-                        turno.User.Email,
-                        turno.User.UserName ?? "Usuario",
-                        motivo
-                    );
+                    var hasPushEnabled = await _notificationService.UserHasPushEnabledAsync(turno.UserId);
+                    
+                    if (hasPushEnabled && turno.NumeroTurno.HasValue)
+                    {
+                        // Usuario tiene la app instalada -> enviar push notification
+                        _logger.LogInformation("Usuario {UserId} tiene push habilitado, enviando notificación de rechazo", turno.UserId);
+                        
+                        await _notificationService.SendTurnoRechazadoNotificationAsync(
+                            turno.UserId,
+                            turno.Id,
+                            turno.NumeroTurno.Value,
+                            motivo);
+                        
+                        turno.EmailEnviado = false; // No se envió email, se usó push
+                    }
+                    else if (turno.User.Email != null)
+                    {
+                        // Usuario NO tiene la app -> enviar email
+                        _logger.LogInformation("Usuario {UserId} no tiene push, enviando email de rechazo a {Email}", turno.UserId, turno.User.Email);
+                        
+                        var emailSent = await _emailService.SendTurnoRechazadoEmailAsync(
+                            turno.User.Email,
+                            turno.User.UserName ?? "Usuario",
+                            motivo
+                        );
 
-                    turno.EmailEnviado = emailSent;
+                        turno.EmailEnviado = emailSent;
+                    }
+                    
                     await _context.SaveChangesAsync();
                 }
 
@@ -1270,6 +1315,7 @@ namespace FarmaciaSolidariaCristiana.Services
         public async Task<bool> CancelTurnoByUserAsync(int turnoId, string userId, string motivoCancelacion)
         {
             var turno = await _context.Turnos
+                .Include(t => t.User)
                 .Include(t => t.Medicamentos).ThenInclude(tm => tm.Medicine)
                 .Include(t => t.Insumos).ThenInclude(ti => ti.Supply)
                 .FirstOrDefaultAsync(t => t.Id == turnoId && t.UserId == userId);
@@ -1317,6 +1363,27 @@ namespace FarmaciaSolidariaCristiana.Services
             await _context.SaveChangesAsync();
             
             _logger.LogInformation("Turno {TurnoId} cancelado por usuario {UserId}", turnoId, userId);
+            
+            // Enviar notificación push a farmacéuticos y admin
+            if (turno.NumeroTurno.HasValue && turno.FechaPreferida.HasValue)
+            {
+                try
+                {
+                    var nombrePaciente = turno.User?.UserName ?? "Paciente";
+                    await _notificationService.SendTurnoCanceladoPorPacienteToFarmaceuticosAsync(
+                        turnoId,
+                        turno.NumeroTurno.Value,
+                        nombrePaciente,
+                        turno.FechaPreferida.Value,
+                        motivoCancelacion);
+                    
+                    _logger.LogInformation("Notificación de cancelación enviada a farmacéuticos para turno #{TurnoId}", turnoId);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Error enviando notificación de cancelación a farmacéuticos para turno #{TurnoId}", turnoId);
+                }
+            }
             
             return true;
         }

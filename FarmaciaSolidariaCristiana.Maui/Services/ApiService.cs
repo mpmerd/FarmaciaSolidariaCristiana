@@ -125,6 +125,18 @@ public class ApiService : IApiService
         {
             return ErrorResponse<T>(Constants.SesionExpirada);
         }
+
+        // Si la respuesta está vacía
+        if (string.IsNullOrWhiteSpace(content))
+        {
+            Console.WriteLine($"[API] WARNING: Empty response!");
+            if (response.IsSuccessStatusCode)
+            {
+                // Si fue exitoso pero vacío, podría ser un 204 No Content
+                return ErrorResponse<T>("El servidor no devolvió datos");
+            }
+            return ErrorResponse<T>($"Error del servidor: {response.StatusCode}");
+        }
         
         // Detectar si la respuesta es HTML (redirect de autenticación)
         if (content.TrimStart().StartsWith("<"))
@@ -142,8 +154,8 @@ public class ApiService : IApiService
         catch (JsonException ex)
         {
             Console.WriteLine($"[API] JSON Error: {ex.Message}");
-            Console.WriteLine($"[API] Content preview: {content.Substring(0, Math.Min(200, content.Length))}");
-            return ErrorResponse<T>($"Error JSON: {ex.Message}");
+            Console.WriteLine($"[API] Content preview: {content.Substring(0, Math.Min(500, content.Length))}");
+            return ErrorResponse<T>($"Error del servidor. Código: {(int)response.StatusCode}");
         }
     }
 
@@ -233,8 +245,64 @@ public class ApiService : IApiService
     public Task<ApiResponse<Turno>> CrearTurnoAsync(CrearTurnoRequest request)
         => PostAsync<Turno>("/api/turnos", request);
 
-    public Task<ApiResponse<Turno>> AprobarTurnoAsync(int id, DateTime fechaAsignada, string? notas)
-        => PostAsync<Turno>($"/api/turnos/{id}/approve", new { fechaAsignada, Comentarios = notas });
+    public async Task<ApiResponse<Turno>> CrearTurnoMobileAsync(ViewModels.CrearTurnoMobileRequest request)
+    {
+        // Convertir al formato que espera la API
+        var apiRequest = new
+        {
+            DocumentoIdentidad = request.DocumentoIdentidad,
+            TipoSolicitud = request.TipoSolicitud,
+            Notas = request.Notas,
+            Items = request.Items.Select(i => new { Id = i.Id, Cantidad = i.Cantidad }).ToList()
+        };
+        return await PostAsync<Turno>("/api/turnos", apiRequest);
+    }
+
+    public async Task<ApiResponse<TurnoDocumentoResponse>> SubirDocumentoTurnoAsync(
+        int turnoId, string fileName, string documentType, byte[] fileBytes, string? description)
+    {
+        try
+        {
+            await SetAuthHeaderAsync();
+
+            using var content = new MultipartFormDataContent();
+            
+            var fileContent = new ByteArrayContent(fileBytes);
+            fileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(
+                fileName.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase) 
+                    ? "application/pdf" 
+                    : "image/jpeg");
+            content.Add(fileContent, "file", fileName);
+            content.Add(new StringContent(documentType), "documentType");
+            
+            if (!string.IsNullOrEmpty(description))
+            {
+                content.Add(new StringContent(description), "description");
+            }
+
+            var response = await _httpClient.PostAsync($"/api/turnos/{turnoId}/documents", content);
+            var responseContent = await response.Content.ReadAsStringAsync();
+
+            Console.WriteLine($"[API] SubirDocumentoTurno status: {response.StatusCode}");
+            Console.WriteLine($"[API] SubirDocumentoTurno response: {responseContent}");
+
+            if (response.IsSuccessStatusCode)
+            {
+                var result = JsonSerializer.Deserialize<ApiResponse<TurnoDocumentoResponse>>(responseContent, _jsonOptions);
+                return result ?? ErrorResponse<TurnoDocumentoResponse>("Error al procesar respuesta");
+            }
+
+            return ErrorResponse<TurnoDocumentoResponse>($"Error: {response.StatusCode}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[API] SubirDocumentoTurno error: {ex.Message}");
+            return ErrorResponse<TurnoDocumentoResponse>(ex.Message);
+        }
+    }
+
+    public Task<ApiResponse<Turno>> AprobarTurnoAsync(int id, string? comentarios = null)
+        => PostAsync<Turno>($"/api/turnos/{id}/approve", new { Comentarios = comentarios });
 
     public Task<ApiResponse<Turno>> RechazarTurnoAsync(int id, string motivo)
         => PostAsync<Turno>($"/api/turnos/{id}/reject", new { motivo });
@@ -242,8 +310,11 @@ public class ApiService : IApiService
     public Task<ApiResponse<Turno>> ReprogramarTurnoAsync(int id, DateTime nuevaFecha, string? motivo)
         => PostAsync<Turno>($"/api/turnos/{id}/reschedule", new { nuevaFecha, motivo });
 
-    public Task<ApiResponse<bool>> CancelarTurnoAsync(int id)
-        => PostAsync<bool>($"/api/turnos/{id}/cancelar", new { });
+    public Task<ApiResponse<Turno>> CancelarTurnoAsync(int id, string motivo)
+        => PostAsync<Turno>($"/api/turnos/{id}/cancel", new { motivo });
+
+    public Task<ApiResponse<CanCancelTurnoResponse>> PuedeCancelarTurnoAsync(int id)
+        => GetAsync<CanCancelTurnoResponse>($"/api/turnos/{id}/can-cancel");
 
     public async Task<byte[]?> DescargarTurnoPdfAsync(int id)
     {
@@ -349,6 +420,54 @@ public class ApiService : IApiService
     public Task<ApiResponse<List<PatientDocument>>> GetDocumentosPacienteAsync(int patientId)
         => GetAsync<List<PatientDocument>>($"/api/patients/{patientId}/documents");
 
+    public async Task<ApiResponse<PatientDocument>> SubirDocumentoPacienteAsync(
+        int patientId, string fileName, string documentType, byte[] fileBytes, string? notes)
+    {
+        try
+        {
+            await SetAuthHeaderAsync();
+
+            using var content = new MultipartFormDataContent();
+            
+            var fileContent = new ByteArrayContent(fileBytes);
+            fileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(
+                fileName.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase) 
+                    ? "application/pdf" 
+                    : "image/jpeg");
+            
+            content.Add(fileContent, "file", fileName);
+            content.Add(new StringContent(documentType), "documentType");
+            if (!string.IsNullOrEmpty(notes))
+            {
+                content.Add(new StringContent(notes), "notes");
+            }
+
+            var response = await _httpClient.PostAsync($"/api/patients/{patientId}/documents", content);
+            var responseContent = await response.Content.ReadAsStringAsync();
+
+            if (response.IsSuccessStatusCode)
+            {
+                var result = JsonSerializer.Deserialize<ApiResponse<PatientDocument>>(responseContent, 
+                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                return result ?? new ApiResponse<PatientDocument> { Success = false, Message = "Error deserializando respuesta" };
+            }
+            
+            return new ApiResponse<PatientDocument> 
+            { 
+                Success = false, 
+                Message = $"Error: {response.StatusCode}" 
+            };
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse<PatientDocument> 
+            { 
+                Success = false, 
+                Message = ex.Message 
+            };
+        }
+    }
+
     // === PATROCINADORES ===
 
     public Task<ApiResponse<List<Sponsor>>> GetPatrocinadoresAsync()
@@ -410,12 +529,23 @@ public class ApiService : IApiService
             if (response.IsSuccessStatusCode)
             {
                 var content = await response.Content.ReadAsStringAsync();
+                System.Diagnostics.Debug.WriteLine($"Reporte response: {content.Substring(0, Math.Min(500, content.Length))}...");
+                
                 var apiResponse = JsonSerializer.Deserialize<ApiResponseReport>(content, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
                 
                 if (apiResponse?.Success == true && apiResponse.Data?.PdfBase64 != null)
                 {
                     return Convert.FromBase64String(apiResponse.Data.PdfBase64);
                 }
+                else
+                {
+                    System.Diagnostics.Debug.WriteLine($"Reporte API error: Success={apiResponse?.Success}, Data={apiResponse?.Data != null}, Message={apiResponse?.Message}");
+                }
+            }
+            else
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                System.Diagnostics.Debug.WriteLine($"Reporte HTTP error {response.StatusCode}: {errorContent}");
             }
             return null;
         }
@@ -423,6 +553,67 @@ public class ApiService : IApiService
         {
             System.Diagnostics.Debug.WriteLine($"Error descargando reporte: {ex.Message}");
             return null;
+        }
+    }
+
+    // === AUTENTICACIÓN ===
+
+    public async Task<ApiResponse<RegistrationStatusDto>> GetRegistrationStatusAsync()
+    {
+        try
+        {
+            var response = await _httpClient.GetAsync("/api/auth/registration-status");
+            return await ProcessResponseAsync<RegistrationStatusDto>(response);
+        }
+        catch (Exception ex)
+        {
+            return ErrorResponse<RegistrationStatusDto>($"Error de conexión: {ex.Message}");
+        }
+    }
+
+    public async Task<ApiResponse<bool>> RegisterAsync(RegisterRequest request)
+    {
+        try
+        {
+            var json = JsonSerializer.Serialize(request, _jsonOptions);
+            var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
+            var response = await _httpClient.PostAsync("/api/auth/register", content);
+            return await ProcessResponseAsync<bool>(response);
+        }
+        catch (Exception ex)
+        {
+            return ErrorResponse<bool>($"Error de conexión: {ex.Message}");
+        }
+    }
+
+    public async Task<ApiResponse<bool>> ForgotPasswordAsync(string emailOrUserName)
+    {
+        try
+        {
+            var requestObj = new { EmailOrUserName = emailOrUserName };
+            var json = JsonSerializer.Serialize(requestObj, _jsonOptions);
+            var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
+            var response = await _httpClient.PostAsync("/api/auth/forgot-password", content);
+            return await ProcessResponseAsync<bool>(response);
+        }
+        catch (Exception ex)
+        {
+            return ErrorResponse<bool>($"Error de conexión: {ex.Message}");
+        }
+    }
+
+    // === DIAGNÓSTICO ===
+
+    public async Task<bool> CheckApiHealthAsync()
+    {
+        try
+        {
+            var response = await _httpClient.GetAsync("/api/diagnostics/ping");
+            return response.IsSuccessStatusCode;
+        }
+        catch
+        {
+            return false;
         }
     }
 
@@ -440,20 +631,5 @@ public class ApiService : IApiService
         public string? FileName { get; set; }
         public string? ContentType { get; set; }
         public DateTime GeneratedAt { get; set; }
-    }
-
-    // === DIAGNÓSTICO ===
-
-    public async Task<bool> CheckApiHealthAsync()
-    {
-        try
-        {
-            var response = await _httpClient.GetAsync("/api/diagnostics/ping");
-            return response.IsSuccessStatusCode;
-        }
-        catch
-        {
-            return false;
-        }
     }
 }
