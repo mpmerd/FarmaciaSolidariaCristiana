@@ -270,6 +270,9 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
             _logger.LogInformation("Entrega creada vía API: {Item} x{Quantity} a {Patient} (ID: {Id})", 
                 itemName, model.Quantity, model.PatientIdentification, delivery.Id);
 
+            // Marcar turno como Completado si existe uno aprobado para este paciente y producto
+            await CompleteTurnoIfExistsAsync(model.PatientIdentification, model.MedicineId, model.SupplyId);
+
             var result = new DeliveryDto
             {
                 Id = delivery.Id,
@@ -359,6 +362,66 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
             };
 
             return ApiOk(stats);
+        }
+
+        /// <summary>
+        /// Marca un turno aprobado como completado si existe para el paciente y producto
+        /// </summary>
+        private async Task CompleteTurnoIfExistsAsync(string documentoIdentidad, int? medicineId, int? supplyId)
+        {
+            try
+            {
+                // Normalizar documento (igual que TurnoService.HashDocument)
+                documentoIdentidad = documentoIdentidad.Trim().ToUpper();
+                
+                // Calcular hash del documento
+                using var sha256 = System.Security.Cryptography.SHA256.Create();
+                var hashBytes = sha256.ComputeHash(System.Text.Encoding.UTF8.GetBytes(documentoIdentidad));
+                var documentHash = Convert.ToBase64String(hashBytes);
+
+                // Buscar turnos aprobados para este paciente
+                var turnos = await _context.Turnos
+                    .Include(t => t.Medicamentos)
+                    .Include(t => t.Insumos)
+                    .Where(t => 
+                        t.DocumentoIdentidadHash == documentHash && 
+                        t.Estado == "Aprobado")
+                    .ToListAsync();
+
+                if (!turnos.Any())
+                {
+                    _logger.LogDebug("API: No se encontró turno aprobado para documento {Hash}", documentHash);
+                    return;
+                }
+
+                // Buscar turno que coincida con el producto entregado
+                FarmaciaSolidariaCristiana.Models.Turno? turnoCoincidente = null;
+
+                if (medicineId.HasValue)
+                {
+                    turnoCoincidente = turnos.FirstOrDefault(t => 
+                        t.Medicamentos.Any(m => m.MedicineId == medicineId.Value));
+                }
+                else if (supplyId.HasValue)
+                {
+                    turnoCoincidente = turnos.FirstOrDefault(t => 
+                        t.Insumos.Any(i => i.SupplyId == supplyId.Value));
+                }
+
+                if (turnoCoincidente != null)
+                {
+                    turnoCoincidente.Estado = "Completado";
+                    turnoCoincidente.FechaEntrega = DateTime.Now;
+                    await _context.SaveChangesAsync();
+                    
+                    _logger.LogInformation("API: ✅ Turno #{TurnoId} marcado como Completado automáticamente", turnoCoincidente.Id);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "API: Error al intentar completar turno automáticamente");
+                // No lanzar excepción - la entrega ya se creó exitosamente
+            }
         }
     }
 }
