@@ -82,15 +82,35 @@
                                HeightRequest="40"/>
             
             <!-- Links -->
-            <HorizontalStackLayout HorizontalOptions="Center" Spacing="20">
+            <VerticalStackLayout Spacing="15">
                 <Label Text="¿Olvidó su contraseña?"
                        TextColor="{StaticResource Primary}"
-                       TextDecorations="Underline">
+                       TextDecorations="Underline"
+                       HorizontalTextAlignment="Center">
                     <Label.GestureRecognizers>
                         <TapGestureRecognizer Command="{Binding ForgotPasswordCommand}"/>
                     </Label.GestureRecognizers>
                 </Label>
-            </HorizontalStackLayout>
+                
+                <!-- Separador -->
+                <BoxView HeightRequest="1" 
+                         BackgroundColor="{StaticResource Gray200}"
+                         Margin="50,5"/>
+                
+                <!-- Registro -->
+                <HorizontalStackLayout HorizontalOptions="Center" Spacing="5">
+                    <Label Text="¿No tiene cuenta?"
+                           TextColor="{StaticResource Gray500}"/>
+                    <Label Text="Regístrese aquí"
+                           TextColor="{StaticResource Primary}"
+                           FontAttributes="Bold"
+                           TextDecorations="Underline">
+                        <Label.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding GoToRegisterCommand}"/>
+                        </Label.GestureRecognizers>
+                    </Label>
+                </HorizontalStackLayout>
+            </VerticalStackLayout>
             
             <!-- Footer -->
             <Label Text="© 2026 Farmacia Solidaria Cristiana"

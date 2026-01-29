@@ -1,4 +1,5 @@
 using FarmaciaSolidariaCristiana.Maui.Models;
+using FarmaciaSolidariaCristiana.Maui.ViewModels;
 
 namespace FarmaciaSolidariaCristiana.Maui.Services;
 
@@ -12,10 +13,13 @@ public interface IApiService
     Task<ApiResponse<List<Turno>>> GetMisTurnosAsync();
     Task<ApiResponse<Turno>> GetTurnoAsync(int id);
     Task<ApiResponse<Turno>> CrearTurnoAsync(CrearTurnoRequest request);
-    Task<ApiResponse<Turno>> AprobarTurnoAsync(int id, DateTime fechaAsignada, string? notas);
+    Task<ApiResponse<Turno>> CrearTurnoMobileAsync(CrearTurnoMobileRequest request);
+    Task<ApiResponse<TurnoDocumentoResponse>> SubirDocumentoTurnoAsync(int turnoId, string fileName, string documentType, byte[] fileBytes, string? description);
+    Task<ApiResponse<Turno>> AprobarTurnoAsync(int id, string? comentarios = null);
     Task<ApiResponse<Turno>> RechazarTurnoAsync(int id, string motivo);
     Task<ApiResponse<Turno>> ReprogramarTurnoAsync(int id, DateTime nuevaFecha, string? motivo);
-    Task<ApiResponse<bool>> CancelarTurnoAsync(int id);
+    Task<ApiResponse<Turno>> CancelarTurnoAsync(int id, string motivo);
+    Task<ApiResponse<CanCancelTurnoResponse>> PuedeCancelarTurnoAsync(int id);
     Task<byte[]?> DescargarTurnoPdfAsync(int id);
     
     // Medicamentos
@@ -52,6 +56,7 @@ public interface IApiService
     Task<ApiResponse<Patient>> ActualizarPacienteAsync(Patient paciente);
     Task<ApiResponse<bool>> DeletePacienteAsync(int id);
     Task<ApiResponse<List<PatientDocument>>> GetDocumentosPacienteAsync(int patientId);
+    Task<ApiResponse<PatientDocument>> SubirDocumentoPacienteAsync(int patientId, string fileName, string documentType, byte[] fileBytes, string? notes);
     
     // Patrocinadores
     Task<ApiResponse<List<Sponsor>>> GetPatrocinadoresAsync();
@@ -73,8 +78,33 @@ public interface IApiService
     // Reportes
     Task<byte[]?> DescargarReporteAsync(string tipoReporte, DateTime? fechaInicio = null, DateTime? fechaFin = null);
     
+    // Autenticación
+    Task<ApiResponse<RegistrationStatusDto>> GetRegistrationStatusAsync();
+    Task<ApiResponse<bool>> RegisterAsync(RegisterRequest request);
+    Task<ApiResponse<bool>> ForgotPasswordAsync(string emailOrUserName);
+    
     // Diagnóstico
     Task<bool> CheckApiHealthAsync();
+}
+
+/// <summary>
+/// Estado del registro público
+/// </summary>
+public class RegistrationStatusDto
+{
+    public bool IsEnabled { get; set; }
+    public string? Message { get; set; }
+}
+
+/// <summary>
+/// Request para registro de usuario
+/// </summary>
+public class RegisterRequest
+{
+    public string UserName { get; set; } = string.Empty;
+    public string Email { get; set; } = string.Empty;
+    public string Password { get; set; } = string.Empty;
+    public string ConfirmPassword { get; set; } = string.Empty;
 }
 
 public class FechaBloqueadaDto

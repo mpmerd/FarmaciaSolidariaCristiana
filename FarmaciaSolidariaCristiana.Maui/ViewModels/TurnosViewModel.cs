@@ -37,6 +37,9 @@ public partial class TurnosViewModel : BaseViewModel
     [ObservableProperty]
     private string _selectedFilter = "Todos";
 
+    [ObservableProperty]
+    private bool _isRefreshing;
+
     public List<string> FilterOptions { get; } = new()
     {
         "Todos", "Pendiente", "Aprobado", "Rechazado", "Completado", "Cancelado"
@@ -53,7 +56,10 @@ public partial class TurnosViewModel : BaseViewModel
     [RelayCommand]
     public async Task LoadTurnosAsync()
     {
-        await ExecuteAsync(async () =>
+        if (IsRefreshing) return;
+        
+        IsRefreshing = true;
+        try
         {
             // Verificar permisos
             CanManageTurnos = await AuthService.IsInAnyRoleAsync(
@@ -80,7 +86,16 @@ public partial class TurnosViewModel : BaseViewModel
             {
                 await ShowErrorAsync(result.Message ?? "Error al cargar turnos");
             }
-        });
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[Turnos] Error: {ex.Message}");
+            await ShowErrorAsync("Error al cargar turnos");
+        }
+        finally
+        {
+            IsRefreshing = false;
+        }
     }
 
     partial void OnSearchTextChanged(string value)
@@ -159,16 +174,34 @@ public partial class TurnosViewModel : BaseViewModel
                 case "📄 Descargar PDF": await DescargarPdfAsync(turno); break;
             }
         }
-        // Si es viewerpublic y el turno está aprobado, mostrar opción de PDF
+        // Si es viewerpublic y el turno está aprobado, mostrar opciones incluyendo cancelar
         else if (IsViewerPublic && turno.Estado == "Aprobado")
         {
-            var action = await Shell.Current.DisplayActionSheet(
-                $"Turno #{turno.Id}", "Cancelar", null,
-                "👁️ Ver detalles", "📄 Descargar PDF");
-            switch (action)
+            // Verificar si puede cancelar este turno
+            var canCancelResult = await ApiService.PuedeCancelarTurnoAsync(turno.Id);
+            
+            if (canCancelResult.Success && canCancelResult.Data?.CanCancel == true)
             {
-                case "👁️ Ver detalles": await VerDetallesTurnoAsync(turno); break;
-                case "📄 Descargar PDF": await DescargarPdfAsync(turno); break;
+                var action = await Shell.Current.DisplayActionSheet(
+                    $"Turno #{turno.Id}", "Cerrar", null,
+                    "👁️ Ver detalles", "📄 Ver/Descargar PDF", "🚫 Cancelar turno");
+                switch (action)
+                {
+                    case "👁️ Ver detalles": await VerDetallesTurnoAsync(turno); break;
+                    case "📄 Ver/Descargar PDF": await DescargarPdfAsync(turno); break;
+                    case "🚫 Cancelar turno": await CancelarTurnoAsync(turno); break;
+                }
+            }
+            else
+            {
+                var action = await Shell.Current.DisplayActionSheet(
+                    $"Turno #{turno.Id}", "Cerrar", null,
+                    "👁️ Ver detalles", "📄 Ver/Descargar PDF");
+                switch (action)
+                {
+                    case "👁️ Ver detalles": await VerDetallesTurnoAsync(turno); break;
+                    case "📄 Ver/Descargar PDF": await DescargarPdfAsync(turno); break;
+                }
             }
         }
         else
@@ -214,14 +247,94 @@ public partial class TurnosViewModel : BaseViewModel
                     sb.AppendLine($"  • {ins.SupplyName}: {ins.CantidadSolicitada}{aprobado}");
                 }
             }
-            if (turno.DocumentosCount > 0)
+            
+            // Mostrar documentos adjuntos
+            if (turno.Documentos?.Any() == true)
+            {
+                sb.AppendLine($"\n📎 Documentos adjuntos ({turno.Documentos.Count}):");
+                foreach (var doc in turno.Documentos)
+                {
+                    sb.AppendLine($"  {doc.IconDisplay} {doc.DocumentType}: {doc.FileName}");
+                }
+            }
+            else if (turno.DocumentosCount > 0)
+            {
                 sb.AppendLine($"\n📎 Documentos adjuntos: {turno.DocumentosCount}");
+            }
 
-            await Shell.Current.DisplayAlert($"Turno #{turno.Id}", sb.ToString(), "Cerrar");
+            // Mostrar alerta con opción de ver documentos si existen
+            if (turno.Documentos?.Any() == true)
+            {
+                var verDocs = await Shell.Current.DisplayAlert(
+                    $"Turno #{turno.Id}", 
+                    sb.ToString(), 
+                    "Ver Documentos", 
+                    "Cerrar");
+                    
+                if (verDocs)
+                {
+                    await VerDocumentosTurnoAsync(turno);
+                }
+            }
+            else
+            {
+                await Shell.Current.DisplayAlert($"Turno #{turno.Id}", sb.ToString(), "Cerrar");
+            }
         }
         catch (Exception ex)
         {
             await ShowErrorAsync($"Error: {ex.Message}");
+        }
+    }
+
+    private async Task VerDocumentosTurnoAsync(Turno turno)
+    {
+        if (turno.Documentos == null || !turno.Documentos.Any())
+        {
+            await Shell.Current.DisplayAlert("Información", "Este turno no tiene documentos adjuntos", "OK");
+            return;
+        }
+
+        // Crear lista de opciones con los documentos
+        var options = turno.Documentos
+            .Select(d => $"{d.IconDisplay} {d.DocumentType}: {d.FileName}")
+            .ToArray();
+
+        var selected = await Shell.Current.DisplayActionSheet(
+            "Seleccione un documento para ver",
+            "Cancelar",
+            null,
+            options);
+
+        if (string.IsNullOrEmpty(selected) || selected == "Cancelar")
+            return;
+
+        // Encontrar el documento seleccionado
+        var index = Array.IndexOf(options, selected);
+        if (index >= 0 && index < turno.Documentos.Count)
+        {
+            var doc = turno.Documentos[index];
+            await AbrirDocumentoAsync(doc);
+        }
+    }
+
+    private async Task AbrirDocumentoAsync(Models.TurnoDocumento doc)
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(doc.FullUrl))
+            {
+                await ShowErrorAsync("No se puede acceder al documento");
+                return;
+            }
+
+            // Navegar a la página de visualización de documento
+            var viewerPage = new Views.DocumentoViewerPage(doc);
+            await Shell.Current.Navigation.PushAsync(viewerPage);
+        }
+        catch (Exception ex)
+        {
+            await ShowErrorAsync($"Error al abrir documento: {ex.Message}");
         }
     }
 
@@ -234,11 +347,8 @@ public partial class TurnosViewModel : BaseViewModel
             return;
         }
         
-        // Por ahora mostrar mensaje informativo
-        await Shell.Current.DisplayAlert(
-            "Solicitar Turno", 
-            "La funcionalidad de solicitar turno desde la app móvil estará disponible próximamente.\n\nPor ahora, puede solicitar turnos desde la aplicación web.", 
-            "Entendido");
+        // Navegar a la página de solicitar turno
+        await Shell.Current.GoToAsync("SolicitarTurnoPage");
     }
 
     [RelayCommand]
@@ -250,26 +360,31 @@ public partial class TurnosViewModel : BaseViewModel
             return;
         }
 
-        var fecha = await Shell.Current.DisplayPromptAsync(
+        // Confirmar aprobación
+        var confirm = await ShowConfirmAsync(
             "Aprobar Turno",
-            "Ingrese la fecha asignada (dd/MM/yyyy):",
-            placeholder: DateTime.Today.AddDays(1).ToString("dd/MM/yyyy"));
+            $"¿Desea aprobar el turno #{turno.Id}?\n\nLa fecha y hora se asignarán automáticamente al próximo slot disponible.");
 
-        if (string.IsNullOrEmpty(fecha)) return;
+        if (!confirm) return;
 
-        if (!DateTime.TryParse(fecha, out var fechaAsignada))
-        {
-            await ShowErrorAsync("Fecha inválida");
-            return;
-        }
+        // Pedir comentarios opcionales
+        var comentarios = await Shell.Current.DisplayPromptAsync(
+            "Comentarios (opcional)",
+            "Puede agregar comentarios para el paciente:",
+            placeholder: "Ej: Traer carnet de identidad...",
+            maxLength: 500);
+
+        // El usuario puede cancelar el prompt pero aún así aprobar
+        // Si presiona Cancel en comentarios, comentarios será null (lo cual está bien)
 
         await ExecuteAsync(async () =>
         {
-            var result = await ApiService.AprobarTurnoAsync(turno.Id, fechaAsignada, null);
+            var result = await ApiService.AprobarTurnoAsync(turno.Id, comentarios);
             
             if (result.Success)
             {
-                await ShowSuccessAsync("Turno aprobado exitosamente");
+                var fechaAsignada = result.Data?.FechaPreferida?.ToString("dd/MM/yyyy HH:mm") ?? "próximo disponible";
+                await ShowSuccessAsync($"Turno aprobado exitosamente.\n\nFecha asignada: {fechaAsignada}");
                 await LoadTurnosAsync();
             }
             else
@@ -369,19 +484,46 @@ public partial class TurnosViewModel : BaseViewModel
     [RelayCommand]
     private async Task CancelarTurnoAsync(Turno turno)
     {
-        var confirm = await ShowConfirmAsync(
-            "Cancelar Turno",
-            "¿Está seguro de que desea cancelar este turno?");
+        // Verificar primero si puede cancelar y mostrar info
+        var canCancelResult = await ApiService.PuedeCancelarTurnoAsync(turno.Id);
+        
+        if (!canCancelResult.Success || canCancelResult.Data?.CanCancel != true)
+        {
+            var reason = canCancelResult.Data?.Reason ?? "No se puede cancelar este turno.";
+            await ShowErrorAsync(reason);
+            return;
+        }
+
+        var diasRestantes = canCancelResult.Data.DiasRestantes;
+        var mensaje = diasRestantes > 7 
+            ? $"Faltan {diasRestantes} días para tu turno.\n¿Estás seguro de que deseas cancelarlo?"
+            : "¿Estás seguro de que deseas cancelar este turno?";
+
+        var confirm = await ShowConfirmAsync("Cancelar Turno", mensaje);
 
         if (!confirm) return;
 
+        // Pedir motivo de cancelación
+        var motivo = await Shell.Current.DisplayPromptAsync(
+            "Motivo de Cancelación",
+            "Por favor, ingrese el motivo de la cancelación:",
+            placeholder: "Ej: No podré asistir...",
+            maxLength: 500);
+
+        if (string.IsNullOrWhiteSpace(motivo))
+        {
+            await ShowErrorAsync("Debe proporcionar un motivo para cancelar el turno.");
+            return;
+        }
+
         await ExecuteAsync(async () =>
         {
-            var result = await ApiService.CancelarTurnoAsync(turno.Id);
+            var result = await ApiService.CancelarTurnoAsync(turno.Id, motivo);
             
             if (result.Success)
             {
-                await ShowSuccessAsync("Turno cancelado");
+                // Mostrar notificación local de confirmación (no push)
+                await ShowSuccessAsync("Tu turno ha sido cancelado exitosamente.\n\nLos farmacéuticos han sido notificados.");
                 await LoadTurnosAsync();
             }
             else

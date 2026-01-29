@@ -140,5 +140,33 @@ namespace FarmaciaSolidariaCristiana.Services
             int turnoId,
             int numeroTurno,
             string nombreSolicitante);
+
+        /// <summary>
+        /// Notifica a los farmacéuticos/admin que un paciente canceló su turno
+        /// </summary>
+        Task<NotificationResultDto> SendTurnoCanceladoPorPacienteToFarmaceuticosAsync(
+            int turnoId,
+            int numeroTurno,
+            string nombrePaciente,
+            DateTime fechaTurno,
+            string motivo);
+
+        /// <summary>
+        /// Notifica al paciente y farmacéuticos que el turno fue cancelado por no presentación
+        /// </summary>
+        Task<NotificationResultDto> SendTurnoCanceladoNoPresentacionAsync(
+            string userId,
+            int turnoId,
+            int numeroTurno,
+            DateTime fechaTurno);
+
+        /// <summary>
+        /// Notifica a los farmacéuticos/admin que un turno fue cancelado por no presentación del paciente
+        /// </summary>
+        Task<NotificationResultDto> SendTurnoCanceladoNoPresentacionToFarmaceuticosAsync(
+            int turnoId,
+            int numeroTurno,
+            string nombrePaciente,
+            DateTime fechaTurno);
     }
 }

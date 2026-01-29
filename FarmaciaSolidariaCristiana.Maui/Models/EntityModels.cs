@@ -110,6 +110,15 @@ public class PatientDocument
     public string? FilePath { get; set; }
     public string? Notes { get; set; }
     public DateTime UploadedAt { get; set; }
+    
+    /// <summary>
+    /// URL completa del documento para visualización
+    /// </summary>
+    public string? FullUrl => string.IsNullOrEmpty(FilePath) 
+        ? null 
+        : (FilePath.StartsWith("http") 
+            ? FilePath 
+            : $"{Helpers.Constants.ApiBaseUrl}/{FilePath.TrimStart('/')}");
 }
 
 /// <summary>
@@ -126,11 +135,31 @@ public class Patient
     public string? Phone { get; set; }
     public string? Municipality { get; set; }
     public string? Province { get; set; }
+    
+    // Datos clínicos
     public string? MainDiagnosis { get; set; }
+    public string? AssociatedPathologies { get; set; }
     public string? KnownAllergies { get; set; }
+    public string? CurrentTreatments { get; set; }
+    
+    // Datos vitales
+    public int? BloodPressureSystolic { get; set; }
+    public int? BloodPressureDiastolic { get; set; }
+    public decimal? Weight { get; set; }
+    public decimal? Height { get; set; }
+    
+    // Observaciones
+    public string? Observations { get; set; }
+    
     public bool IsActive { get; set; }
     public DateTime RegistrationDate { get; set; }
     public int DeliveriesCount { get; set; }
+    
+    // Propiedad calculada para mostrar presión arterial
+    public string BloodPressureDisplay => 
+        BloodPressureSystolic.HasValue && BloodPressureDiastolic.HasValue 
+            ? $"{BloodPressureSystolic}/{BloodPressureDiastolic} mmHg" 
+            : "N/A";
 }
 
 /// <summary>

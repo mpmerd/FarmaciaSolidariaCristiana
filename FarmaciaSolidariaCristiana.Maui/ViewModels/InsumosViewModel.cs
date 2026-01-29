@@ -223,7 +223,7 @@ public partial class InsumosViewModel : BaseViewModel
                 Name = nombre,
                 Description = string.IsNullOrWhiteSpace(descripcion) ? null : descripcion,
                 StockQuantity = stock,
-                Unit = "unidades"
+                Unit = "unidades"  // Insumos siempre usan unidades
             };
             
             var result = await ApiService.CrearInsumoAsync(nuevoInsumo);

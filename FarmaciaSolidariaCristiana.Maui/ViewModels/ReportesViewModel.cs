@@ -130,10 +130,23 @@ public partial class ReportesViewModel : BaseViewModel
             var filePath = Path.Combine(FileSystem.CacheDirectory, fileName);
             await File.WriteAllBytesAsync(filePath, pdfBytes);
             
-            await Launcher.OpenAsync(new OpenFileRequest
+            // Intentar abrir el PDF, si falla usar Share
+            try
             {
-                File = new ReadOnlyFile(filePath)
-            });
+                await Launcher.OpenAsync(new OpenFileRequest
+                {
+                    File = new ReadOnlyFile(filePath)
+                });
+            }
+            catch
+            {
+                // Fallback: compartir el archivo
+                await Share.RequestAsync(new ShareFileRequest
+                {
+                    Title = "Abrir reporte PDF",
+                    File = new ShareFile(filePath)
+                });
+            }
         }
         catch (Exception ex)
         {

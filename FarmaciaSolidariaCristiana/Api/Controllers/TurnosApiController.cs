@@ -17,15 +17,18 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
     {
         private readonly ApplicationDbContext _context;
         private readonly ITurnoService _turnoService;
+        private readonly IOneSignalNotificationService _notificationService;
         private readonly ILogger<TurnosApiController> _logger;
 
         public TurnosApiController(
             ApplicationDbContext context,
             ITurnoService turnoService,
+            IOneSignalNotificationService notificationService,
             ILogger<TurnosApiController> logger)
         {
             _context = context;
             _turnoService = turnoService;
+            _notificationService = notificationService;
             _logger = logger;
         }
 
@@ -46,6 +49,7 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
                 .Include(t => t.User)
                 .Include(t => t.Medicamentos).ThenInclude(tm => tm.Medicine)
                 .Include(t => t.Insumos).ThenInclude(ti => ti.Supply)
+                .Include(t => t.Documentos)
                 .AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(estado))
@@ -96,6 +100,7 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
             var turnos = await _context.Turnos
                 .Include(t => t.Medicamentos).ThenInclude(tm => tm.Medicine)
                 .Include(t => t.Insumos).ThenInclude(ti => ti.Supply)
+                .Include(t => t.Documentos)
                 .Where(t => t.UserId == userId)
                 .OrderByDescending(t => t.FechaSolicitud)
                 .Select(t => MapToDto(t))
@@ -168,6 +173,223 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
         }
 
         /// <summary>
+        /// Crea una nueva solicitud de turno (para usuarios ViewerPublic desde app móvil)
+        /// </summary>
+        [HttpPost]
+        [Authorize(Roles = "ViewerPublic")]
+        [ProducesResponseType(typeof(ApiResponse<TurnoDto>), 200)]
+        [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+        public async Task<IActionResult> CreateTurno([FromBody] CreateTurnoApiDto model)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                {
+                    var errors = ModelState.Values
+                        .SelectMany(v => v.Errors)
+                        .Select(e => e.ErrorMessage)
+                        .ToList();
+                    return ApiError(string.Join("; ", errors));
+                }
+
+                var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+                // Verificar si puede solicitar turno
+                var (canRequest, reason) = await _turnoService.CanUserRequestTurnoAsync(userId!);
+                if (!canRequest)
+                {
+                    return ApiError(reason ?? "No puede solicitar turno en este momento");
+                }
+
+                // Validar que haya items
+                if (model.Items == null || !model.Items.Any())
+                {
+                    return ApiError("Debe seleccionar al menos un medicamento o insumo");
+                }
+
+                // Crear listas de medicamentos o insumos según tipo
+                var medicamentos = new List<(int MedicineId, int Quantity)>();
+                var insumos = new List<(int SupplyId, int Quantity)>();
+
+                if (model.TipoSolicitud == "Medicamento")
+                {
+                    foreach (var item in model.Items)
+                    {
+                        if (item.Cantidad > 0)
+                        {
+                            medicamentos.Add((item.Id, item.Cantidad));
+                        }
+                    }
+                }
+                else if (model.TipoSolicitud == "Insumo")
+                {
+                    foreach (var item in model.Items)
+                    {
+                        if (item.Cantidad > 0)
+                        {
+                            insumos.Add((item.Id, item.Cantidad));
+                        }
+                    }
+                }
+
+                // Crear turno
+                var turno = new Turno
+                {
+                    UserId = userId!,
+                    DocumentoIdentidadHash = _turnoService.HashDocument(model.DocumentoIdentidad),
+                    FechaPreferida = null, // Se asigna al aprobar
+                    NotasSolicitante = model.Notas
+                };
+
+                // Crear turno sin documentos (los documentos se suben en llamadas separadas)
+                var createdTurno = await _turnoService.CreateTurnoWithDocumentsAsync(
+                    turno, 
+                    medicamentos, 
+                    insumos, 
+                    new List<IFormFile>(), 
+                    new List<string>(), 
+                    new List<string>());
+
+                // Cargar datos completos para el DTO
+                var turnoCompleto = await _context.Turnos
+                    .Include(t => t.User)
+                    .Include(t => t.Medicamentos).ThenInclude(tm => tm.Medicine)
+                    .Include(t => t.Insumos).ThenInclude(ti => ti.Supply)
+                    .FirstOrDefaultAsync(t => t.Id == createdTurno.Id);
+
+                _logger.LogInformation("Turno #{Id} creado vía API por usuario {UserId}", createdTurno.Id, userId);
+
+                // Enviar notificación push a farmacéuticos (no email ya que el usuario vio la confirmación en app)
+                try
+                {
+                    var nombreUsuario = turnoCompleto?.User?.UserName ?? "Usuario";
+                    var numeroTurno = turnoCompleto?.NumeroTurno ?? createdTurno.Id;
+                    await _notificationService.SendNuevaSolicitudToFarmaceuticosAsync(
+                        createdTurno.Id, 
+                        numeroTurno, 
+                        nombreUsuario);
+                    _logger.LogInformation("Notificación push enviada a farmacéuticos para turno #{TurnoId}", createdTurno.Id);
+                }
+                catch (Exception notifEx)
+                {
+                    // No fallar la solicitud si la notificación falla
+                    _logger.LogWarning(notifEx, "Error enviando notificación push a farmacéuticos para turno #{TurnoId}", createdTurno.Id);
+                }
+
+                return ApiOk(MapToDto(turnoCompleto!), "Turno solicitado exitosamente. Recibirás una notificación cuando sea revisado.");
+            }
+            catch (InvalidOperationException ex)
+            {
+                return ApiError(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error creando turno vía API");
+                return ApiError("Error al crear la solicitud de turno");
+            }
+        }
+
+        /// <summary>
+        /// Sube un documento a un turno existente
+        /// </summary>
+        [HttpPost("{id}/documents")]
+        [Authorize(Roles = "ViewerPublic")]
+        [ProducesResponseType(typeof(ApiResponse<TurnoDocumentoDto>), 200)]
+        [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+        public async Task<IActionResult> UploadDocument(int id, [FromForm] IFormFile file, [FromForm] string documentType, [FromForm] string? description)
+        {
+            try
+            {
+                var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+                // Buscar turno
+                var turno = await _context.Turnos
+                    .FirstOrDefaultAsync(t => t.Id == id && t.UserId == userId);
+
+                if (turno == null)
+                {
+                    return ApiError("Turno no encontrado", 404);
+                }
+
+                // Solo permitir subir documentos a turnos pendientes
+                if (turno.Estado != EstadoTurno.Pendiente)
+                {
+                    return ApiError("Solo se pueden subir documentos a turnos pendientes");
+                }
+
+                // Validar archivo
+                if (file == null || file.Length == 0)
+                {
+                    return ApiError("Debe seleccionar un archivo");
+                }
+
+                if (file.Length > 5 * 1024 * 1024)
+                {
+                    return ApiError("El archivo no puede superar 5MB");
+                }
+
+                var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".pdf" };
+                var ext = Path.GetExtension(file.FileName).ToLowerInvariant();
+                if (!allowedExtensions.Contains(ext))
+                {
+                    return ApiError("Solo se permiten archivos JPG, PNG o PDF");
+                }
+
+                // Crear directorio
+                var uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", "turnos");
+                if (!Directory.Exists(uploadsFolder))
+                {
+                    Directory.CreateDirectory(uploadsFolder);
+                }
+
+                // Guardar archivo
+                var fileName = $"{Guid.NewGuid()}_{Path.GetFileName(file.FileName)}";
+                var filePath = Path.Combine(uploadsFolder, fileName);
+                long fileSize = file.Length;
+
+                using (var stream = new FileStream(filePath, FileMode.Create))
+                {
+                    await file.CopyToAsync(stream);
+                }
+
+                // Crear registro
+                var documento = new TurnoDocumento
+                {
+                    TurnoId = turno.Id,
+                    DocumentType = documentType ?? "Otro",
+                    FileName = file.FileName,
+                    FilePath = $"/uploads/turnos/{fileName}",
+                    FileSize = fileSize,
+                    ContentType = file.ContentType,
+                    Description = description,
+                    UploadDate = DateTime.Now
+                };
+
+                _context.TurnoDocumentos.Add(documento);
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation("Documento subido para turno #{TurnoId}: {FileName}", id, file.FileName);
+
+                return ApiOk(new TurnoDocumentoDto
+                {
+                    Id = documento.Id,
+                    DocumentType = documento.DocumentType,
+                    FileName = documento.FileName,
+                    FilePath = documento.FilePath,
+                    FileSize = documento.FileSize,
+                    ContentType = documento.ContentType,
+                    Description = documento.Description,
+                    UploadDate = documento.UploadDate
+                }, "Documento subido exitosamente");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error subiendo documento para turno #{Id}", id);
+                return ApiError("Error al subir el documento");
+            }
+        }
+
+        /// <summary>
         /// Aprueba un turno (Admin/Farmaceutico)
         /// </summary>
         [HttpPost("{id}/approve")]
@@ -193,23 +415,31 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
             }
 
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            
-            turno.Estado = EstadoTurno.Aprobado;
-            turno.RevisadoPorId = userId;
-            turno.FechaRevision = DateTime.Now;
-            turno.ComentariosFarmaceutico = model?.Comentarios;
 
-            // Asignar fecha si no tiene
-            if (!turno.FechaPreferida.HasValue)
+            // Usar el servicio que genera el PDF y maneja todo correctamente
+            var (success, message, pdfPath) = await _turnoService.ApproveTurnoAsync(
+                id, 
+                userId!, 
+                null, // cantidadesAprobadas (se usan las solicitadas)
+                model?.Comentarios);
+
+            if (!success)
             {
-                turno.FechaPreferida = await _turnoService.GetNextAvailableSlotAsync();
+                return ApiError(message ?? "Error al aprobar el turno");
             }
 
-            await _context.SaveChangesAsync();
+            // Recargar turno con datos actualizados
+            turno = await _context.Turnos
+                .Include(t => t.User)
+                .Include(t => t.Medicamentos).ThenInclude(tm => tm.Medicine)
+                .Include(t => t.Insumos).ThenInclude(ti => ti.Supply)
+                .FirstOrDefaultAsync(t => t.Id == id);
 
             _logger.LogInformation("Turno {Id} aprobado vía API por usuario {UserId}", id, userId);
 
-            return ApiOk(MapToDto(turno), "Turno aprobado exitosamente");
+            // La notificación (push o email) ya fue enviada por TurnoService.ApproveTurnoAsync
+
+            return ApiOk(MapToDto(turno!), "Turno aprobado exitosamente");
         }
 
         /// <summary>
@@ -244,16 +474,114 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
 
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
-            turno.Estado = EstadoTurno.Rechazado;
-            turno.RevisadoPorId = userId;
-            turno.FechaRevision = DateTime.Now;
-            turno.ComentariosFarmaceutico = model.Motivo;
+            // Usar el servicio para rechazar (maneja notificaciones push/email)
+            var (success, message) = await _turnoService.RejectTurnoAsync(id, userId!, model.Motivo);
 
-            await _context.SaveChangesAsync();
+            if (!success)
+            {
+                return ApiError(message ?? "Error al rechazar el turno");
+            }
+
+            // Recargar turno con datos actualizados
+            turno = await _context.Turnos
+                .Include(t => t.User)
+                .Include(t => t.Medicamentos).ThenInclude(tm => tm.Medicine)
+                .Include(t => t.Insumos).ThenInclude(ti => ti.Supply)
+                .FirstOrDefaultAsync(t => t.Id == id);
 
             _logger.LogInformation("Turno {Id} rechazado vía API por usuario {UserId}", id, userId);
 
-            return ApiOk(MapToDto(turno), "Turno rechazado");
+            // La notificación (push o email) ya fue enviada por TurnoService.RejectTurnoAsync
+
+            return ApiOk(MapToDto(turno!), "Turno rechazado");
+        }
+
+        /// <summary>
+        /// Cancela un turno por el paciente (debe faltar más de 7 días)
+        /// </summary>
+        [HttpPost("{id}/cancel")]
+        [ProducesResponseType(typeof(ApiResponse<TurnoDto>), 200)]
+        [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+        [ProducesResponseType(typeof(ApiResponse<object>), 404)]
+        public async Task<IActionResult> Cancel(int id, [FromBody] CancelTurnoDto model)
+        {
+            if (!ModelState.IsValid || string.IsNullOrWhiteSpace(model?.Motivo))
+            {
+                return ApiError("Debe proporcionar un motivo de cancelación");
+            }
+
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            var turno = await _context.Turnos
+                .Include(t => t.User)
+                .Include(t => t.Medicamentos).ThenInclude(tm => tm.Medicine)
+                .Include(t => t.Insumos).ThenInclude(ti => ti.Supply)
+                .FirstOrDefaultAsync(t => t.Id == id && t.UserId == userId);
+
+            if (turno == null)
+            {
+                return ApiError("Turno no encontrado o no tiene permisos para cancelarlo", 404);
+            }
+
+            // Validar que se puede cancelar (debe ser Aprobado y faltar más de 7 días)
+            if (!_turnoService.CanUserCancelTurno(turno))
+            {
+                var reason = _turnoService.GetCancelReasonMessage(turno);
+                return ApiError(reason);
+            }
+
+            // Usar el servicio para cancelar (maneja devolución de stock y notificaciones push a farmacéuticos)
+            var success = await _turnoService.CancelTurnoByUserAsync(id, userId!, model.Motivo);
+
+            if (!success)
+            {
+                return ApiError("Error al cancelar el turno");
+            }
+
+            // Recargar turno con datos actualizados
+            turno = await _context.Turnos
+                .Include(t => t.User)
+                .Include(t => t.Medicamentos).ThenInclude(tm => tm.Medicine)
+                .Include(t => t.Insumos).ThenInclude(ti => ti.Supply)
+                .FirstOrDefaultAsync(t => t.Id == id);
+
+            _logger.LogInformation("Turno {Id} cancelado por paciente vía API", id);
+
+            // La notificación push a farmacéuticos ya fue enviada por TurnoService.CancelTurnoByUserAsync
+            // El paciente recibirá confirmación local en la app (no push)
+
+            return ApiOk(MapToDto(turno!), "Turno cancelado exitosamente");
+        }
+
+        /// <summary>
+        /// Verifica si el usuario puede cancelar un turno específico
+        /// </summary>
+        [HttpGet("{id}/can-cancel")]
+        [ProducesResponseType(typeof(ApiResponse<CanCancelTurnoDto>), 200)]
+        [ProducesResponseType(typeof(ApiResponse<object>), 404)]
+        public async Task<IActionResult> CanCancel(int id)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            var turno = await _context.Turnos
+                .FirstOrDefaultAsync(t => t.Id == id && t.UserId == userId);
+
+            if (turno == null)
+            {
+                return ApiError("Turno no encontrado", 404);
+            }
+
+            var canCancel = _turnoService.CanUserCancelTurno(turno);
+            var reason = canCancel ? null : _turnoService.GetCancelReasonMessage(turno);
+
+            return ApiOk(new CanCancelTurnoDto
+            {
+                CanCancel = canCancel,
+                Reason = reason,
+                DiasRestantes = turno.FechaPreferida.HasValue 
+                    ? (int)(turno.FechaPreferida.Value.Date - DateTime.Now.Date).TotalDays 
+                    : 0
+            });
         }
 
         /// <summary>
@@ -376,12 +704,14 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
                 Id = t.Id,
                 UserId = t.UserId,
                 UserEmail = t.User?.Email,
+                NumeroTurno = t.NumeroTurno,
                 FechaPreferida = t.FechaPreferida,
                 FechaSolicitud = t.FechaSolicitud,
                 Estado = t.Estado,
                 NotasSolicitante = t.NotasSolicitante,
                 ComentariosFarmaceutico = t.ComentariosFarmaceutico,
                 FechaRevision = t.FechaRevision,
+                TurnoPdfPath = t.TurnoPdfPath,
                 Medicamentos = t.Medicamentos.Select(m => new TurnoMedicamentoDto
                 {
                     MedicineId = m.MedicineId,
@@ -398,7 +728,18 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
                     CantidadAprobada = i.CantidadAprobada,
                     DisponibleAlSolicitar = i.DisponibleAlSolicitar
                 }).ToList(),
-                DocumentosCount = t.Documentos?.Count ?? 0
+                DocumentosCount = t.Documentos?.Count ?? 0,
+                Documentos = t.Documentos?.Select(d => new TurnoDocumentoDto
+                {
+                    Id = d.Id,
+                    DocumentType = d.DocumentType ?? "Otro",
+                    FileName = d.FileName,
+                    FilePath = d.FilePath,
+                    FileSize = d.FileSize,
+                    ContentType = d.ContentType,
+                    Description = d.Description,
+                    UploadDate = d.UploadDate
+                }).ToList() ?? new List<TurnoDocumentoDto>()
             };
         }
 

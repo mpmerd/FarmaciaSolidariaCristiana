@@ -5,6 +5,7 @@ namespace FarmaciaSolidariaCristiana.Maui.Views;
 public partial class MedicamentosPage : ContentPage
 {
     private readonly MedicamentosViewModel _viewModel;
+    private bool _initialized;
 
     public MedicamentosPage(MedicamentosViewModel viewModel)
     {
@@ -15,6 +16,14 @@ public partial class MedicamentosPage : ContentPage
     protected override async void OnAppearing()
     {
         base.OnAppearing();
-        await _viewModel.LoadMedicamentosCommand.ExecuteAsync(null);
+        if (!_initialized)
+        {
+            _initialized = true;
+            await _viewModel.InitializeAsync();
+        }
+        else
+        {
+            await _viewModel.LoadMedicamentosCommand.ExecuteAsync(null);
+        }
     }
 }

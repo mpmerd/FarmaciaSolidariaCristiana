@@ -10,15 +10,18 @@ namespace FarmaciaSolidariaCristiana.Api.Models
         public int Id { get; set; }
         public string UserId { get; set; } = string.Empty;
         public string? UserEmail { get; set; }
+        public int? NumeroTurno { get; set; }
         public DateTime? FechaPreferida { get; set; }
         public DateTime FechaSolicitud { get; set; }
         public string Estado { get; set; } = string.Empty;
         public string? NotasSolicitante { get; set; }
         public string? ComentariosFarmaceutico { get; set; }
         public DateTime? FechaRevision { get; set; }
+        public string? TurnoPdfPath { get; set; }
         public List<TurnoMedicamentoDto> Medicamentos { get; set; } = new();
         public List<TurnoInsumoDto> Insumos { get; set; } = new();
         public int DocumentosCount { get; set; }
+        public List<TurnoDocumentoDto> Documentos { get; set; } = new();
     }
 
     /// <summary>
@@ -96,5 +99,75 @@ namespace FarmaciaSolidariaCristiana.Api.Models
         public int TotalRechazados { get; set; }
         public int TurnosHoy { get; set; }
         public int TurnosEsteMes { get; set; }
+    }
+
+    /// <summary>
+    /// DTO para crear una solicitud de turno desde la app móvil
+    /// </summary>
+    public class CreateTurnoApiDto
+    {
+        [Required(ErrorMessage = "El documento de identidad es requerido")]
+        [StringLength(20)]
+        [RegularExpression(@"^(\d{11}|[A-Za-z]{1,3}\d{6,7})$", 
+            ErrorMessage = "Formato inválido. Use 11 dígitos para CI o 1-3 letras + 6-7 dígitos para Pasaporte")]
+        public string DocumentoIdentidad { get; set; } = string.Empty;
+
+        [StringLength(1000)]
+        public string? Notas { get; set; }
+
+        /// <summary>
+        /// Tipo de solicitud: "Medicamento" o "Insumo"
+        /// </summary>
+        [Required(ErrorMessage = "El tipo de solicitud es requerido")]
+        public string TipoSolicitud { get; set; } = "Medicamento";
+
+        /// <summary>
+        /// Lista de items (medicamentos o insumos según TipoSolicitud)
+        /// </summary>
+        public List<TurnoItemDto> Items { get; set; } = new();
+    }
+
+    /// <summary>
+    /// Item de turno (medicamento o insumo)
+    /// </summary>
+    public class TurnoItemDto
+    {
+        public int Id { get; set; }
+        public int Cantidad { get; set; } = 1;
+    }
+
+    /// <summary>
+    /// DTO para documento de turno
+    /// </summary>
+    public class TurnoDocumentoDto
+    {
+        public int Id { get; set; }
+        public string DocumentType { get; set; } = string.Empty;
+        public string FileName { get; set; } = string.Empty;
+        public string FilePath { get; set; } = string.Empty;
+        public long FileSize { get; set; }
+        public string? ContentType { get; set; }
+        public string? Description { get; set; }
+        public DateTime UploadDate { get; set; }
+    }
+
+    /// <summary>
+    /// DTO para cancelar un turno por el paciente
+    /// </summary>
+    public class CancelTurnoDto
+    {
+        [Required(ErrorMessage = "Debe proporcionar un motivo de cancelación")]
+        [StringLength(500, ErrorMessage = "El motivo no puede exceder 500 caracteres")]
+        public string Motivo { get; set; } = string.Empty;
+    }
+
+    /// <summary>
+    /// DTO para la respuesta de si se puede cancelar un turno
+    /// </summary>
+    public class CanCancelTurnoDto
+    {
+        public bool CanCancel { get; set; }
+        public string? Reason { get; set; }
+        public int DiasRestantes { get; set; }
     }
 }

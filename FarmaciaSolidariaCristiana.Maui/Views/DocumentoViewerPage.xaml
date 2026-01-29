@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="FarmaciaSolidariaCristiana.Maui.Views.DocumentoViewerPage"
+             Title="Documento"
+             Shell.NavBarIsVisible="True">
+    
+    <Grid BackgroundColor="#1a1a1a">
+        <!-- Imagen con zoom -->
+        <ScrollView x:Name="ImageScrollView"
+                    Orientation="Both"
+                    HorizontalScrollBarVisibility="Never"
+                    VerticalScrollBarVisibility="Never"
+                    IsVisible="False">
+            <Image x:Name="ImageViewer"
+                   Aspect="AspectFit"
+                   HorizontalOptions="Center"
+                   VerticalOptions="Center"/>
+        </ScrollView>
+        
+        <!-- PDF en WebView -->
+        <WebView x:Name="PdfViewer"
+                 HorizontalOptions="Fill"
+                 VerticalOptions="Fill"
+                 IsVisible="False"/>
+        
+        <!-- Loading -->
+        <VerticalStackLayout x:Name="LoadingView"
+                             VerticalOptions="Center"
+                             HorizontalOptions="Center"
+                             IsVisible="True">
+            <ActivityIndicator IsRunning="True" Color="White" HeightRequest="50" WidthRequest="50"/>
+            <Label x:Name="LoadingLabel" Text="Cargando documento..." TextColor="White" Margin="0,10,0,0"/>
+        </VerticalStackLayout>
+        
+        <!-- Error -->
+        <VerticalStackLayout x:Name="ErrorView"
+                             VerticalOptions="Center"
+                             HorizontalOptions="Center"
+                             Padding="30"
+                             IsVisible="False">
+            <Label Text="❌" FontSize="60" HorizontalTextAlignment="Center"/>
+            <Label x:Name="ErrorLabel" 
+                   Text="Error al cargar documento" 
+                   TextColor="White" 
+                   FontSize="18"
+                   HorizontalTextAlignment="Center"
+                   Margin="20,10"/>
+            <Button Text="Cerrar" 
+                    Clicked="OnCloseClicked"
+                    BackgroundColor="{StaticResource Primary}"
+                    TextColor="White"
+                    CornerRadius="10"
+                    WidthRequest="150"
+                    Margin="0,20,0,0"/>
+        </VerticalStackLayout>
+        
+        <!-- Info del documento (overlay) -->
+        <Frame x:Name="InfoFrame"
+               BackgroundColor="#80000000"
+               Padding="15"
+               CornerRadius="10"
+               HasShadow="False"
+               VerticalOptions="End"
+               HorizontalOptions="Center"
+               Margin="20"
+               IsVisible="False">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="15">
+                <VerticalStackLayout Grid.Column="0" VerticalOptions="Center">
+                    <Label x:Name="DocTypeLabel" TextColor="White" FontAttributes="Bold"/>
+                    <Label x:Name="FileNameLabel" TextColor="White" FontSize="12" LineBreakMode="TailTruncation"/>
+                </VerticalStackLayout>
+                <Button Grid.Column="1" 
+                        Text="📥" 
+                        FontSize="20"
+                        BackgroundColor="Transparent"
+                        Clicked="OnDownloadClicked"
+                        ToolTipProperties.Text="Abrir en app externa"/>
+            </Grid>
+        </Frame>
+    </Grid>
+</ContentPage>

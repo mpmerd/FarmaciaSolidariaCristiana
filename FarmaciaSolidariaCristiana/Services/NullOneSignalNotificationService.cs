@@ -117,5 +117,23 @@ namespace FarmaciaSolidariaCristiana.Services
         {
             return Task.FromResult(NotConfiguredResult());
         }
+
+        public Task<NotificationResultDto> SendTurnoCanceladoPorPacienteToFarmaceuticosAsync(
+            int turnoId, int numeroTurno, string nombrePaciente, DateTime fechaTurno, string motivo)
+        {
+            return Task.FromResult(NotConfiguredResult());
+        }
+
+        public Task<NotificationResultDto> SendTurnoCanceladoNoPresentacionAsync(
+            string userId, int turnoId, int numeroTurno, DateTime fechaTurno)
+        {
+            return Task.FromResult(NotConfiguredResult());
+        }
+
+        public Task<NotificationResultDto> SendTurnoCanceladoNoPresentacionToFarmaceuticosAsync(
+            int turnoId, int numeroTurno, string nombrePaciente, DateTime fechaTurno)
+        {
+            return Task.FromResult(NotConfiguredResult());
+        }
     }
 }

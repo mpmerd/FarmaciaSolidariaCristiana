@@ -19,6 +19,10 @@
             <converters:StatusToColorConverter x:Key="StatusToColorConverter"/>
             <converters:StringToBoolConverter x:Key="StringToBoolConverter"/>
             <converters:MonthIndexConverter x:Key="MonthIndexConverter"/>
+            <converters:BoolToColorConverter x:Key="BoolToColorConverter"/>
+            <converters:BoolToColorInverseConverter x:Key="BoolToColorInverseConverter"/>
+            <converters:BoolToTextConverter x:Key="BoolToTextConverter"/>
+            <converters:IntToBoolConverter x:Key="IntToBoolConverter"/>
             
             <!-- Additional Colors -->
             <Color x:Key="BackgroundColor">#F5F5F5</Color>

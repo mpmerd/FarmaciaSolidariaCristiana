@@ -1,0 +1,255 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:viewmodels="clr-namespace:FarmaciaSolidariaCristiana.Maui.ViewModels"
+             x:Class="FarmaciaSolidariaCristiana.Maui.Views.SolicitarTurnoPage"
+             x:DataType="viewmodels:SolicitarTurnoViewModel"
+             Title="{Binding Title}"
+             Shell.NavBarIsVisible="True">
+
+    <ContentPage.Resources>
+        <Style x:Key="SectionTitle" TargetType="Label">
+            <Setter Property="FontSize" Value="16"/>
+            <Setter Property="FontAttributes" Value="Bold"/>
+            <Setter Property="TextColor" Value="{StaticResource Primary}"/>
+            <Setter Property="Margin" Value="0,15,0,8"/>
+        </Style>
+        <Style x:Key="FieldLabel" TargetType="Label">
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="TextColor" Value="{StaticResource Gray600}"/>
+            <Setter Property="Margin" Value="0,0,0,4"/>
+        </Style>
+    </ContentPage.Resources>
+
+    <Grid>
+        <ScrollView Padding="16">
+            <VerticalStackLayout Spacing="10">
+                
+                <!-- Aviso Importante -->
+                <Frame BackgroundColor="#FFF3CD" BorderColor="#FFC107" Padding="12" CornerRadius="8">
+                    <VerticalStackLayout Spacing="4">
+                        <Label Text="⚠️ Importante" FontAttributes="Bold" TextColor="#856404"/>
+                        <Label Text="Los tratamientos se ofrecerán por un período máximo de 15 días. De manera excepcional, podrán ser valorados hasta 21 días, sin garantía de aprobación."
+                               FontSize="13" TextColor="#856404" LineBreakMode="WordWrap"/>
+                    </VerticalStackLayout>
+                </Frame>
+
+                <!-- Documento de Identidad -->
+                <Frame BackgroundColor="White" Padding="16" CornerRadius="10" HasShadow="True">
+                    <VerticalStackLayout Spacing="8">
+                        <Label Text="📋 Identificación" Style="{StaticResource SectionTitle}"/>
+                        
+                        <Label Text="Carnet de Identidad o Pasaporte *" Style="{StaticResource FieldLabel}"/>
+                        <Entry Placeholder="Ej: 88012312345 o A1234567"
+                               Text="{Binding DocumentoIdentidad}"
+                               Keyboard="Text"
+                               MaxLength="20"
+                               ReturnType="Next"/>
+                        
+                        <Label Text="{Binding DocumentoError}"
+                               TextColor="Red"
+                               FontSize="12"
+                               IsVisible="{Binding DocumentoError, Converter={StaticResource StringToBoolConverter}}"/>
+                        
+                        <Label Text="✓ Documento válido"
+                               TextColor="Green"
+                               FontSize="12"
+                               IsVisible="{Binding IsDocumentoValid}"/>
+                    </VerticalStackLayout>
+                </Frame>
+
+                <!-- Tipo de Solicitud -->
+                <Frame BackgroundColor="White" Padding="16" CornerRadius="10" HasShadow="True">
+                    <VerticalStackLayout Spacing="8">
+                        <Label Text="📦 Tipo de Solicitud" Style="{StaticResource SectionTitle}"/>
+                        <Label Text="Seleccione el tipo de productos *" Style="{StaticResource FieldLabel}"/>
+                        
+                        <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                            <Button Grid.Column="0"
+                                    Text="💊 Medicamentos"
+                                    BackgroundColor="{Binding IsMedicamento, Converter={StaticResource BoolToColorConverter}, ConverterParameter='Primary|LightGray'}"
+                                    TextColor="{Binding IsMedicamento, Converter={StaticResource BoolToColorConverter}, ConverterParameter='White|Black'}"
+                                    Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:SolicitarTurnoViewModel}}, Path=SetMedicamentoCommand}"
+                                    CornerRadius="8"/>
+                            <Button Grid.Column="1"
+                                    Text="🩹 Insumos"
+                                    BackgroundColor="{Binding IsMedicamento, Converter={StaticResource BoolToColorInverseConverter}, ConverterParameter='Primary|LightGray'}"
+                                    TextColor="{Binding IsMedicamento, Converter={StaticResource BoolToColorInverseConverter}, ConverterParameter='White|Black'}"
+                                    Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:SolicitarTurnoViewModel}}, Path=SetInsumoCommand}"
+                                    CornerRadius="8"/>
+                        </Grid>
+                        
+                        <Label Text="Solo puede solicitar medicamentos O insumos, no ambos en el mismo turno."
+                               FontSize="11" TextColor="{StaticResource Gray500}" FontAttributes="Italic"/>
+                    </VerticalStackLayout>
+                </Frame>
+
+                <!-- Buscador de Items -->
+                <Frame BackgroundColor="White" Padding="16" CornerRadius="10" HasShadow="True">
+                    <VerticalStackLayout Spacing="8">
+                        <Label Text="{Binding IsMedicamento, Converter={StaticResource BoolToTextConverter}, ConverterParameter='🔍 Buscar Medicamento|🔍 Buscar Insumo'}" 
+                               Style="{StaticResource SectionTitle}"/>
+                        
+                        <SearchBar Placeholder="Escriba para buscar..."
+                                   Text="{Binding SearchText}"/>
+                        
+                        <!-- Resultados de Búsqueda -->
+                        <CollectionView ItemsSource="{Binding ResultadosBusqueda}"
+                                        IsVisible="{Binding ShowSearchResults}"
+                                        HeightRequest="200"
+                                        SelectionMode="None">
+                            <CollectionView.ItemTemplate>
+                                <DataTemplate x:DataType="viewmodels:ItemBusqueda">
+                                    <Frame Padding="10" Margin="0,2" CornerRadius="6" BackgroundColor="#F8F9FA">
+                                        <Frame.GestureRecognizers>
+                                            <TapGestureRecognizer 
+                                                Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:SolicitarTurnoViewModel}}, Path=SelectItemCommand}"
+                                                CommandParameter="{Binding .}"/>
+                                        </Frame.GestureRecognizers>
+                                        <Grid ColumnDefinitions="*,Auto">
+                                            <Label Text="{Binding Name}" FontAttributes="Bold"/>
+                                            <Frame Grid.Column="1" BackgroundColor="{Binding StockColor}" Padding="8,4" CornerRadius="10">
+                                                <Label Text="{Binding StockDisplay}" FontSize="11" TextColor="White"/>
+                                            </Frame>
+                                        </Grid>
+                                    </Frame>
+                                </DataTemplate>
+                            </CollectionView.ItemTemplate>
+                        </CollectionView>
+                        
+                        <!-- Items Seleccionados -->
+                        <Label Text="Items Seleccionados:" FontAttributes="Bold" Margin="0,10,0,4"
+                               IsVisible="{Binding ItemsSeleccionados.Count, Converter={StaticResource IntToBoolConverter}}"/>
+                        
+                        <CollectionView ItemsSource="{Binding ItemsSeleccionados}"
+                                        SelectionMode="None">
+                            <CollectionView.EmptyView>
+                                <Frame BackgroundColor="#F8F9FA" Padding="20" CornerRadius="8">
+                                    <Label Text="No ha seleccionado ningún item aún" 
+                                           HorizontalTextAlignment="Center" 
+                                           TextColor="{StaticResource Gray500}"/>
+                                </Frame>
+                            </CollectionView.EmptyView>
+                            <CollectionView.ItemTemplate>
+                                <DataTemplate x:DataType="viewmodels:ItemSeleccionado">
+                                    <Frame Padding="10" Margin="0,2" CornerRadius="6" BackgroundColor="#E8F4FD">
+                                        <Grid ColumnDefinitions="*,80,Auto" ColumnSpacing="10">
+                                            <VerticalStackLayout Grid.Column="0" VerticalOptions="Center">
+                                                <Label Text="{Binding Name}" FontAttributes="Bold" LineBreakMode="TailTruncation"/>
+                                                <Label Text="{Binding Stock, StringFormat='Disponible: {0}'}" FontSize="11" TextColor="{StaticResource Gray500}"/>
+                                            </VerticalStackLayout>
+                                            
+                                            <HorizontalStackLayout Grid.Column="1" Spacing="5" VerticalOptions="Center">
+                                                <Label Text="Cant:" VerticalOptions="Center" FontSize="12"/>
+                                                <Entry Text="{Binding Cantidad}" 
+                                                       Keyboard="Numeric" 
+                                                       WidthRequest="50"
+                                                       HorizontalTextAlignment="Center"/>
+                                            </HorizontalStackLayout>
+                                            
+                                            <Button Grid.Column="2" 
+                                                    Text="✕" 
+                                                    BackgroundColor="{StaticResource Danger}"
+                                                    TextColor="White"
+                                                    WidthRequest="36"
+                                                    HeightRequest="36"
+                                                    CornerRadius="18"
+                                                    Padding="0"
+                                                    Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:SolicitarTurnoViewModel}}, Path=RemoveItemCommand}"
+                                                    CommandParameter="{Binding .}"/>
+                                        </Grid>
+                                    </Frame>
+                                </DataTemplate>
+                            </CollectionView.ItemTemplate>
+                        </CollectionView>
+                    </VerticalStackLayout>
+                </Frame>
+
+                <!-- Documentos -->
+                <Frame BackgroundColor="White" Padding="16" CornerRadius="10" HasShadow="True">
+                    <VerticalStackLayout Spacing="8">
+                        <Label Text="📎 Documentos Médicos" Style="{StaticResource SectionTitle}"/>
+                        <Label Text="Adjunte recetas, tarjetón sanitario u otros documentos médicos"
+                               FontSize="12" TextColor="{StaticResource Gray500}"/>
+                        
+                        <Button Text="+ Agregar Documento"
+                                Command="{Binding AddDocumentCommand}"
+                                BackgroundColor="{StaticResource Secondary}"
+                                TextColor="White"
+                                CornerRadius="8"/>
+                        
+                        <!-- Lista de Documentos -->
+                        <CollectionView ItemsSource="{Binding DocumentosAdjuntos}"
+                                        SelectionMode="None">
+                            <CollectionView.ItemTemplate>
+                                <DataTemplate x:DataType="viewmodels:DocumentoTurno">
+                                    <Frame Padding="10" Margin="0,4" CornerRadius="6" BackgroundColor="#E8F8F5">
+                                        <Grid ColumnDefinitions="*,Auto">
+                                            <VerticalStackLayout Grid.Column="0">
+                                                <Label Text="{Binding Display}" FontSize="13"/>
+                                                <Label Text="{Binding FileSizeDisplay}" FontSize="11" TextColor="{StaticResource Gray500}"/>
+                                            </VerticalStackLayout>
+                                            <Button Grid.Column="1"
+                                                    Text="✕"
+                                                    BackgroundColor="{StaticResource Danger}"
+                                                    TextColor="White"
+                                                    WidthRequest="32"
+                                                    HeightRequest="32"
+                                                    CornerRadius="16"
+                                                    Padding="0"
+                                                    Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:SolicitarTurnoViewModel}}, Path=RemoveDocumentCommand}"
+                                                    CommandParameter="{Binding .}"/>
+                                        </Grid>
+                                    </Frame>
+                                </DataTemplate>
+                            </CollectionView.ItemTemplate>
+                        </CollectionView>
+                    </VerticalStackLayout>
+                </Frame>
+
+                <!-- Notas -->
+                <Frame BackgroundColor="White" Padding="16" CornerRadius="10" HasShadow="True">
+                    <VerticalStackLayout Spacing="8">
+                        <Label Text="📝 Notas Adicionales (Opcional)" Style="{StaticResource SectionTitle}"/>
+                        <Editor Placeholder="Información adicional para el farmacéutico..."
+                                Text="{Binding Notas}"
+                                HeightRequest="100"
+                                MaxLength="1000"/>
+                    </VerticalStackLayout>
+                </Frame>
+
+                <!-- Botones -->
+                <Grid ColumnDefinitions="*,*" ColumnSpacing="10" Margin="0,20">
+                    <Button Grid.Column="0"
+                            Text="Cancelar"
+                            Command="{Binding CancelCommand}"
+                            BackgroundColor="{StaticResource Gray400}"
+                            TextColor="White"
+                            CornerRadius="10"/>
+                    <Button Grid.Column="1"
+                            Text="Enviar Solicitud"
+                            Command="{Binding SubmitCommand}"
+                            IsEnabled="{Binding CanSubmit}"
+                            BackgroundColor="{StaticResource Primary}"
+                            TextColor="White"
+                            CornerRadius="10"
+                            FontAttributes="Bold"/>
+                </Grid>
+
+                <!-- Espacio final -->
+                <BoxView HeightRequest="20"/>
+            </VerticalStackLayout>
+        </ScrollView>
+
+        <!-- Loading Overlay -->
+        <Grid BackgroundColor="#80000000" IsVisible="{Binding IsBusy}">
+            <Frame BackgroundColor="White" CornerRadius="10" Padding="30" 
+                   HorizontalOptions="Center" VerticalOptions="Center">
+                <VerticalStackLayout Spacing="15">
+                    <ActivityIndicator IsRunning="True" Color="{StaticResource Primary}"/>
+                    <Label Text="Procesando..." HorizontalTextAlignment="Center"/>
+                </VerticalStackLayout>
+            </Frame>
+        </Grid>
+    </Grid>
+</ContentPage>

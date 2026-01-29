@@ -32,13 +32,21 @@ public partial class MedicamentosViewModel : BaseViewModel
         Title = "Medicamentos";
     }
 
+    public async Task InitializeAsync()
+    {
+        CanEdit = await AuthService.IsInAnyRoleAsync(
+            Constants.RoleAdmin, Constants.RoleFarmaceutico);
+        await LoadMedicamentosAsync();
+    }
+
     [RelayCommand]
     public async Task LoadMedicamentosAsync()
     {
-        await ExecuteAsync(async () =>
+        if (IsBusy) return;
+
+        try
         {
-            CanEdit = await AuthService.IsInAnyRoleAsync(
-                Constants.RoleAdmin, Constants.RoleFarmaceutico);
+            IsBusy = true;
 
             var result = await ApiService.GetMedicamentosAsync();
 
@@ -53,7 +61,15 @@ public partial class MedicamentosViewModel : BaseViewModel
             {
                 await ShowErrorAsync(result.Message ?? "Error al cargar medicamentos");
             }
-        });
+        }
+        catch (Exception ex)
+        {
+            await ShowErrorAsync($"Error: {ex.Message}");
+        }
+        finally
+        {
+            IsBusy = false;
+        }
     }
 
     partial void OnSearchTextChanged(string value)
@@ -215,6 +231,23 @@ public partial class MedicamentosViewModel : BaseViewModel
 
         if (descripcion == null) return;
 
+        // Seleccionar unidad de medida
+        var unidades = new[] { "Unidades", "ml (Mililitros)", "Sobres", "Cápsulas", "Ampollas", "Comprimidos" };
+        var unidadSeleccionada = await Shell.Current.DisplayActionSheet(
+            "Unidad de medida",
+            "Cancelar",
+            null,
+            unidades);
+
+        if (string.IsNullOrEmpty(unidadSeleccionada) || unidadSeleccionada == "Cancelar") return;
+
+        // Convertir la selección a valor simple
+        var unidad = unidadSeleccionada switch
+        {
+            "ml (Mililitros)" => "ml",
+            _ => unidadSeleccionada.ToLower()
+        };
+
         // Stock inicial
         var stockStr = await Shell.Current.DisplayPromptAsync(
             "Nuevo Medicamento",
@@ -229,14 +262,16 @@ public partial class MedicamentosViewModel : BaseViewModel
             return;
         }
 
-        await ExecuteAsync(async () =>
+        try
         {
+            IsBusy = true;
+            
             var nuevoMed = new Medicine
             {
                 Name = nombre,
                 Description = string.IsNullOrWhiteSpace(descripcion) ? null : descripcion,
                 StockQuantity = stock,
-                Unit = "unidades"
+                Unit = unidad
             };
             
             var result = await ApiService.CrearMedicamentoAsync(nuevoMed);
@@ -244,13 +279,29 @@ public partial class MedicamentosViewModel : BaseViewModel
             if (result.Success)
             {
                 await ShowSuccessAsync("Medicamento creado");
-                await LoadMedicamentosAsync();
+                // Recargar la lista directamente sin usar LoadMedicamentosAsync
+                var reloadResult = await ApiService.GetMedicamentosAsync();
+                if (reloadResult.Success && reloadResult.Data != null)
+                {
+                    _allMedicamentos = reloadResult.Data
+                        .OrderBy(m => m.Name)
+                        .ToList();
+                    ApplyFilters();
+                }
             }
             else
             {
                 await ShowErrorAsync(result.Message ?? "Error al crear medicamento");
             }
-        });
+        }
+        catch (Exception ex)
+        {
+            await ShowErrorAsync($"Error: {ex.Message}");
+        }
+        finally
+        {
+            IsBusy = false;
+        }
     }
 
     [RelayCommand]
