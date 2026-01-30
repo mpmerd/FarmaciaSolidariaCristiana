@@ -45,17 +45,29 @@ public class NotificationService : INotificationService
 #if ANDROID || IOS
         try
         {
-            // In OneSignal SDK 5.x, use the User.PushSubscription.Id
+            // First check if App has the PlayerId (from subscription change event)
+            if (!string.IsNullOrEmpty(App.OneSignalPlayerId))
+            {
+                _playerId = App.OneSignalPlayerId;
+                System.Diagnostics.Debug.WriteLine($"[NotificationService] Got PlayerId from App: {_playerId}");
+                return;
+            }
+            
+            // Try to get directly from OneSignal SDK
             var subscriptionId = OneSignal.User.PushSubscription.Id;
             if (!string.IsNullOrEmpty(subscriptionId))
             {
                 _playerId = subscriptionId;
-                System.Diagnostics.Debug.WriteLine($"OneSignal Subscription ID: {_playerId}");
+                System.Diagnostics.Debug.WriteLine($"[NotificationService] Got PlayerId from SDK: {_playerId}");
+            }
+            else
+            {
+                System.Diagnostics.Debug.WriteLine("[NotificationService] PlayerId is null or empty from SDK");
             }
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Error getting OneSignal subscription ID: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"[NotificationService] Error getting subscription ID: {ex.Message}");
         }
 #endif
     }
@@ -67,7 +79,9 @@ public class NotificationService : INotificationService
         {
             UpdatePlayerIdFromOneSignal();
         }
-        return _playerId;
+        
+        // Return App's PlayerId as fallback
+        return _playerId ?? App.OneSignalPlayerId;
     }
 
     public bool IsPushEnabled()

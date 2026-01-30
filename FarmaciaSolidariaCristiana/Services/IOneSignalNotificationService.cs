@@ -27,9 +27,25 @@ namespace FarmaciaSolidariaCristiana.Services
         Task<List<DeviceTokenResponseDto>> GetUserDeviceTokensAsync(string userId);
 
         /// <summary>
+        /// [DEBUG] Obtiene todos los tokens de todos los usuarios
+        /// </summary>
+        Task<List<DeviceTokenResponseDto>> GetAllDeviceTokensAsync();
+
+        /// <summary>
         /// Verifica si un usuario tiene dispositivos registrados para push
         /// </summary>
         Task<bool> UserHasPushEnabledAsync(string userId);
+
+        /// <summary>
+        /// Actualiza la última actividad del dispositivo móvil (para determinar si enviar email o no)
+        /// </summary>
+        Task UpdateDeviceLastActivityAsync(string userId, string deviceType);
+
+        /// <summary>
+        /// Verifica si el usuario tiene un dispositivo activo recientemente (últimos 5 minutos)
+        /// Si el usuario está activo en la app móvil, no se le debe enviar email
+        /// </summary>
+        Task<bool> IsUserActiveOnMobileAsync(string userId);
 
         // ========================================
         // Envío de notificaciones genéricas

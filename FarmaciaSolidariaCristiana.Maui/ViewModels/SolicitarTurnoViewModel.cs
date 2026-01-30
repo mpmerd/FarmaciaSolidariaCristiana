@@ -12,6 +12,12 @@ namespace FarmaciaSolidariaCristiana.Maui.ViewModels;
 /// </summary>
 public partial class SolicitarTurnoViewModel : BaseViewModel
 {
+    private readonly IImageCompressionService _imageCompressionService;
+    
+    // Límites de tamaño de archivos
+    private const int MaxImageSizeBytes = 5 * 1024 * 1024; // 5MB para imágenes
+    private const int MaxPdfSizeBytes = 3 * 1024 * 1024;   // 3MB para PDFs (más restrictivo)
+    
     #region Observable Properties
 
     [ObservableProperty]
@@ -65,9 +71,13 @@ public partial class SolicitarTurnoViewModel : BaseViewModel
         "Otro"
     };
 
-    public SolicitarTurnoViewModel(IAuthService authService, IApiService apiService)
+    public SolicitarTurnoViewModel(
+        IAuthService authService, 
+        IApiService apiService,
+        IImageCompressionService imageCompressionService)
         : base(authService, apiService)
     {
+        _imageCompressionService = imageCompressionService;
         Title = "Solicitar Turno";
     }
 
@@ -324,9 +334,12 @@ public partial class SolicitarTurnoViewModel : BaseViewModel
                 if (result != null)
                 {
                     using var stream = await result.OpenReadAsync();
-                    fileBytes = await CompressImageAsync(stream, result.ContentType);
-                    fileName = result.FileName;
+                    fileBytes = await _imageCompressionService.CompressImageAsync(
+                        stream, result.ContentType, 1920, 1080, 80);
+                    fileName = Path.ChangeExtension(result.FileName, ".jpg");
                     contentType = "image/jpeg"; // Siempre JPEG después de compresión
+                    
+                    Console.WriteLine($"[SolicitarTurno] Imagen de cámara comprimida: {FormatFileSize(fileBytes.Length)}");
                 }
             }
             else if (action == "🖼️ Seleccionar de Galería")
@@ -339,9 +352,12 @@ public partial class SolicitarTurnoViewModel : BaseViewModel
                 if (result != null)
                 {
                     using var stream = await result.OpenReadAsync();
-                    fileBytes = await CompressImageAsync(stream, result.ContentType);
-                    fileName = result.FileName;
+                    fileBytes = await _imageCompressionService.CompressImageAsync(
+                        stream, result.ContentType, 1920, 1080, 80);
+                    fileName = Path.ChangeExtension(result.FileName, ".jpg");
                     contentType = "image/jpeg";
+                    
+                    Console.WriteLine($"[SolicitarTurno] Imagen de galería comprimida: {FormatFileSize(fileBytes.Length)}");
                 }
             }
             else if (action == "📄 Seleccionar PDF")
@@ -358,17 +374,29 @@ public partial class SolicitarTurnoViewModel : BaseViewModel
                     using var ms = new MemoryStream();
                     await stream.CopyToAsync(ms);
                     fileBytes = ms.ToArray();
+                    
+                    // Validar tamaño de PDF (más restrictivo)
+                    if (fileBytes.Length > MaxPdfSizeBytes)
+                    {
+                        await ShowErrorAsync($"El PDF es demasiado grande ({FormatFileSize(fileBytes.Length)}).\n" +
+                            $"El tamaño máximo permitido es {FormatFileSize(MaxPdfSizeBytes)}.\n\n" +
+                            "Sugerencia: Use un PDF más pequeño o tome una foto del documento.");
+                        return;
+                    }
+                    
                     fileName = pdfResult.FileName;
                     contentType = "application/pdf";
+                    Console.WriteLine($"[SolicitarTurno] PDF seleccionado: {FormatFileSize(fileBytes.Length)}");
                 }
             }
 
             if (fileBytes != null && fileBytes.Length > 0)
             {
-                // Validar tamaño (máx 5MB)
-                if (fileBytes.Length > 5 * 1024 * 1024)
+                // Validar tamaño máximo (5MB para imágenes, PDFs ya validados)
+                if (fileBytes.Length > MaxImageSizeBytes)
                 {
-                    await ShowErrorAsync("El archivo no puede superar 5MB");
+                    await ShowErrorAsync($"El archivo es demasiado grande ({FormatFileSize(fileBytes.Length)}).\n" +
+                        $"Tamaño máximo: {FormatFileSize(MaxImageSizeBytes)}");
                     return;
                 }
 
@@ -508,27 +536,6 @@ public partial class SolicitarTurnoViewModel : BaseViewModel
     #endregion
 
     #region Helpers
-
-    /// <summary>
-    /// Lee los bytes del stream. La compresión se realiza en el servidor.
-    /// </summary>
-    private static async Task<byte[]> CompressImageAsync(Stream stream, string contentType)
-    {
-        try
-        {
-            // Leer los bytes del stream
-            // La compresión real se hace en el servidor
-            using var ms = new MemoryStream();
-            stream.Position = 0;
-            await stream.CopyToAsync(ms);
-            return ms.ToArray();
-        }
-        catch
-        {
-            // Si hay error, retornar array vacío
-            return Array.Empty<byte>();
-        }
-    }
 
     private static string FormatFileSize(long bytes)
     {

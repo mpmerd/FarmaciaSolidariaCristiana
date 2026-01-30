@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 using FarmaciaSolidariaCristiana.Api.Models;
 using FarmaciaSolidariaCristiana.Services;
+using FarmaciaSolidariaCristiana.Models;
 
 namespace FarmaciaSolidariaCristiana.Api.Controllers
 {
@@ -20,15 +21,18 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
     public class NotificationsController : ApiBaseController
     {
         private readonly IOneSignalNotificationService _notificationService;
+        private readonly IPendingNotificationService _pendingNotificationService;
         private readonly UserManager<IdentityUser> _userManager;
         private readonly ILogger<NotificationsController> _logger;
 
         public NotificationsController(
             IOneSignalNotificationService notificationService,
+            IPendingNotificationService pendingNotificationService,
             UserManager<IdentityUser> userManager,
             ILogger<NotificationsController> logger)
         {
             _notificationService = notificationService;
+            _pendingNotificationService = pendingNotificationService;
             _userManager = userManager;
             _logger = logger;
         }
@@ -277,5 +281,164 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
 
             return ApiOk(result, "Notificación de prueba enviada");
         }
+
+        // ========================================
+        // POLLING: Endpoints para notificaciones sin push
+        // ========================================
+        
+        /// <summary>
+        /// Obtiene las notificaciones pendientes (no leídas) del usuario.
+        /// Este endpoint debe llamarse periódicamente por la app móvil para polling.
+        /// </summary>
+        [HttpGet("pending")]
+        [ProducesResponseType(typeof(ApiResponse<PendingNotificationsResponseDto>), StatusCodes.Status200OK)]
+        public async Task<IActionResult> GetPendingNotifications()
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userId))
+                return ApiError("Usuario no autenticado", 401);
+
+            var notifications = await _pendingNotificationService.GetUnreadNotificationsAsync(userId);
+            
+            return ApiOk(new PendingNotificationsResponseDto
+            {
+                Count = notifications.Count,
+                Notifications = notifications.Select(n => new PendingNotificationDto
+                {
+                    Id = n.Id,
+                    Title = n.Title,
+                    Message = n.Message,
+                    NotificationType = n.NotificationType,
+                    ReferenceId = n.ReferenceId,
+                    ReferenceType = n.ReferenceType,
+                    CreatedAt = n.CreatedAt
+                }).ToList()
+            });
+        }
+
+        /// <summary>
+        /// Marca una notificación como leída
+        /// </summary>
+        [HttpPost("pending/{id}/read")]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
+        public async Task<IActionResult> MarkNotificationAsRead(int id)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userId))
+                return ApiError("Usuario no autenticado", 401);
+
+            var result = await _pendingNotificationService.MarkAsReadAsync(id, userId);
+            
+            if (!result)
+                return ApiError("Notificación no encontrada", 404);
+
+            return ApiOk(new { marked = true });
+        }
+
+        /// <summary>
+        /// Marca todas las notificaciones del usuario como leídas
+        /// </summary>
+        [HttpPost("pending/read-all")]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
+        public async Task<IActionResult> MarkAllNotificationsAsRead()
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userId))
+                return ApiError("Usuario no autenticado", 401);
+
+            var count = await _pendingNotificationService.MarkAllAsReadAsync(userId);
+            
+            return ApiOk(new { markedCount = count });
+        }
+
+        /// <summary>
+        /// Obtiene el conteo de notificaciones no leídas (para badge)
+        /// </summary>
+        [HttpGet("pending/count")]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
+        public async Task<IActionResult> GetUnreadCount()
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userId))
+                return ApiError("Usuario no autenticado", 401);
+
+            var count = await _pendingNotificationService.GetUnreadCountAsync(userId);
+            
+            return ApiOk(new { unreadCount = count });
+        }
+
+        /// <summary>
+        /// Registra la actividad del dispositivo móvil (heartbeat).
+        /// Esto indica que el usuario está activo en la app y no debe recibir emails.
+        /// </summary>
+        [HttpPost("heartbeat")]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
+        public async Task<IActionResult> Heartbeat([FromBody] HeartbeatDto? dto)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userId))
+                return ApiError("Usuario no autenticado", 401);
+
+            // Actualizar el timestamp de última actividad del dispositivo
+            await _notificationService.UpdateDeviceLastActivityAsync(
+                userId,
+                dto?.DeviceType ?? "Android"
+            );
+
+            return ApiOk(new { registered = true, timestamp = DateTime.UtcNow });
+        }
+
+        // ========================================
+        // DEBUG: Endpoint temporal para verificar dispositivos registrados
+        // ========================================
+        
+        /// <summary>
+        /// [DEBUG] Lista todos los dispositivos registrados (sin auth, solo para desarrollo)
+        /// </summary>
+        [HttpGet("debug/all-devices")]
+        [AllowAnonymous]
+        public async Task<IActionResult> DebugGetAllDevices()
+        {
+            var devices = await _notificationService.GetAllDeviceTokensAsync();
+            return ApiOk(new 
+            { 
+                count = devices.Count,
+                devices = devices.Select(d => new 
+                {
+                    d.Id,
+                    d.OneSignalPlayerId,
+                    d.DeviceType,
+                    d.DeviceName,
+                    d.IsActive,
+                    d.CreatedAt,
+                    d.UpdatedAt
+                })
+            });
+        }
     }
+}
+
+// DTOs para polling
+public class PendingNotificationsResponseDto
+{
+    public int Count { get; set; }
+    public List<PendingNotificationDto> Notifications { get; set; } = new();
+}
+
+public class PendingNotificationDto
+{
+    public int Id { get; set; }
+    public string Title { get; set; } = string.Empty;
+    public string Message { get; set; } = string.Empty;
+    public string NotificationType { get; set; } = string.Empty;
+    public int? ReferenceId { get; set; }
+    public string? ReferenceType { get; set; }
+    public DateTime CreatedAt { get; set; }
+}
+
+public class HeartbeatDto
+{
+    public string? PlayerId { get; set; }
+    public string? DeviceType { get; set; }
+    public string? DeviceName { get; set; }
 }

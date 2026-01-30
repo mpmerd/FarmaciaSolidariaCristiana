@@ -36,6 +36,8 @@ public static class MauiProgram
         builder.Services.AddSingleton<IAuthService, AuthService>();
         builder.Services.AddSingleton<IApiService, ApiService>();
         builder.Services.AddSingleton<INotificationService, NotificationService>();
+        builder.Services.AddSingleton<IPollingNotificationService, PollingNotificationService>();
+        builder.Services.AddSingleton<IImageCompressionService, ImageCompressionService>();
 
         // Register ViewModels
         builder.Services.AddTransient<LoginViewModel>();

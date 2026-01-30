@@ -10,6 +10,7 @@ namespace FarmaciaSolidariaCristiana.Maui.ViewModels;
 public partial class LoginViewModel : BaseViewModel
 {
     private readonly INotificationService _notificationService;
+    private readonly IPollingNotificationService _pollingService;
 
     [ObservableProperty]
     private string _email = string.Empty;
@@ -26,10 +27,12 @@ public partial class LoginViewModel : BaseViewModel
     public LoginViewModel(
         IAuthService authService, 
         IApiService apiService,
-        INotificationService notificationService) 
+        INotificationService notificationService,
+        IPollingNotificationService pollingService) 
         : base(authService, apiService)
     {
         _notificationService = notificationService;
+        _pollingService = pollingService;
         Title = "Iniciar Sesión";
     }
 
@@ -54,13 +57,31 @@ public partial class LoginViewModel : BaseViewModel
             
             if (result.Success && result.Data != null)
             {
-                // Registrar dispositivo para notificaciones push
-                await _notificationService.RegisterDeviceAsync();
+                // Intentar registrar dispositivo para notificaciones push (puede fallar en Cuba)
+                try
+                {
+                    await _notificationService.RegisterDeviceAsync();
+                    
+                    // Configurar tags de usuario en OneSignal (si funciona)
+                    var user = result.Data.User;
+                    var primaryRole = user.Roles.FirstOrDefault() ?? "user";
+                    await _notificationService.SetUserTagsAsync(user.Id, primaryRole);
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[Login] Push registration failed (expected in Cuba): {ex.Message}");
+                }
                 
-                // Configurar tags de usuario en OneSignal
-                var user = result.Data.User;
-                var primaryRole = user.Roles.FirstOrDefault() ?? "user";
-                await _notificationService.SetUserTagsAsync(user.Id, primaryRole);
+                // Iniciar servicio de polling para notificaciones (funciona siempre)
+                try
+                {
+                    await _pollingService.StartAsync();
+                    System.Diagnostics.Debug.WriteLine("[Login] Polling service started successfully");
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[Login] Failed to start polling: {ex.Message}");
+                }
                 
                 // Navegar al Shell principal
                 var appShell = App.Current?.Handler?.MauiContext?.Services.GetService<AppShell>();

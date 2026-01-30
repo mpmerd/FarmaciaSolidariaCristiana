@@ -54,4 +54,9 @@
 		<PackageReference Include="OneSignalSDK.DotNet" Version="5.2.2" />
 	</ItemGroup>
 
+	<!-- Google Services for FCM (Android) -->
+	<ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">
+		<GoogleServicesJson Include="Platforms\Android\google-services.json" />
+	</ItemGroup>
+
 </Project>

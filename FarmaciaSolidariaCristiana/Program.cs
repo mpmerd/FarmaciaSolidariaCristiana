@@ -128,6 +128,9 @@ else
     builder.Services.AddScoped<IOneSignalNotificationService, NullOneSignalNotificationService>();
 }
 
+// Servicio de notificaciones pendientes (polling - funciona sin push)
+builder.Services.AddScoped<IPendingNotificationService, PendingNotificationService>();
+
 // Register Background Services
 builder.Services.AddHostedService<TurnoCleanupService>();
 
@@ -171,8 +174,10 @@ builder.Services.ConfigureApplicationCookie(options =>
     
     // Configuración para compatibilidad con Safari y dispositivos móviles
     options.Cookie.SameSite = SameSiteMode.Lax;
-    // En producción forzar cookies seguras (solo HTTPS)
-    options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+    // En desarrollo permitir HTTP, en producción forzar HTTPS
+    options.Cookie.SecurePolicy = builder.Environment.IsDevelopment() 
+        ? CookieSecurePolicy.SameAsRequest 
+        : CookieSecurePolicy.Always;
     options.Cookie.HttpOnly = true;
     options.Cookie.IsEssential = true;
 });

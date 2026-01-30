@@ -23,6 +23,7 @@ namespace FarmaciaSolidariaCristiana.Services
         private readonly ApplicationDbContext _context;
         private readonly IEmailService _emailService;
         private readonly IOneSignalNotificationService _notificationService;
+        private readonly IPendingNotificationService _pendingNotificationService;
         private readonly IWebHostEnvironment _environment;
         private readonly IImageCompressionService _imageCompressionService;
         private readonly ILogger<TurnoService> _logger;
@@ -31,6 +32,7 @@ namespace FarmaciaSolidariaCristiana.Services
             ApplicationDbContext context, 
             IEmailService emailService,
             IOneSignalNotificationService notificationService,
+            IPendingNotificationService pendingNotificationService,
             IWebHostEnvironment environment,
             IImageCompressionService imageCompressionService,
             ILogger<TurnoService> logger)
@@ -38,6 +40,7 @@ namespace FarmaciaSolidariaCristiana.Services
             _context = context;
             _emailService = emailService;
             _notificationService = notificationService;
+            _pendingNotificationService = pendingNotificationService;
             _environment = environment;
             _imageCompressionService = imageCompressionService;
             _logger = logger;
@@ -802,29 +805,40 @@ namespace FarmaciaSolidariaCristiana.Services
 
                 await _context.SaveChangesAsync();
 
-                // Notificar al usuario: Push si tiene app instalada, Email si no
+                // Notificar al usuario
+                // NUEVA LÓGICA: 
+                // 1. SIEMPRE crear notificación pendiente (para polling en la app)
+                // 2. Solo enviar email si el usuario NO está activo en la app móvil
                 if (turno.User != null && turno.NumeroTurno.HasValue && turno.FechaPreferida.HasValue)
                 {
-                    var hasPushEnabled = await _notificationService.UserHasPushEnabledAsync(turno.UserId);
+                    // Crear notificación pendiente para polling (funciona siempre)
+                    var notificationTitle = "🎉 ¡Turno Aprobado!";
+                    var notificationMessage = $"Tu turno #{turno.NumeroTurno.Value} ha sido aprobado para el {turno.FechaPreferida.Value:dd/MM/yyyy} a las {turno.FechaPreferida.Value:HH:mm}";
                     
-                    if (hasPushEnabled)
+                    await _pendingNotificationService.CreateNotificationAsync(
+                        turno.UserId,
+                        notificationTitle,
+                        notificationMessage,
+                        NotificationTypes.TurnoAprobado,
+                        turno.Id,
+                        "Turno");
+                    
+                    _logger.LogInformation("Notificación pendiente creada para usuario {UserId}", turno.UserId);
+
+                    // Verificar si el usuario está activo en la app móvil (últimos 5 minutos)
+                    var isActiveOnMobile = await _notificationService.IsUserActiveOnMobileAsync(turno.UserId);
+                    
+                    if (isActiveOnMobile)
                     {
-                        // Usuario tiene la app instalada -> enviar push notification
-                        _logger.LogInformation("Usuario {UserId} tiene push habilitado, enviando notificación push", turno.UserId);
-                        
-                        await _notificationService.SendTurnoAprobadoNotificationAsync(
-                            turno.UserId,
-                            turno.Id,
-                            turno.NumeroTurno.Value,
-                            turno.FechaPreferida.Value,
-                            pdfPath); // URL del PDF
-                        
-                        turno.EmailEnviado = false; // No se envió email, se usó push
+                        // Usuario está usando la app móvil -> NO enviar email
+                        // La notificación será recibida vía polling
+                        _logger.LogInformation("Usuario {UserId} está activo en la app móvil, no se envía email", turno.UserId);
+                        turno.EmailEnviado = false;
                     }
                     else if (turno.User.Email != null)
                     {
-                        // Usuario NO tiene la app -> enviar email con PDF adjunto
-                        _logger.LogInformation("Usuario {UserId} no tiene push, enviando email a {Email}", turno.UserId, turno.User.Email);
+                        // Usuario NO está activo en la app -> enviar email con PDF adjunto
+                        _logger.LogInformation("Usuario {UserId} no está activo en la app, enviando email a {Email}", turno.UserId, turno.User.Email);
                         
                         var pdfPhysicalPath = Path.Combine(_environment.WebRootPath, pdfPath.Replace("/", Path.DirectorySeparatorChar.ToString()));
                         
@@ -887,28 +901,27 @@ namespace FarmaciaSolidariaCristiana.Services
 
                 await _context.SaveChangesAsync();
 
-                // Notificar al usuario: Push si tiene app instalada, Email si no
+                // Notificar al usuario: siempre crear notificación para polling, email solo si no está activo en la app
                 if (turno.User != null)
                 {
-                    var hasPushEnabled = await _notificationService.UserHasPushEnabledAsync(turno.UserId);
+                    // Siempre crear notificación pendiente para polling
+                    await _pendingNotificationService.CreateNotificationAsync(
+                        turno.UserId,
+                        "Turno Rechazado",
+                        $"Tu turno #{turno.NumeroTurno} ha sido rechazado. Motivo: {motivo}",
+                        NotificationTypes.TurnoRechazado,
+                        turno.Id,
+                        "Turno");
                     
-                    if (hasPushEnabled && turno.NumeroTurno.HasValue)
+                    _logger.LogInformation("Notificación de rechazo creada para polling - Usuario {UserId}", turno.UserId);
+                    
+                    // Verificar si el usuario está activo en la app móvil
+                    var isActiveOnMobile = await _notificationService.IsUserActiveOnMobileAsync(turno.UserId);
+                    
+                    if (!isActiveOnMobile && turno.User.Email != null)
                     {
-                        // Usuario tiene la app instalada -> enviar push notification
-                        _logger.LogInformation("Usuario {UserId} tiene push habilitado, enviando notificación de rechazo", turno.UserId);
-                        
-                        await _notificationService.SendTurnoRechazadoNotificationAsync(
-                            turno.UserId,
-                            turno.Id,
-                            turno.NumeroTurno.Value,
-                            motivo);
-                        
-                        turno.EmailEnviado = false; // No se envió email, se usó push
-                    }
-                    else if (turno.User.Email != null)
-                    {
-                        // Usuario NO tiene la app -> enviar email
-                        _logger.LogInformation("Usuario {UserId} no tiene push, enviando email de rechazo a {Email}", turno.UserId, turno.User.Email);
+                        // Usuario NO está activo en la app -> enviar email
+                        _logger.LogInformation("Usuario {UserId} no está activo en app, enviando email de rechazo a {Email}", turno.UserId, turno.User.Email);
                         
                         var emailSent = await _emailService.SendTurnoRechazadoEmailAsync(
                             turno.User.Email,
@@ -917,6 +930,11 @@ namespace FarmaciaSolidariaCristiana.Services
                         );
 
                         turno.EmailEnviado = emailSent;
+                    }
+                    else
+                    {
+                        _logger.LogInformation("Usuario {UserId} está activo en app móvil, no se envía email", turno.UserId);
+                        turno.EmailEnviado = false;
                     }
                     
                     await _context.SaveChangesAsync();

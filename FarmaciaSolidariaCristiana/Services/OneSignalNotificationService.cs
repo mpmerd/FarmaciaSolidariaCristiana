@@ -194,10 +194,60 @@ namespace FarmaciaSolidariaCristiana.Services
             return tokens.Select(MapToDto).ToList();
         }
 
+        public async Task<List<DeviceTokenResponseDto>> GetAllDeviceTokensAsync()
+        {
+            var tokens = await _context.UserDeviceTokens
+                .OrderByDescending(t => t.UpdatedAt)
+                .ToListAsync();
+
+            return tokens.Select(MapToDto).ToList();
+        }
+
         public async Task<bool> UserHasPushEnabledAsync(string userId)
         {
             return await _context.UserDeviceTokens
                 .AnyAsync(t => t.UserId == userId && t.IsActive);
+        }
+
+        public async Task UpdateDeviceLastActivityAsync(string userId, string deviceType)
+        {
+            // Buscar el dispositivo más reciente del usuario
+            var device = await _context.UserDeviceTokens
+                .Where(t => t.UserId == userId && t.IsActive)
+                .OrderByDescending(t => t.LastActivityAt ?? t.UpdatedAt)
+                .FirstOrDefaultAsync();
+
+            if (device != null)
+            {
+                device.LastActivityAt = DateTime.UtcNow;
+                device.UpdatedAt = DateTime.UtcNow;
+                await _context.SaveChangesAsync();
+            }
+            else
+            {
+                // Si no hay dispositivo registrado, crear uno genérico para tracking de actividad
+                var newDevice = new UserDeviceToken
+                {
+                    UserId = userId,
+                    OneSignalPlayerId = $"polling-{userId[..8]}",
+                    DeviceType = deviceType,
+                    DeviceName = "Mobile App (Polling)",
+                    IsActive = true,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow,
+                    LastActivityAt = DateTime.UtcNow
+                };
+                _context.UserDeviceTokens.Add(newDevice);
+                await _context.SaveChangesAsync();
+            }
+        }
+
+        public async Task<bool> IsUserActiveOnMobileAsync(string userId)
+        {
+            // El usuario se considera activo si tiene un dispositivo con actividad en los últimos 5 minutos
+            var cutoff = DateTime.UtcNow.AddMinutes(-5);
+            return await _context.UserDeviceTokens
+                .AnyAsync(t => t.UserId == userId && t.IsActive && t.LastActivityAt >= cutoff);
         }
 
         // ========================================
