@@ -25,6 +25,7 @@ namespace FarmaciaSolidariaCristiana.Data
         public DbSet<FechaBloqueada> FechasBloqueadas { get; set; }
         public DbSet<NavbarDecoration> NavbarDecorations { get; set; }
         public DbSet<UserDeviceToken> UserDeviceTokens { get; set; }
+        public DbSet<PendingNotification> PendingNotifications { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

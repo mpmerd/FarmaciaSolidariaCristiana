@@ -3,13 +3,18 @@ using FarmaciaSolidariaCristiana.Maui.Services;
 using OneSignalSDK.DotNet;
 using OneSignalSDK.DotNet.Core;
 using OneSignalSDK.DotNet.Core.Debug;
-using OneSignalSDK.DotNet.Core.Notifications;
+using OneSignalSDK.DotNet.Core.User.Subscriptions;
 
 namespace FarmaciaSolidariaCristiana.Maui;
 
 public partial class App : Application
 {
     private readonly IAuthService _authService;
+    
+    // Static property to track OneSignal initialization status
+    public static bool IsOneSignalInitialized { get; private set; }
+    public static string? OneSignalPlayerId { get; private set; }
+    public static string? OneSignalInitError { get; private set; }
     
     public App(IAuthService authService)
     {
@@ -25,21 +30,64 @@ public partial class App : Application
         try
         {
 #if DEBUG
-            // Enable verbose OneSignal logging to debug issues if needed.
+            // Enable verbose OneSignal logging to debug issues
             OneSignal.Debug.LogLevel = LogLevel.VERBOSE;
 #endif
 
+            System.Diagnostics.Debug.WriteLine($"[OneSignal] Initializing with AppId: {Constants.OneSignalAppId}");
+
             // OneSignal Initialization
             OneSignal.Initialize(Constants.OneSignalAppId);
+            
+            // Subscribe to push subscription changes
+            OneSignal.User.PushSubscription.Changed += OnPushSubscriptionChanged;
+            
+            // Check if we already have a subscription ID
+            var existingId = OneSignal.User.PushSubscription.Id;
+            if (!string.IsNullOrEmpty(existingId))
+            {
+                OneSignalPlayerId = existingId;
+                System.Diagnostics.Debug.WriteLine($"[OneSignal] Already has PlayerId: {existingId}");
+            }
+            else
+            {
+                System.Diagnostics.Debug.WriteLine("[OneSignal] No PlayerId yet, waiting for subscription...");
+            }
 
-            // Request notification permission (will show native prompt)
-            OneSignal.Notifications.RequestPermissionAsync(true);
+            // Request notification permission (will show native prompt on Android 13+)
+            MainThread.BeginInvokeOnMainThread(async () =>
+            {
+                try
+                {
+                    var granted = await OneSignal.Notifications.RequestPermissionAsync(true);
+                    System.Diagnostics.Debug.WriteLine($"[OneSignal] Permission granted: {granted}");
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[OneSignal] Permission request error: {ex.Message}");
+                }
+            });
 
-            System.Diagnostics.Debug.WriteLine("OneSignal initialized successfully");
+            IsOneSignalInitialized = true;
+            System.Diagnostics.Debug.WriteLine("[OneSignal] Initialized successfully");
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"OneSignal initialization error: {ex.Message}");
+            OneSignalInitError = ex.Message;
+            System.Diagnostics.Debug.WriteLine($"[OneSignal] Initialization error: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"[OneSignal] Stack trace: {ex.StackTrace}");
+        }
+    }
+    
+    private void OnPushSubscriptionChanged(object? sender, PushSubscriptionChangedEventArgs e)
+    {
+        var newId = e.State.Current.Id;
+        System.Diagnostics.Debug.WriteLine($"[OneSignal] Push subscription changed. New ID: {newId}");
+        
+        if (!string.IsNullOrEmpty(newId))
+        {
+            OneSignalPlayerId = newId;
+            System.Diagnostics.Debug.WriteLine($"[OneSignal] PlayerId updated: {newId}");
         }
     }
 

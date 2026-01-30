@@ -41,7 +41,22 @@ namespace FarmaciaSolidariaCristiana.Services
             return Task.FromResult(new List<DeviceTokenResponseDto>());
         }
 
+        public Task<List<DeviceTokenResponseDto>> GetAllDeviceTokensAsync()
+        {
+            return Task.FromResult(new List<DeviceTokenResponseDto>());
+        }
+
         public Task<bool> UserHasPushEnabledAsync(string userId)
+        {
+            return Task.FromResult(false);
+        }
+
+        public Task UpdateDeviceLastActivityAsync(string userId, string deviceType)
+        {
+            return Task.CompletedTask;
+        }
+
+        public Task<bool> IsUserActiveOnMobileAsync(string userId)
         {
             return Task.FromResult(false);
         }

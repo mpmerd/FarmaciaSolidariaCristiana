@@ -133,6 +133,37 @@
                 </StackLayout>
             </Frame>
 
+            <!-- Debug Section (Temporary) -->
+            <Label Text="🔧 Debug Notificaciones" 
+                   FontSize="18" 
+                   FontAttributes="Bold"
+                   TextColor="{StaticResource Gray600}"
+                   Margin="0,10,0,0"/>
+
+            <Frame BackgroundColor="#FFF8E1" CornerRadius="15" Padding="15" HasShadow="True">
+                <StackLayout Spacing="10">
+                    <Label Text="Herramientas de diagnóstico para notificaciones push" 
+                           FontSize="13" 
+                           TextColor="{StaticResource Gray600}"/>
+                    
+                    <Button Text="📊 Ver Estado OneSignal"
+                            BackgroundColor="#FF9800"
+                            TextColor="White"
+                            CornerRadius="10"
+                            HeightRequest="45"
+                            FontSize="14"
+                            Command="{Binding ShowNotificationDebugCommand}"/>
+                    
+                    <Button Text="🔄 Forzar Registro Dispositivo"
+                            BackgroundColor="#4CAF50"
+                            TextColor="White"
+                            CornerRadius="10"
+                            HeightRequest="45"
+                            FontSize="14"
+                            Command="{Binding ForceRegisterDeviceCommand}"/>
+                </StackLayout>
+            </Frame>
+
             <!-- Logout Button -->
             <Button Text="Cerrar Sesión"
                     BackgroundColor="{StaticResource Danger}"

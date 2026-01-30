@@ -70,5 +70,11 @@ namespace FarmaciaSolidariaCristiana.Models
         /// Última vez que se usó este token para enviar una notificación
         /// </summary>
         public DateTime? LastUsedAt { get; set; }
+
+        /// <summary>
+        /// Última actividad del usuario en la app móvil (actualizado por heartbeat/polling)
+        /// Se usa para determinar si el usuario está activo y no enviar email
+        /// </summary>
+        public DateTime? LastActivityAt { get; set; }
     }
 }
