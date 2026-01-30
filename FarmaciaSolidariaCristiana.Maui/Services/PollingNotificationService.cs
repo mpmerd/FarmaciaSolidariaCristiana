@@ -2,6 +2,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using FarmaciaSolidariaCristiana.Maui.Helpers;
 using CommunityToolkit.Maui.Alerts;
+using Plugin.Maui.Audio;
 
 namespace FarmaciaSolidariaCristiana.Maui.Services;
 
@@ -14,6 +15,7 @@ public class PollingNotificationService : IPollingNotificationService, IDisposab
 {
     private readonly HttpClient _httpClient;
     private readonly IAuthService _authService;
+    private readonly IAudioManager _audioManager;
     private CancellationTokenSource? _cancellationTokenSource;
     private Task? _pollingTask;
     private readonly HashSet<int> _shownNotificationIds = new();
@@ -28,6 +30,7 @@ public class PollingNotificationService : IPollingNotificationService, IDisposab
     {
         _httpClient = httpClient;
         _authService = authService;
+        _audioManager = AudioManager.Current;
     }
 
     public async Task StartAsync()
@@ -257,6 +260,9 @@ public class PollingNotificationService : IPollingNotificationService, IDisposab
 
     private async Task ShowLocalNotificationAsync(PendingNotificationItem notification)
     {
+        // Reproducir sonido de notificación
+        await PlayNotificationSoundAsync();
+        
         // Mostrar como toast/snackbar en la app
         await MainThread.InvokeOnMainThreadAsync(async () =>
         {
@@ -300,6 +306,21 @@ public class PollingNotificationService : IPollingNotificationService, IDisposab
                 catch { /* Ignorar errores de UI */ }
             }
         });
+    }
+
+    private async Task PlayNotificationSoundAsync()
+    {
+        try
+        {
+            var player = _audioManager.CreatePlayer(await FileSystem.OpenAppPackageFileAsync("notfar.mp3"));
+            player.Play();
+            
+            System.Diagnostics.Debug.WriteLine("[PollingService] Sonido de notificación reproducido");
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[PollingService] Error reproduciendo sonido: {ex.Message}");
+        }
     }
 
     private async Task SetAuthHeaderAsync()
