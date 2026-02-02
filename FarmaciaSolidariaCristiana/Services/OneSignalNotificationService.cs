@@ -21,6 +21,7 @@ namespace FarmaciaSolidariaCristiana.Services
         private readonly RoleManager<IdentityRole> _roleManager;
         private readonly ILogger<OneSignalNotificationService> _logger;
         private readonly IConfiguration _configuration;
+        private readonly IPendingNotificationService _pendingNotificationService;
 
         // Configuración de OneSignal
         private readonly string? _appId;
@@ -34,7 +35,8 @@ namespace FarmaciaSolidariaCristiana.Services
             UserManager<IdentityUser> userManager,
             RoleManager<IdentityRole> roleManager,
             ILogger<OneSignalNotificationService> logger,
-            IConfiguration configuration)
+            IConfiguration configuration,
+            IPendingNotificationService pendingNotificationService)
         {
             _httpClientFactory = httpClientFactory;
             _context = context;
@@ -42,6 +44,7 @@ namespace FarmaciaSolidariaCristiana.Services
             _roleManager = roleManager;
             _logger = logger;
             _configuration = configuration;
+            _pendingNotificationService = pendingNotificationService;
 
             // Cargar configuración de OneSignal (tolerante a falta de configuración)
             var oneSignalSettings = _configuration.GetSection("OneSignalSettings");
@@ -552,6 +555,43 @@ namespace FarmaciaSolidariaCristiana.Services
                     };
                 }
 
+                var title = "🆕 Nueva Solicitud de Turno";
+                var message = $"{nombreSolicitante} ha solicitado el turno #{numeroTurno}";
+                
+                var data = new Dictionary<string, string>
+                {
+                    { "turnoId", turnoId.ToString() },
+                    { "numeroTurno", numeroTurno.ToString() },
+                    { "action", "revisar_turno" }
+                };
+
+                // Crear notificaciones pendientes para el sistema de polling (funciona sin FCM)
+                var pendingNotificationsCreated = 0;
+                foreach (var userId in allUserIds)
+                {
+                    try
+                    {
+                        await _pendingNotificationService.CreateNotificationAsync(
+                            userId,
+                            title,
+                            message,
+                            nameof(NotificationType.TurnoSolicitado),
+                            turnoId,
+                            "Turno",
+                            data);
+                        pendingNotificationsCreated++;
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Error creando notificación pendiente para usuario {UserId}", userId);
+                    }
+                }
+                
+                _logger.LogInformation(
+                    "Creadas {Count} notificaciones pendientes para farmacéuticos/admins sobre turno #{TurnoId}",
+                    pendingNotificationsCreated, turnoId);
+
+                // Intentar también enviar push a través de OneSignal (puede fallar en Cuba)
                 // Obtener todos los Player IDs de farmacéuticos
                 var playerIds = await _context.UserDeviceTokens
                     .Where(t => allUserIds.Contains(t.UserId) && t.IsActive)
@@ -563,23 +603,22 @@ namespace FarmaciaSolidariaCristiana.Services
                     _logger.LogInformation("Los farmacéuticos no tienen dispositivos registrados para push");
                     return new NotificationResultDto
                     {
-                        Success = false,
-                        RecipientsCount = 0,
-                        ErrorMessage = "Los farmacéuticos no tienen dispositivos registrados"
+                        Success = true, // Las notificaciones pendientes sí se crearon
+                        RecipientsCount = pendingNotificationsCreated,
+                        ErrorMessage = "Notificaciones pendientes creadas. Push no enviado (sin dispositivos)."
                     };
                 }
 
-                var title = "🆕 Nueva Solicitud de Turno";
-                var message = $"{nombreSolicitante} ha solicitado el turno #{numeroTurno}";
+                var pushResult = await SendNotificationToPlayersAsync(playerIds, title, message, NotificationType.TurnoSolicitado, data);
                 
-                var data = new Dictionary<string, string>
+                return new NotificationResultDto
                 {
-                    { "turnoId", turnoId.ToString() },
-                    { "numeroTurno", numeroTurno.ToString() },
-                    { "action", "revisar_turno" }
+                    Success = true,
+                    RecipientsCount = pendingNotificationsCreated,
+                    ErrorMessage = pushResult.Success 
+                        ? null 
+                        : $"Notificaciones pendientes creadas. Push: {pushResult.ErrorMessage}"
                 };
-
-                return await SendNotificationToPlayersAsync(playerIds, title, message, NotificationType.TurnoSolicitado, data);
             }
             catch (Exception ex)
             {

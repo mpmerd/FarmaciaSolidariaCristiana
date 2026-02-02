@@ -189,3 +189,69 @@ public class Sponsor
             ? LogoPath 
             : $"{Helpers.Constants.ApiBaseUrl}/{LogoPath.TrimStart('/')}");
 }
+
+/// <summary>
+/// Resultado de búsqueda de documentos de turnos
+/// </summary>
+public class TurnoDocumentsSearchResult
+{
+    public bool Found { get; set; }
+    public int Count { get; set; }
+    public List<TurnoDocumentItem> Documents { get; set; } = new();
+    public string? Message { get; set; }
+}
+
+/// <summary>
+/// Documento de turno para importar
+/// </summary>
+public class TurnoDocumentItem
+{
+    public int Id { get; set; }
+    public int TurnoId { get; set; }
+    public int? NumeroTurno { get; set; }
+    public string DocumentType { get; set; } = string.Empty;
+    public string FileName { get; set; } = string.Empty;
+    public string FilePath { get; set; } = string.Empty;
+    public string? ContentType { get; set; }
+    public long FileSize { get; set; }
+    public DateTime FechaSolicitud { get; set; }
+    public string Source { get; set; } = string.Empty;
+    
+    /// <summary>
+    /// URL completa del documento
+    /// </summary>
+    public string? FullUrl => string.IsNullOrEmpty(FilePath) 
+        ? null 
+        : $"{Helpers.Constants.ApiBaseUrl}/{FilePath.TrimStart('/')}";
+    
+    /// <summary>
+    /// Descripción para mostrar en la UI
+    /// </summary>
+    public string DisplayDescription => 
+        $"Turno #{NumeroTurno ?? 0} ({FechaSolicitud:dd/MM/yyyy})";
+}
+
+/// <summary>
+/// Item para importar documento de turno
+/// </summary>
+public class TurnoDocumentImportItem
+{
+    public int TurnoId { get; set; }
+    public int? NumeroTurno { get; set; }
+    public string DocumentType { get; set; } = string.Empty;
+    public string FileName { get; set; } = string.Empty;
+    public string FilePath { get; set; } = string.Empty;
+    public DateTime FechaSolicitud { get; set; }
+}
+
+/// <summary>
+/// Resultado de importación de documentos
+/// </summary>
+public class ImportDocumentsResult
+{
+    public bool Success { get; set; }
+    public int ImportedCount { get; set; }
+    public List<PatientDocument> ImportedDocuments { get; set; } = new();
+    public List<string> Errors { get; set; } = new();
+    public string? Message { get; set; }
+}

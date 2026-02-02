@@ -69,7 +69,7 @@
             },
             "itext7": {
               "target": "Package",
-              "version": "[9.0.0, )"
+              "version": "[9.3.0, )"
             },
             "itext7.bouncy-castle-adapter": {
               "target": "Package",

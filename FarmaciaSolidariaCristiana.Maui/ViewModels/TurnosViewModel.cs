@@ -549,16 +549,10 @@ public partial class TurnosViewModel : BaseViewModel
             
             if (pdfBytes != null && pdfBytes.Length > 0)
             {
-                // Guardar en caché y abrir
-                var fileName = $"turno_{turno.Id}.pdf";
-                var filePath = Path.Combine(FileSystem.CacheDirectory, fileName);
-                await File.WriteAllBytesAsync(filePath, pdfBytes);
-                
-                // Abrir el PDF
-                await Launcher.OpenAsync(new OpenFileRequest
-                {
-                    File = new ReadOnlyFile(filePath)
-                });
+                // Abrir en el visor de PDF integrado de la app
+                var fileName = $"Turno_{turno.NumeroTurno ?? turno.Id}.pdf";
+                var pdfViewerPage = new Views.PdfViewerPage(pdfBytes, fileName);
+                await Shell.Current.Navigation.PushAsync(pdfViewerPage);
             }
             else
             {

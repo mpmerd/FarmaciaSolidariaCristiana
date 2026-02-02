@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.Input;
 using FarmaciaSolidariaCristiana.Maui.Helpers;
 using FarmaciaSolidariaCristiana.Maui.Models;
 using FarmaciaSolidariaCristiana.Maui.Services;
+using FarmaciaSolidariaCristiana.Maui.Views;
 using System.Collections.ObjectModel;
 
 namespace FarmaciaSolidariaCristiana.Maui.ViewModels;
@@ -103,7 +104,7 @@ public partial class PacientesViewModel : BaseViewModel
         if (paciente == null) return;
         
         var options = CanEdit 
-            ? new[] { "Ver detalles", "Editar ficha", "Ver documentos médicos", "Agregar documento", "Eliminar" } 
+            ? new[] { "Ver detalles", "Editar ficha", "Ver documentos médicos", "Agregar documento", "📥 Importar de turnos", "Eliminar" } 
             : new[] { "Ver detalles", "Ver documentos médicos" };
         
         var action = await Shell.Current.DisplayActionSheet(
@@ -125,6 +126,9 @@ public partial class PacientesViewModel : BaseViewModel
                 break;
             case "Agregar documento":
                 await AgregarDocumentoAsync(paciente);
+                break;
+            case "📥 Importar de turnos":
+                await OfrecerImportarDocumentosTurnoAsync(paciente);
                 break;
             case "Eliminar":
                 await DeletePacienteAsync(paciente);
@@ -294,10 +298,13 @@ public partial class PacientesViewModel : BaseViewModel
             {
                 await Shell.Current.DisplayAlert("Éxito", "Paciente creado correctamente", "OK");
                 
-                // Preguntar si desea agregar documentos
+                // Buscar documentos de turnos para este paciente
+                await OfrecerImportarDocumentosTurnoAsync(result.Data);
+                
+                // Preguntar si desea agregar documentos adicionales
                 var agregarDocs = await Shell.Current.DisplayAlert(
                     "Documentos Médicos",
-                    "¿Desea agregar documentos médicos ahora?",
+                    "¿Desea agregar más documentos médicos?",
                     "Sí", "No");
 
                 if (agregarDocs)
@@ -631,11 +638,11 @@ public partial class PacientesViewModel : BaseViewModel
 
     private async Task VerDocumentoAsync(PatientDocument doc)
     {
-        if (string.IsNullOrEmpty(doc.FullUrl))
+        if (string.IsNullOrEmpty(doc.FilePath))
         {
             await Shell.Current.DisplayAlert(
                 doc.DocumentType,
-                $"Archivo: {doc.FileName}\nSubido: {doc.UploadedAt:dd/MM/yyyy}\nNotas: {doc.Notes ?? "Sin notas"}\n\n⚠️ URL del documento no disponible",
+                $"Archivo: {doc.FileName}\nSubido: {doc.UploadedAt:dd/MM/yyyy}\nNotas: {doc.Notes ?? "Sin notas"}\n\n⚠️ Ruta del documento no disponible",
                 "OK");
             return;
         }
@@ -644,27 +651,181 @@ public partial class PacientesViewModel : BaseViewModel
             doc.FileName,
             "Cerrar",
             null,
-            "Ver documento",
-            "Ver información");
+            "📄 Ver en la app",
+            "ℹ️ Ver información");
 
         switch (accion)
         {
-            case "Ver documento":
-                try
-                {
-                    await Launcher.OpenAsync(new Uri(doc.FullUrl));
-                }
-                catch (Exception ex)
-                {
-                    await ShowErrorAsync($"No se pudo abrir el documento: {ex.Message}");
-                }
+            case "📄 Ver en la app":
+                await VerDocumentoEnAppAsync(doc);
                 break;
-            case "Ver información":
+            case "ℹ️ Ver información":
                 await Shell.Current.DisplayAlert(
                     doc.DocumentType,
-                    $"Archivo: {doc.FileName}\nSubido: {doc.UploadedAt:dd/MM/yyyy}\nNotas: {doc.Notes ?? "Sin notas"}\nURL: {doc.FullUrl}",
+                    $"Archivo: {doc.FileName}\nSubido: {doc.UploadedAt:dd/MM/yyyy}\nNotas: {doc.Notes ?? "Sin notas"}",
                     "OK");
                 break;
+        }
+    }
+
+    private async Task VerDocumentoEnAppAsync(PatientDocument doc)
+    {
+        try
+        {
+            IsBusy = true;
+            
+            // Descargar el documento usando la API
+            var fileBytes = await ApiService.DownloadPatientDocumentAsync(doc.PatientId, doc.Id);
+            
+            if (fileBytes == null || fileBytes.Length == 0)
+            {
+                await ShowErrorAsync("No se pudo descargar el documento");
+                return;
+            }
+            
+            // Determinar tipo de documento
+            var isPdf = doc.FileName.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase);
+            var isImage = doc.FileName.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase) ||
+                         doc.FileName.EndsWith(".jpeg", StringComparison.OrdinalIgnoreCase) ||
+                         doc.FileName.EndsWith(".png", StringComparison.OrdinalIgnoreCase);
+            
+            if (isPdf)
+            {
+                // Usar PdfViewerPage
+                var pdfViewer = new PdfViewerPage(fileBytes, doc.FileName);
+                await Shell.Current.Navigation.PushAsync(pdfViewer);
+            }
+            else if (isImage)
+            {
+                // Crear TurnoDocumento temporal para usar DocumentoViewerPage
+                var turnoDoc = new TurnoDocumento
+                {
+                    Id = doc.Id,
+                    FileName = doc.FileName,
+                    DocumentType = doc.DocumentType,
+                    FilePath = doc.FilePath,
+                    ContentType = isImage ? "image/jpeg" : "application/octet-stream"
+                };
+                var docViewer = new DocumentoViewerPage(turnoDoc);
+                await Shell.Current.Navigation.PushAsync(docViewer);
+            }
+            else
+            {
+                // Tipo desconocido - intentar abrir con el visor de PDF
+                var pdfViewer = new PdfViewerPage(fileBytes, doc.FileName);
+                await Shell.Current.Navigation.PushAsync(pdfViewer);
+            }
+        }
+        catch (Exception ex)
+        {
+            await ShowErrorAsync($"Error al abrir el documento: {ex.Message}");
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    /// <summary>
+    /// Busca documentos de turnos aprobados y ofrece importarlos
+    /// </summary>
+    private async Task OfrecerImportarDocumentosTurnoAsync(Patient paciente)
+    {
+        try
+        {
+            // Buscar documentos de turnos para este número de identificación
+            var searchResult = await ApiService.GetTurnoDocumentsByIdentificationAsync(paciente.IdentificationDocument);
+            
+            if (!searchResult.Success || searchResult.Data == null || !searchResult.Data.Found)
+            {
+                // No hay documentos de turnos - no mostrar nada
+                return;
+            }
+            
+            var docs = searchResult.Data.Documents;
+            
+            var importar = await Shell.Current.DisplayAlert(
+                "📋 Documentos de Turnos Encontrados",
+                $"Se encontraron {docs.Count} documento(s) en turnos aprobados para este paciente.\n\n¿Desea importarlos a la ficha del paciente?",
+                "Sí, importar",
+                "No, gracias");
+            
+            if (!importar) return;
+            
+            // Mostrar lista para seleccionar
+            var opciones = docs.Select(d => $"📄 {d.DocumentType} - Turno #{d.NumeroTurno} ({d.FechaSolicitud:dd/MM/yy})").ToArray();
+            var todosSeleccionados = new List<TurnoDocumentItem>(docs);
+            
+            var seleccionarTodos = await Shell.Current.DisplayAlert(
+                "Seleccionar Documentos",
+                $"¿Importar todos los {docs.Count} documentos?",
+                "Sí, todos",
+                "Seleccionar manualmente");
+            
+            if (!seleccionarTodos)
+            {
+                // Selección manual
+                todosSeleccionados.Clear();
+                foreach (var doc in docs)
+                {
+                    var incluir = await Shell.Current.DisplayAlert(
+                        "Importar Documento",
+                        $"📄 {doc.DocumentType}\n📁 {doc.FileName}\n📅 Turno #{doc.NumeroTurno} ({doc.FechaSolicitud:dd/MM/yyyy})\n\n¿Incluir este documento?",
+                        "Sí", "No");
+                    if (incluir)
+                    {
+                        todosSeleccionados.Add(doc);
+                    }
+                }
+            }
+            
+            if (todosSeleccionados.Count == 0)
+            {
+                await Shell.Current.DisplayAlert("Info", "No se seleccionaron documentos para importar.", "OK");
+                return;
+            }
+            
+            // Importar los documentos seleccionados
+            IsBusy = true;
+            
+            var itemsToImport = todosSeleccionados.Select(d => new TurnoDocumentImportItem
+            {
+                TurnoId = d.TurnoId,
+                NumeroTurno = d.NumeroTurno,
+                DocumentType = d.DocumentType,
+                FileName = d.FileName,
+                FilePath = d.FilePath,
+                FechaSolicitud = d.FechaSolicitud
+            }).ToList();
+            
+            var importResult = await ApiService.ImportTurnoDocumentsAsync(paciente.Id, itemsToImport);
+            
+            if (importResult.Success && importResult.Data != null)
+            {
+                var msg = importResult.Data.ImportedCount > 0
+                    ? $"✅ Se importaron {importResult.Data.ImportedCount} documento(s) correctamente."
+                    : "No se pudo importar ningún documento.";
+                
+                if (importResult.Data.Errors.Count > 0)
+                {
+                    msg += $"\n\n⚠️ Errores:\n{string.Join("\n", importResult.Data.Errors)}";
+                }
+                
+                await Shell.Current.DisplayAlert("Importación Completada", msg, "OK");
+            }
+            else
+            {
+                await ShowErrorAsync(importResult.Message ?? "Error al importar documentos");
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[Pacientes] Error al buscar documentos de turnos: {ex.Message}");
+            // No mostramos error al usuario porque no es crítico
+        }
+        finally
+        {
+            IsBusy = false;
         }
     }
 
@@ -673,7 +834,7 @@ public partial class PacientesViewModel : BaseViewModel
         if (!CanEdit)
         {
             await ShowErrorAsync("No tiene permisos para agregar documentos.");
-            return;
+            return;;
         }
 
         var opcion = await Shell.Current.DisplayActionSheet(
