@@ -47,17 +47,18 @@
                                     <!-- Número de Turno -->
                                     <Frame Grid.RowSpan="3"
                                            BackgroundColor="{StaticResource Primary}"
-                                           Padding="10"
+                                           Padding="6"
                                            CornerRadius="8"
-                                           WidthRequest="60"
-                                           HeightRequest="60"
+                                           WidthRequest="55"
+                                           HeightRequest="55"
                                            VerticalOptions="Center">
                                         <Label Text="{Binding Id, StringFormat='#{0}'}"
-                                               FontSize="18"
+                                               FontSize="13"
                                                FontAttributes="Bold"
                                                TextColor="White"
                                                HorizontalTextAlignment="Center"
-                                               VerticalTextAlignment="Center"/>
+                                               VerticalTextAlignment="Center"
+                                               LineBreakMode="NoWrap"/>
                                     </Frame>
                                     
                                     <!-- Info -->

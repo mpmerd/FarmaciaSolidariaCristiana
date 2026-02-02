@@ -89,7 +89,7 @@ public partial class ProfileViewModel : BaseViewModel
     [RelayCommand]
     private async Task ChangePasswordAsync()
     {
-        await Shell.Current.DisplayAlert("Cambiar Contraseña", "Funcionalidad próximamente disponible", "OK");
+        await Shell.Current.GoToAsync("ChangePasswordPage");
     }
 
     [RelayCommand]
@@ -116,94 +116,6 @@ public partial class ProfileViewModel : BaseViewModel
             
             await AuthService.LogoutAsync();
             await Shell.Current.GoToAsync("//LoginPage");
-        }
-    }
-
-    [RelayCommand]
-    private async Task ShowNotificationDebugAsync()
-    {
-        try
-        {
-            var playerId = _notificationService.GetPlayerId();
-            var isPushEnabled = _notificationService.IsPushEnabled();
-            
-            // Get additional debug info from App
-            var appPlayerId = App.OneSignalPlayerId;
-            var isInitialized = App.IsOneSignalInitialized;
-            var initError = App.OneSignalInitError;
-            
-            string message = $"🔔 Estado de Notificaciones Push\n\n" +
-                           $"• OneSignal Init: {(isInitialized ? "✅ Sí" : "❌ No")}\n" +
-                           $"• PlayerId (Service): {(string.IsNullOrEmpty(playerId) ? "❌ No disponible" : $"✅ {playerId[..Math.Min(15, playerId.Length)]}...")}\n" +
-                           $"• PlayerId (App): {(string.IsNullOrEmpty(appPlayerId) ? "❌ No disponible" : $"✅ {appPlayerId[..Math.Min(15, appPlayerId.Length)]}...")}\n" +
-                           $"• Permisos: {(isPushEnabled ? "✅ Habilitados" : "❌ Deshabilitados")}\n";
-            
-            if (!string.IsNullOrEmpty(initError))
-            {
-                message += $"• Error Init: {initError}\n";
-            }
-            
-            message += "\n";
-            
-            if (string.IsNullOrEmpty(playerId) && string.IsNullOrEmpty(appPlayerId))
-            {
-                message += "⚠️ El PlayerId no está disponible.\n\n" +
-                          "Posibles causas:\n" +
-                          "• FCM no pudo conectarse (¿VPN?)\n" +
-                          "• Google Play Services no disponible\n" +
-                          "• Firebase no configurado correctamente\n" +
-                          "• Dispositivo sin conexión a internet\n\n" +
-                          "💡 Intenta:\n" +
-                          "1. Verifica que tienes conexión a internet\n" +
-                          "2. Cierra y abre la app\n" +
-                          "3. Revisa si Google Play Services está actualizado";
-            }
-            else
-            {
-                message += "✅ OneSignal está funcionando.\n\n" +
-                          "💡 Para probar:\n" +
-                          "1. Toca 'Forzar Registro' abajo\n" +
-                          "2. Luego aprueba un turno desde MVC\n" +
-                          "3. Deberías recibir una notificación push";
-            }
-            
-            await Shell.Current.DisplayAlert("Debug Notificaciones", message, "OK");
-        }
-        catch (Exception ex)
-        {
-            await Shell.Current.DisplayAlert("Error", $"Error: {ex.Message}", "OK");
-        }
-    }
-
-    [RelayCommand]
-    private async Task ForceRegisterDeviceAsync()
-    {
-        try
-        {
-            IsBusy = true;
-            
-            var result = await _notificationService.RegisterDeviceAsync();
-            
-            if (result)
-            {
-                await Shell.Current.DisplayAlert("Éxito", "✅ Dispositivo registrado correctamente en el servidor", "OK");
-            }
-            else
-            {
-                var playerId = _notificationService.GetPlayerId();
-                string errorMsg = string.IsNullOrEmpty(playerId) 
-                    ? "❌ No hay PlayerId de OneSignal disponible" 
-                    : "❌ Error al registrar en el servidor";
-                await Shell.Current.DisplayAlert("Error", errorMsg, "OK");
-            }
-        }
-        catch (Exception ex)
-        {
-            await Shell.Current.DisplayAlert("Error", $"Error: {ex.Message}", "OK");
-        }
-        finally
-        {
-            IsBusy = false;
         }
     }
 }

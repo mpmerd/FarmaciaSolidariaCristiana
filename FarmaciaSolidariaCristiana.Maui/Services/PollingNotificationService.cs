@@ -312,14 +312,30 @@ public class PollingNotificationService : IPollingNotificationService, IDisposab
     {
         try
         {
-            var player = _audioManager.CreatePlayer(await FileSystem.OpenAppPackageFileAsync("notfar.mp3"));
+            System.Diagnostics.Debug.WriteLine("[PollingService] Intentando reproducir sonido...");
+            
+            // Abrir el archivo de sonido desde Resources/Raw
+            using var stream = await FileSystem.OpenAppPackageFileAsync("notfar.mp3");
+            var player = _audioManager.CreatePlayer(stream);
+            
             player.Play();
             
-            System.Diagnostics.Debug.WriteLine("[PollingService] Sonido de notificación reproducido");
+            // Esperar a que termine de reproducir (máximo 5 segundos)
+            var timeout = DateTime.Now.AddSeconds(5);
+            while (player.IsPlaying && DateTime.Now < timeout)
+            {
+                await Task.Delay(100);
+            }
+            
+            // Liberar el player
+            player.Dispose();
+            
+            System.Diagnostics.Debug.WriteLine("[PollingService] Sonido de notificación reproducido correctamente");
         }
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"[PollingService] Error reproduciendo sonido: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"[PollingService] Stack trace: {ex.StackTrace}");
         }
     }
 

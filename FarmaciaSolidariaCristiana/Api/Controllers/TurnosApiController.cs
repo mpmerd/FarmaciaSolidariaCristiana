@@ -19,17 +19,20 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
         private readonly ITurnoService _turnoService;
         private readonly IOneSignalNotificationService _notificationService;
         private readonly ILogger<TurnosApiController> _logger;
+        private readonly IWebHostEnvironment _environment;
 
         public TurnosApiController(
             ApplicationDbContext context,
             ITurnoService turnoService,
             IOneSignalNotificationService notificationService,
-            ILogger<TurnosApiController> logger)
+            ILogger<TurnosApiController> logger,
+            IWebHostEnvironment environment)
         {
             _context = context;
             _turnoService = turnoService;
             _notificationService = notificationService;
             _logger = logger;
+            _environment = environment;
         }
 
         /// <summary>
@@ -140,6 +143,75 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
             }
 
             return ApiOk(MapToDto(turno));
+        }
+
+        /// <summary>
+        /// Descarga el PDF de un turno aprobado
+        /// </summary>
+        [HttpGet("{id}/pdf")]
+        [Authorize(Roles = "Admin,Farmaceutico,Viewer,ViewerPublic")]
+        [ProducesResponseType(typeof(FileContentResult), 200)]
+        [ProducesResponseType(typeof(ApiResponse<object>), 404)]
+        public async Task<IActionResult> DownloadPdf(int id)
+        {
+            _logger.LogInformation("Solicitud de PDF para turno {TurnoId}", id);
+            
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var isAdmin = User.IsInRole("Admin") || User.IsInRole("Farmaceutico");
+
+            _logger.LogInformation("Usuario {UserId}, IsAdmin: {IsAdmin}", userId, isAdmin);
+
+            var turno = await _context.Turnos
+                .FirstOrDefaultAsync(t => t.Id == id);
+
+            if (turno == null)
+            {
+                _logger.LogWarning("Turno {TurnoId} no encontrado", id);
+                return ApiError("Turno no encontrado", 404);
+            }
+
+            _logger.LogInformation("Turno encontrado. Estado: {Estado}, UserId del turno: {TurnoUserId}, TurnoPdfPath: {PdfPath}", 
+                turno.Estado, turno.UserId, turno.TurnoPdfPath);
+
+            // Verificar acceso: Admin/Farmaceutico pueden ver todos, usuarios solo los suyos
+            if (!isAdmin && turno.UserId != userId)
+            {
+                _logger.LogWarning("Usuario {UserId} no tiene permiso para turno {TurnoId} que pertenece a {TurnoUserId}", 
+                    userId, id, turno.UserId);
+                return ApiError("No tiene permiso para acceder a este turno", 403);
+            }
+
+            // Verificar que el turno esté aprobado
+            if (turno.Estado != "Aprobado")
+            {
+                _logger.LogWarning("Turno {TurnoId} no está aprobado, estado actual: {Estado}", id, turno.Estado);
+                return ApiError("El PDF solo está disponible para turnos aprobados", 400);
+            }
+
+            // Verificar que existe el PDF
+            if (string.IsNullOrEmpty(turno.TurnoPdfPath))
+            {
+                _logger.LogWarning("Turno {TurnoId} no tiene TurnoPdfPath", id);
+                return ApiError("Este turno no tiene PDF generado", 404);
+            }
+
+            // Construir la ruta del archivo
+            var pdfPath = Path.Combine(_environment.WebRootPath, turno.TurnoPdfPath.TrimStart('/'));
+            _logger.LogInformation("Ruta del PDF: {PdfPath}", pdfPath);
+
+            if (!System.IO.File.Exists(pdfPath))
+            {
+                _logger.LogWarning("PDF no encontrado en disco: {Path}", pdfPath);
+                return ApiError("El archivo PDF no se encuentra en el servidor", 404);
+            }
+
+            // Leer y devolver el archivo
+            var pdfBytes = await System.IO.File.ReadAllBytesAsync(pdfPath);
+            var fileName = $"turno_{turno.NumeroTurno ?? turno.Id}.pdf";
+            
+            _logger.LogInformation("Enviando PDF {FileName}, tamaño: {Size} bytes", fileName, pdfBytes.Length);
+            
+            return File(pdfBytes, "application/pdf", fileName);
         }
 
         /// <summary>

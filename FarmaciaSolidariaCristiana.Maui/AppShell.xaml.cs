@@ -36,6 +36,7 @@ public partial class AppShell : Shell
         Routing.RegisterRoute("ReportesPage", typeof(ReportesPage));
         Routing.RegisterRoute("FechasBloqueadasPage", typeof(FechasBloqueadasPage));
         Routing.RegisterRoute("ProfilePage", typeof(ProfilePage));
+        Routing.RegisterRoute("ChangePasswordPage", typeof(ChangePasswordPage));
     }
     
     private async void CheckAuthenticationAsync()

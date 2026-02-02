@@ -54,6 +54,7 @@ public static class MauiProgram
         builder.Services.AddTransient<ReportesViewModel>();
         builder.Services.AddTransient<FechasBloqueadasViewModel>();
         builder.Services.AddTransient<ProfileViewModel>();
+        builder.Services.AddTransient<ChangePasswordViewModel>();
 
         // Register Pages
         builder.Services.AddTransient<LoginPage>();
@@ -70,6 +71,7 @@ public static class MauiProgram
         builder.Services.AddTransient<ReportesPage>();
         builder.Services.AddTransient<FechasBloqueadasPage>();
         builder.Services.AddTransient<ProfilePage>();
+        builder.Services.AddTransient<ChangePasswordPage>();
         
         // Register AppShell
         builder.Services.AddTransient<AppShell>();

@@ -58,3 +58,13 @@ public class RegisterRequest
     public string Password { get; set; } = string.Empty;
     public string ConfirmPassword { get; set; } = string.Empty;
 }
+
+/// <summary>
+/// Request de cambio de contraseña
+/// </summary>
+public class ChangePasswordRequest
+{
+    public string CurrentPassword { get; set; } = string.Empty;
+    public string NewPassword { get; set; } = string.Empty;
+    public string ConfirmPassword { get; set; } = string.Empty;
+}

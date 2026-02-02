@@ -57,6 +57,9 @@ public interface IApiService
     Task<ApiResponse<bool>> DeletePacienteAsync(int id);
     Task<ApiResponse<List<PatientDocument>>> GetDocumentosPacienteAsync(int patientId);
     Task<ApiResponse<PatientDocument>> SubirDocumentoPacienteAsync(int patientId, string fileName, string documentType, byte[] fileBytes, string? notes);
+    Task<ApiResponse<TurnoDocumentsSearchResult>> GetTurnoDocumentsByIdentificationAsync(string identification);
+    Task<ApiResponse<ImportDocumentsResult>> ImportTurnoDocumentsAsync(int patientId, List<TurnoDocumentImportItem> documents);
+    Task<byte[]?> DownloadPatientDocumentAsync(int patientId, int documentId);
     
     // Patrocinadores
     Task<ApiResponse<List<Sponsor>>> GetPatrocinadoresAsync();
@@ -82,6 +85,7 @@ public interface IApiService
     Task<ApiResponse<RegistrationStatusDto>> GetRegistrationStatusAsync();
     Task<ApiResponse<bool>> RegisterAsync(RegisterRequest request);
     Task<ApiResponse<bool>> ForgotPasswordAsync(string emailOrUserName);
+    Task<ApiResponse<bool>> ChangePasswordAsync(ChangePasswordRequest request);
     
     // Diagnóstico
     Task<bool> CheckApiHealthAsync();

@@ -443,6 +443,36 @@ public class ApiService : IApiService
     public Task<ApiResponse<List<PatientDocument>>> GetDocumentosPacienteAsync(int patientId)
         => GetAsync<List<PatientDocument>>($"/api/patients/{patientId}/documents");
 
+    public Task<ApiResponse<TurnoDocumentsSearchResult>> GetTurnoDocumentsByIdentificationAsync(string identification)
+        => GetAsync<TurnoDocumentsSearchResult>($"/api/patients/turno-documents/{Uri.EscapeDataString(identification)}");
+
+    public async Task<ApiResponse<ImportDocumentsResult>> ImportTurnoDocumentsAsync(int patientId, List<TurnoDocumentImportItem> documents)
+    {
+        var request = new { Documents = documents };
+        return await PostAsync<ImportDocumentsResult>($"/api/patients/{patientId}/import-turno-documents", request);
+    }
+
+    public async Task<byte[]?> DownloadPatientDocumentAsync(int patientId, int documentId)
+    {
+        try
+        {
+            await SetAuthHeaderAsync();
+            var response = await _httpClient.GetAsync($"/api/patients/{patientId}/documents/{documentId}/download");
+            
+            if (response.IsSuccessStatusCode)
+            {
+                return await response.Content.ReadAsByteArrayAsync();
+            }
+            
+            return null;
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[ApiService] Error descargando documento: {ex.Message}");
+            return null;
+        }
+    }
+
     public async Task<ApiResponse<PatientDocument>> SubirDocumentoPacienteAsync(
         int patientId, string fileName, string documentType, byte[] fileBytes, string? notes)
     {
@@ -617,6 +647,22 @@ public class ApiService : IApiService
             var json = JsonSerializer.Serialize(requestObj, _jsonOptions);
             var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
             var response = await _httpClient.PostAsync("/api/auth/forgot-password", content);
+            return await ProcessResponseAsync<bool>(response);
+        }
+        catch (Exception ex)
+        {
+            return ErrorResponse<bool>($"Error de conexión: {ex.Message}");
+        }
+    }
+
+    public async Task<ApiResponse<bool>> ChangePasswordAsync(ChangePasswordRequest request)
+    {
+        try
+        {
+            await SetAuthHeaderAsync();
+            var json = JsonSerializer.Serialize(request, _jsonOptions);
+            var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
+            var response = await _httpClient.PostAsync("/api/auth/change-password", content);
             return await ProcessResponseAsync<bool>(response);
         }
         catch (Exception ex)
