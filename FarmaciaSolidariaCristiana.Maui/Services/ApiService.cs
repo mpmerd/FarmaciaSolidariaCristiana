@@ -423,6 +423,35 @@ public class ApiService : IApiService
     public Task<ApiResponse<bool>> EliminarEntregaAsync(int id)
         => DeleteAsync($"/api/deliveries/{id}");
 
+    public Task<ApiResponse<List<TurnoForDelivery>>> GetTurnosAprobadosByIdentificationAsync(string identification)
+        => GetAsync<List<TurnoForDelivery>>($"/api/turnos/by-identification/{Uri.EscapeDataString(identification)}");
+
+    public async Task<ApiResponse<PatientInfo>> GetPatientByIdentificationAsync(string identification)
+    {
+        try
+        {
+            await SetAuthHeaderAsync();
+            var response = await _httpClient.GetAsync($"/api/patients/by-identification/{Uri.EscapeDataString(identification)}");
+            var content = await response.Content.ReadAsStringAsync();
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var result = JsonSerializer.Deserialize<ApiResponse<PatientInfo>>(content, 
+                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                return result ?? new ApiResponse<PatientInfo> { Success = false, Message = "Error deserializando" };
+            }
+            
+            return new ApiResponse<PatientInfo> { Success = false, Message = $"Error: {response.StatusCode}" };
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse<PatientInfo> { Success = false, Message = ex.Message };
+        }
+    }
+
+    public Task<ApiResponse<Delivery>> CreateDeliveryAsync(CreateDeliveryRequest request)
+        => PostAsync<Delivery>("/api/deliveries", request);
+
     // === PACIENTES ===
 
     public Task<ApiResponse<List<Patient>>> GetPacientesAsync()
@@ -457,13 +486,22 @@ public class ApiService : IApiService
         try
         {
             await SetAuthHeaderAsync();
-            var response = await _httpClient.GetAsync($"/api/patients/{patientId}/documents/{documentId}/download");
+            var url = $"/api/patients/{patientId}/documents/{documentId}/download";
+            System.Diagnostics.Debug.WriteLine($"[ApiService] Descargando documento: {url}");
+            
+            var response = await _httpClient.GetAsync(url);
+            
+            System.Diagnostics.Debug.WriteLine($"[ApiService] Respuesta descarga: {response.StatusCode}");
             
             if (response.IsSuccessStatusCode)
             {
-                return await response.Content.ReadAsByteArrayAsync();
+                var bytes = await response.Content.ReadAsByteArrayAsync();
+                System.Diagnostics.Debug.WriteLine($"[ApiService] Documento descargado: {bytes.Length} bytes");
+                return bytes;
             }
             
+            var errorContent = await response.Content.ReadAsStringAsync();
+            System.Diagnostics.Debug.WriteLine($"[ApiService] Error descarga documento: {response.StatusCode} - {errorContent}");
             return null;
         }
         catch (Exception ex)
@@ -488,7 +526,7 @@ public class ApiService : IApiService
                     ? "application/pdf" 
                     : "image/jpeg");
             
-            content.Add(fileContent, "file", fileName);
+            content.Add(fileContent, "document", fileName);
             content.Add(new StringContent(documentType), "documentType");
             if (!string.IsNullOrEmpty(notes))
             {

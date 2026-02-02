@@ -21,6 +21,12 @@ public class Turno
     public int DocumentosCount { get; set; }
     public List<TurnoDocumento> Documentos { get; set; } = new();
     
+    /// <summary>
+    /// Indica si el turno fue cancelado por no presentación del paciente.
+    /// Estos turnos cuentan contra el límite mensual como penalización.
+    /// </summary>
+    public bool CanceladoPorNoPresentacion { get; set; }
+    
     // Propiedades calculadas para UI
     public string EstadoDisplay => Estado switch
     {

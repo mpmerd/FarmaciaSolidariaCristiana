@@ -10,6 +10,15 @@ using System.Globalization;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// ========================================
+// CONFIGURACIÓN DE LÍMITE DE TAMAÑO DE ARCHIVOS
+// ========================================
+// Configurar Kestrel para aceptar archivos más grandes (20MB)
+builder.WebHost.ConfigureKestrel(serverOptions =>
+{
+    serverOptions.Limits.MaxRequestBodySize = 20 * 1024 * 1024; // 20MB
+});
+
 // Configurar cultura en español
 var cultureInfo = new CultureInfo("es-ES");
 CultureInfo.DefaultThreadCurrentCulture = cultureInfo;

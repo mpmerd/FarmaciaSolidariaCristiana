@@ -5,6 +5,8 @@ public partial class PdfViewerPage : ContentPage
     private readonly byte[] _pdfBytes;
     private readonly string _fileName;
     private string? _localFilePath;
+    private static string? _pdfJsScript;
+    private static string? _pdfWorkerScript;
 
     public PdfViewerPage(byte[] pdfBytes, string fileName)
     {
@@ -36,18 +38,34 @@ public partial class PdfViewerPage : ContentPage
                 return;
             }
 
-            // Guardar en cache local
+            // Guardar en cache local (para compartir/abrir externamente)
             _localFilePath = Path.Combine(FileSystem.CacheDirectory, _fileName);
             await File.WriteAllBytesAsync(_localFilePath, _pdfBytes);
 
-            LoadingLabel.Text = "Cargando visor...";
+            LoadingLabel.Text = "Cargando biblioteca PDF...";
+
+            // Cargar pdf.js desde recursos locales (solo una vez)
+            if (_pdfJsScript == null)
+            {
+                using var pdfStream = await FileSystem.OpenAppPackageFileAsync("pdf.min.js");
+                using var pdfReader = new StreamReader(pdfStream);
+                _pdfJsScript = await pdfReader.ReadToEndAsync();
+            }
+
+            if (_pdfWorkerScript == null)
+            {
+                using var workerStream = await FileSystem.OpenAppPackageFileAsync("pdf.worker.min.js");
+                using var workerReader = new StreamReader(workerStream);
+                _pdfWorkerScript = await workerReader.ReadToEndAsync();
+            }
+
+            LoadingLabel.Text = "Renderizando PDF...";
 
             // Convertir PDF a base64
             var base64Pdf = Convert.ToBase64String(_pdfBytes);
             
-            // Crear HTML con pdf.js de Mozilla (CDN)
-            // pdf.js renderiza el PDF en un canvas HTML5
-            var html = GetPdfJsHtml(base64Pdf);
+            // Crear HTML con pdf.js embebido (sin necesidad de internet)
+            var html = GetPdfJsHtml(base64Pdf, _pdfJsScript, _pdfWorkerScript);
 
             PdfViewer.Source = new HtmlWebViewSource { Html = html };
             
@@ -62,15 +80,17 @@ public partial class PdfViewerPage : ContentPage
         }
     }
 
-    private string GetPdfJsHtml(string base64Pdf)
+    private string GetPdfJsHtml(string base64Pdf, string pdfJsScript, string pdfWorkerScript)
     {
+        // Convertir el worker a base64 para crear un Blob URL
+        var workerBase64 = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(pdfWorkerScript));
+        
         return $@"
 <!DOCTYPE html>
 <html>
 <head>
     <meta charset='UTF-8'>
     <meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=3.0, user-scalable=yes'>
-    <script src='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js'></script>
     <style>
         * {{ margin: 0; padding: 0; box-sizing: border-box; }}
         html, body {{ 
@@ -114,6 +134,7 @@ public partial class PdfViewerPage : ContentPage
             padding: 20px;
             background: white;
             border-radius: 10px;
+            max-width: 90%;
             display: none;
         }}
         .spinner {{
@@ -130,41 +151,64 @@ public partial class PdfViewerPage : ContentPage
             100% {{ transform: rotate(360deg); }}
         }}
     </style>
+    <!-- pdf.js embebido (sin necesidad de internet) -->
+    <script>{pdfJsScript}</script>
 </head>
 <body>
     <div id='loading'>
         <div class='spinner'></div>
-        <div>Renderizando PDF...</div>
+        <div id='status'>Renderizando PDF...</div>
     </div>
     <div id='error'></div>
     <div id='pdf-container'></div>
     
     <script>
-        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-        
-        const pdfData = atob('{base64Pdf}');
-        const pdfArray = new Uint8Array(pdfData.length);
-        for (let i = 0; i < pdfData.length; i++) {{
-            pdfArray[i] = pdfData.charCodeAt(i);
+        function showError(msg) {{
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('error').style.display = 'block';
+            document.getElementById('error').innerHTML = msg;
         }}
         
-        async function renderPDF() {{
+        function updateStatus(msg) {{
+            document.getElementById('status').innerText = msg;
+        }}
+        
+        // Configurar worker desde base64 (sin necesidad de internet)
+        try {{
+            var workerBlob = new Blob([atob('{workerBase64}')], {{ type: 'application/javascript' }});
+            pdfjsLib.GlobalWorkerOptions.workerSrc = URL.createObjectURL(workerBlob);
+        }} catch (e) {{
+            // Fallback: desactivar worker si no funciona
+            pdfjsLib.GlobalWorkerOptions.workerSrc = '';
+        }}
+        
+        // Iniciar renderizado
+        try {{
+            const pdfData = atob('{base64Pdf}');
+            const pdfArray = new Uint8Array(pdfData.length);
+            for (let i = 0; i < pdfData.length; i++) {{
+                pdfArray[i] = pdfData.charCodeAt(i);
+            }}
+            
+            renderPDF(pdfArray);
+        }} catch (e) {{
+            showError('Error al procesar PDF:<br>' + e.message);
+        }}
+        
+        async function renderPDF(pdfArray) {{
             try {{
                 const pdf = await pdfjsLib.getDocument({{ data: pdfArray }}).promise;
                 const container = document.getElementById('pdf-container');
                 const loading = document.getElementById('loading');
                 
-                // Calcular escala basada en el ancho de pantalla
                 const containerWidth = window.innerWidth - 20;
-                
-                // Usar devicePixelRatio para mejorar la calidad (mínimo 3x para alta resolución)
                 const pixelRatio = Math.max(window.devicePixelRatio || 1, 3);
                 
                 for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {{
+                    updateStatus('Página ' + pageNum + ' de ' + pdf.numPages);
                     const page = await pdf.getPage(pageNum);
                     const viewport = page.getViewport({{ scale: 1 }});
                     
-                    // Escalar para que quepa en la pantalla
                     const scale = containerWidth / viewport.width;
                     const scaledViewport = page.getViewport({{ scale: scale * pixelRatio }});
                     
@@ -172,11 +216,9 @@ public partial class PdfViewerPage : ContentPage
                     canvas.className = 'pdf-page';
                     const context = canvas.getContext('2d');
                     
-                    // Canvas interno a alta resolución
                     canvas.height = scaledViewport.height;
                     canvas.width = scaledViewport.width;
                     
-                    // CSS para mostrar a tamaño normal (pero con más píxeles = más nitidez)
                     canvas.style.width = (scaledViewport.width / pixelRatio) + 'px';
                     canvas.style.height = (scaledViewport.height / pixelRatio) + 'px';
                     
@@ -190,14 +232,9 @@ public partial class PdfViewerPage : ContentPage
                 
                 loading.style.display = 'none';
             }} catch (error) {{
-                document.getElementById('loading').style.display = 'none';
-                document.getElementById('error').style.display = 'block';
-                document.getElementById('error').innerHTML = 'Error al cargar el PDF:<br>' + error.message;
-                console.error('Error rendering PDF:', error);
+                showError('Error al renderizar PDF:<br>' + error.message);
             }}
         }}
-        
-        renderPDF();
     </script>
 </body>
 </html>";

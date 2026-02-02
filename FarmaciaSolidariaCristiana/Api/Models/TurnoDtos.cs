@@ -22,6 +22,11 @@ namespace FarmaciaSolidariaCristiana.Api.Models
         public List<TurnoInsumoDto> Insumos { get; set; } = new();
         public int DocumentosCount { get; set; }
         public List<TurnoDocumentoDto> Documentos { get; set; } = new();
+        
+        /// <summary>
+        /// Indica si el turno fue cancelado por no presentación del paciente.
+        /// </summary>
+        public bool CanceladoPorNoPresentacion { get; set; }
     }
 
     /// <summary>
@@ -169,5 +174,33 @@ namespace FarmaciaSolidariaCristiana.Api.Models
         public bool CanCancel { get; set; }
         public string? Reason { get; set; }
         public int DiasRestantes { get; set; }
+    }
+
+    /// <summary>
+    /// DTO de turno simplificado para entregas
+    /// </summary>
+    public class TurnoForDeliveryDto
+    {
+        public int Id { get; set; }
+        public int? NumeroTurno { get; set; }
+        public string Estado { get; set; } = string.Empty;
+        public DateTime? FechaPreferida { get; set; }
+        public DateTime FechaSolicitud { get; set; }
+        public List<TurnoItemForDeliveryDto> Medicamentos { get; set; } = new();
+        public List<TurnoItemForDeliveryDto> Insumos { get; set; } = new();
+    }
+
+    /// <summary>
+    /// DTO de item de turno para entregas (con stock actual)
+    /// </summary>
+    public class TurnoItemForDeliveryDto
+    {
+        public int Id { get; set; }
+        public string Nombre { get; set; } = string.Empty;
+        public int CantidadSolicitada { get; set; }
+        public int? CantidadAprobada { get; set; }
+        public string Unidad { get; set; } = string.Empty;
+        public int StockActual { get; set; }
+        public string Tipo { get; set; } = string.Empty; // "Medicamento" o "Insumo"
     }
 }

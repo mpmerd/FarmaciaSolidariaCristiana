@@ -56,6 +56,12 @@ public interface IPendingNotificationService
     /// Limpia notificaciones antiguas (más de 30 días)
     /// </summary>
     Task<int> CleanupOldNotificationsAsync(int daysToKeep = 30);
+
+    /// <summary>
+    /// Marca como leídas todas las notificaciones relacionadas con un turno específico.
+    /// Usado cuando un turno cambia de estado para evitar notificaciones obsoletas.
+    /// </summary>
+    Task<int> MarkNotificationsAsReadByReferenceAsync(int referenceId, string referenceType);
 }
 
 /// <summary>
@@ -182,6 +188,27 @@ public class PendingNotificationService : IPendingNotificationService
         if (count > 0)
         {
             _logger.LogInformation("Eliminadas {Count} notificaciones antiguas (más de {Days} días)", count, daysToKeep);
+        }
+
+        return count;
+    }
+
+    public async Task<int> MarkNotificationsAsReadByReferenceAsync(int referenceId, string referenceType)
+    {
+        var now = DateTime.UtcNow;
+        var count = await _context.PendingNotifications
+            .Where(n => n.ReferenceId == referenceId && 
+                       n.ReferenceType == referenceType && 
+                       !n.IsRead)
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(n => n.IsRead, true)
+                .SetProperty(n => n.ReadAt, now));
+
+        if (count > 0)
+        {
+            _logger.LogInformation(
+                "Marcadas {Count} notificaciones como leídas para {Type} #{Id}",
+                count, referenceType, referenceId);
         }
 
         return count;

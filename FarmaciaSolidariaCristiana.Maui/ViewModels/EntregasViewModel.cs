@@ -100,7 +100,7 @@ public partial class EntregasViewModel : BaseViewModel
     private async Task AddEntregaAsync()
     {
         if (!CanEdit) return;
-        await Shell.Current.DisplayAlert("Nueva Entrega", "Funcionalidad próximamente", "OK");
+        await Shell.Current.GoToAsync("nueva-entrega");
     }
 
     [RelayCommand]

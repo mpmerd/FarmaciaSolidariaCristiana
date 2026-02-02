@@ -120,6 +120,12 @@ namespace FarmaciaSolidariaCristiana.Models
         /// Email de notificación enviado
         /// </summary>
         public bool EmailEnviado { get; set; } = false;
+
+        /// <summary>
+        /// Indica si el turno fue cancelado por no presentación del paciente.
+        /// Estos turnos cuentan contra el límite mensual como penalización.
+        /// </summary>
+        public bool CanceladoPorNoPresentacion { get; set; } = false;
     }
 
     /// <summary>

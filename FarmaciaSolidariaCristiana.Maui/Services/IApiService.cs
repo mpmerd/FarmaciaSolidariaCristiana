@@ -78,6 +78,11 @@ public interface IApiService
     // Entregas Delete
     Task<ApiResponse<bool>> DeleteEntregaAsync(int id);
     
+    // Entregas - Nuevos métodos para crear entregas
+    Task<ApiResponse<List<TurnoForDelivery>>> GetTurnosAprobadosByIdentificationAsync(string identification);
+    Task<ApiResponse<PatientInfo>> GetPatientByIdentificationAsync(string identification);
+    Task<ApiResponse<Delivery>> CreateDeliveryAsync(CreateDeliveryRequest request);
+    
     // Reportes
     Task<byte[]?> DescargarReporteAsync(string tipoReporte, DateTime? fechaInicio = null, DateTime? fechaFin = null);
     

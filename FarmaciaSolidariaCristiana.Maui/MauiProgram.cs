@@ -21,13 +21,18 @@ public static class MauiProgram
                 fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
             });
 
+        // Configurar WebView para Android (JavaScript, contenido mixto, etc.)
+#if ANDROID
+        FarmaciaSolidariaCristiana.Maui.Platforms.Android.CustomWebViewHandler.Configure();
+#endif
+
         // Configure HttpClient
         builder.Services.AddSingleton(sp =>
         {
             var client = new HttpClient
             {
                 BaseAddress = new Uri(Constants.ApiBaseUrl),
-                Timeout = TimeSpan.FromSeconds(30)
+                Timeout = TimeSpan.FromSeconds(60) // 60 segundos para soportar subida de archivos grandes
             };
             return client;
         });
@@ -55,6 +60,7 @@ public static class MauiProgram
         builder.Services.AddTransient<FechasBloqueadasViewModel>();
         builder.Services.AddTransient<ProfileViewModel>();
         builder.Services.AddTransient<ChangePasswordViewModel>();
+        builder.Services.AddTransient<NuevaEntregaViewModel>();
 
         // Register Pages
         builder.Services.AddTransient<LoginPage>();
@@ -66,6 +72,7 @@ public static class MauiProgram
         builder.Services.AddTransient<InsumosPage>();
         builder.Services.AddTransient<DonacionesPage>();
         builder.Services.AddTransient<EntregasPage>();
+        builder.Services.AddTransient<NuevaEntregaPage>();
         builder.Services.AddTransient<PacientesPage>();
         builder.Services.AddTransient<PatrocinadoresPage>();
         builder.Services.AddTransient<ReportesPage>();
