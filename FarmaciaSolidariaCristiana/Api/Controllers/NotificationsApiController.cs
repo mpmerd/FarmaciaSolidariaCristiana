@@ -298,7 +298,21 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
             if (string.IsNullOrEmpty(userId))
                 return ApiError("Usuario no autenticado", 401);
 
+            var user = await _userManager.FindByIdAsync(userId);
+            var userRoles = user != null ? await _userManager.GetRolesAsync(user) : new List<string>();
+            
+            _logger.LogInformation(
+                "[Polling] Usuario {UserName} (ID: {UserId}, Roles: {Roles}) solicitando notificaciones pendientes",
+                user?.UserName ?? "desconocido",
+                userId,
+                string.Join(", ", userRoles));
+
             var notifications = await _pendingNotificationService.GetUnreadNotificationsAsync(userId);
+            
+            _logger.LogInformation(
+                "[Polling] Usuario {UserId} tiene {Count} notificaciones pendientes",
+                userId,
+                notifications.Count);
             
             return ApiOk(new PendingNotificationsResponseDto
             {

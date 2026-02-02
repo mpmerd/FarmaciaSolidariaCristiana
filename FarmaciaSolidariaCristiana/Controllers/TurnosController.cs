@@ -18,6 +18,7 @@ namespace FarmaciaSolidariaCristiana.Controllers
         private readonly ApplicationDbContext _context;
         private readonly ITurnoService _turnoService;
         private readonly IEmailService _emailService;
+        private readonly IOneSignalNotificationService _notificationService;
         private readonly UserManager<IdentityUser> _userManager;
         private readonly ILogger<TurnosController> _logger;
 
@@ -25,12 +26,14 @@ namespace FarmaciaSolidariaCristiana.Controllers
             ApplicationDbContext context,
             ITurnoService turnoService,
             IEmailService emailService,
+            IOneSignalNotificationService notificationService,
             UserManager<IdentityUser> userManager,
             ILogger<TurnosController> logger)
         {
             _context = context;
             _turnoService = turnoService;
             _emailService = emailService;
+            _notificationService = notificationService;
             _userManager = userManager;
             _logger = logger;
         }
@@ -274,16 +277,42 @@ namespace FarmaciaSolidariaCristiana.Controllers
                     
                     if (notificationSent)
                     {
-                        _logger.LogInformation("✓ Notificaciones enviadas a farmacéuticos para turno {TurnoId}", createdTurno.Id);
+                        _logger.LogInformation("✓ Notificaciones por email enviadas a farmacéuticos para turno {TurnoId}", createdTurno.Id);
                     }
                     else
                     {
-                        _logger.LogWarning("⚠ No se pudieron enviar notificaciones a farmacéuticos para turno {TurnoId}", createdTurno.Id);
+                        _logger.LogWarning("⚠ No se pudieron enviar notificaciones por email a farmacéuticos para turno {TurnoId}", createdTurno.Id);
                     }
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "✗ Error enviando notificaciones a farmacéuticos para turno {TurnoId}", createdTurno.Id);
+                    _logger.LogError(ex, "✗ Error enviando notificaciones por email a farmacéuticos para turno {TurnoId}", createdTurno.Id);
+                }
+
+                // Enviar notificación push/polling a farmacéuticos (para la app móvil)
+                try
+                {
+                    var pushResult = await _notificationService.SendNuevaSolicitudToFarmaceuticosAsync(
+                        createdTurno.Id,
+                        createdTurno.NumeroTurno ?? createdTurno.Id,
+                        user?.UserName ?? "Usuario");
+                    
+                    if (pushResult.Success)
+                    {
+                        _logger.LogInformation(
+                            "✓ Notificación push/polling enviada a {Count} farmacéuticos para turno {TurnoId}",
+                            pushResult.RecipientsCount, createdTurno.Id);
+                    }
+                    else
+                    {
+                        _logger.LogWarning(
+                            "⚠ Notificación push/polling parcialmente enviada para turno {TurnoId}: {Error}",
+                            createdTurno.Id, pushResult.ErrorMessage);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error enviando notificación push a farmacéuticos para turno {TurnoId}", createdTurno.Id);
                 }
 
                 TempData["SuccessMessage"] = "Tu solicitud de turno ha sido enviada exitosamente. " +
