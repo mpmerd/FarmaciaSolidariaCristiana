@@ -608,10 +608,15 @@ public class ApiService : IApiService
             }
             else
             {
+                // Ajustar EndDate para incluir todo el día (hasta las 23:59:59.999)
+                var adjustedEndDate = fechaFin.HasValue 
+                    ? fechaFin.Value.Date.AddDays(1).AddMilliseconds(-1)
+                    : fechaFin;
+                
                 requestBody = new
                 {
                     StartDate = fechaInicio,
-                    EndDate = fechaFin
+                    EndDate = adjustedEndDate
                 };
             }
             
