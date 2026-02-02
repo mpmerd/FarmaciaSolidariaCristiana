@@ -148,13 +148,26 @@ public class ApiService : IApiService
         try
         {
             var result = JsonSerializer.Deserialize<ApiResponse<T>>(content, _jsonOptions);
-            Console.WriteLine($"[API] Deserialized: Success={result?.Success}");
+            Console.WriteLine($"[API] Deserialized: Success={result?.Success}, Message={result?.Message}");
             return result ?? ErrorResponse<T>("Error al procesar respuesta");
         }
         catch (JsonException ex)
         {
             Console.WriteLine($"[API] JSON Error: {ex.Message}");
             Console.WriteLine($"[API] Content preview: {content.Substring(0, Math.Min(500, content.Length))}");
+            
+            // Intentar extraer el mensaje de error del servidor aunque falle la deserialización del tipo T
+            try
+            {
+                var errorResponse = JsonSerializer.Deserialize<ApiResponse<object>>(content, _jsonOptions);
+                if (errorResponse != null && !string.IsNullOrEmpty(errorResponse.Message))
+                {
+                    Console.WriteLine($"[API] Extracted error message: {errorResponse.Message}");
+                    return ErrorResponse<T>(errorResponse.Message);
+                }
+            }
+            catch { /* Ignorar si tampoco funciona */ }
+            
             return ErrorResponse<T>($"Error del servidor. Código: {(int)response.StatusCode}");
         }
     }
@@ -320,17 +333,27 @@ public class ApiService : IApiService
     {
         try
         {
+            System.Diagnostics.Debug.WriteLine($"[ApiService] Descargando PDF del turno {id}...");
             await SetAuthHeaderAsync();
             var response = await _httpClient.GetAsync($"/api/turnos/{id}/pdf");
             
+            System.Diagnostics.Debug.WriteLine($"[ApiService] Respuesta PDF: {response.StatusCode}");
+            
             if (response.IsSuccessStatusCode)
             {
-                return await response.Content.ReadAsByteArrayAsync();
+                var bytes = await response.Content.ReadAsByteArrayAsync();
+                System.Diagnostics.Debug.WriteLine($"[ApiService] PDF descargado: {bytes.Length} bytes");
+                return bytes;
             }
+            
+            // Log del error del servidor
+            var errorContent = await response.Content.ReadAsStringAsync();
+            System.Diagnostics.Debug.WriteLine($"[ApiService] Error descargando PDF: {response.StatusCode} - {errorContent}");
             return null;
         }
-        catch
+        catch (Exception ex)
         {
+            System.Diagnostics.Debug.WriteLine($"[ApiService] Excepción descargando PDF: {ex.Message}");
             return null;
         }
     }
