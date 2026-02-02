@@ -76,6 +76,38 @@ namespace FarmaciaSolidariaCristiana.Services
         }
 
         /// <summary>
+        /// Valida si un paciente (por documento) puede recibir un turno este mes (límite: 2 por mes natural)
+        /// Esto evita que un usuario abuse solicitando turnos para la misma persona con diferentes cuentas
+        /// </summary>
+        public async Task<(bool CanRequest, string? Reason, int TurnosCount)> CanPatientRequestTurnoAsync(string documentoIdentidad)
+        {
+            var now = DateTime.Now;
+            var startOfMonth = new DateTime(now.Year, now.Month, 1);
+            var endOfMonth = startOfMonth.AddMonths(1).AddDays(-1);
+            
+            // Hash del documento para buscar
+            var documentHash = HashDocument(documentoIdentidad);
+
+            var turnosEsteMes = await _context.Turnos
+                .Where(t => t.DocumentoIdentidadHash == documentHash && 
+                           t.FechaSolicitud >= startOfMonth && 
+                           t.FechaSolicitud <= endOfMonth &&
+                           (t.Estado == EstadoTurno.Pendiente || 
+                            t.Estado == EstadoTurno.Aprobado ||
+                            t.Estado == EstadoTurno.Completado ||
+                            // ✅ Turnos cancelados por no presentación también cuentan como penalización
+                            (t.Estado == EstadoTurno.Cancelado && t.CanceladoPorNoPresentacion)))
+                .CountAsync();
+
+            if (turnosEsteMes >= 2)
+            {
+                return (false, $"Este paciente ya ha alcanzado el límite de 2 turnos para este mes ({now:MMMM yyyy}). No se pueden solicitar más turnos para este documento de identidad.", turnosEsteMes);
+            }
+
+            return (true, null, turnosEsteMes);
+        }
+
+        /// <summary>
         /// Valida si hay disponibilidad para un día específico (límite: 30 turnos por día)
         /// </summary>
         public async Task<(bool HasCapacity, int CurrentCount, string? Reason)> CheckDailyCapacityAsync(DateTime fecha)

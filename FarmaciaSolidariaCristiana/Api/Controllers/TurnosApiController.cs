@@ -328,11 +328,18 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
 
                 var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
-                // Verificar si puede solicitar turno
+                // Verificar si el usuario puede solicitar turno (límite por usuario)
                 var (canRequest, reason) = await _turnoService.CanUserRequestTurnoAsync(userId!);
                 if (!canRequest)
                 {
                     return ApiError(reason ?? "No puede solicitar turno en este momento");
+                }
+
+                // ✅ Verificar si el paciente (documento) puede recibir turno (límite por paciente)
+                var (canPatientRequest, patientReason, patientTurnos) = await _turnoService.CanPatientRequestTurnoAsync(model.DocumentoIdentidad);
+                if (!canPatientRequest)
+                {
+                    return ApiError(patientReason ?? "Este paciente ya alcanzó el límite de turnos mensuales");
                 }
 
                 // Validar que haya items
