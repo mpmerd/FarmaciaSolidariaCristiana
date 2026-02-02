@@ -194,6 +194,30 @@ namespace FarmaciaSolidariaCristiana.Controllers
 
                 var userId = _userManager.GetUserId(User);
 
+                // ✅ Verificar si el paciente (documento) puede recibir turno (límite por paciente)
+                var (canPatientRequest, patientReason, patientTurnos) = await _turnoService.CanPatientRequestTurnoAsync(model.DocumentoIdentidad);
+                if (!canPatientRequest)
+                {
+                    ModelState.AddModelError("", patientReason ?? "Este paciente ya alcanzó el límite de turnos mensuales");
+                    
+                    // Recargar medicamentos e insumos
+                    var medicinesReload = await _context.Medicines
+                        .Where(m => m.StockQuantity > 0)
+                        .OrderBy(m => m.Name)
+                        .Select(m => new { m.Id, m.Name, m.StockQuantity, m.Unit })
+                        .ToListAsync();
+                    ViewBag.Medicines = medicinesReload;
+
+                    var suppliesReload = await _context.Supplies
+                        .Where(s => s.StockQuantity > 0)
+                        .OrderBy(s => s.Name)
+                        .Select(s => new { s.Id, s.Name, s.StockQuantity, s.Unit })
+                        .ToListAsync();
+                    ViewBag.Supplies = suppliesReload;
+                    
+                    return View(model);
+                }
+
                 // Crear lista de medicamentos solicitados
                 var medicamentos = new List<(int MedicineId, int Quantity)>();
                 if (medicineIds != null)

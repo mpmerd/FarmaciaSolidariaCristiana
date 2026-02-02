@@ -11,6 +11,12 @@ namespace FarmaciaSolidariaCristiana.Services
         /// Valida si el usuario puede solicitar un nuevo turno (1 por mes)
         /// </summary>
         Task<(bool CanRequest, string? Reason)> CanUserRequestTurnoAsync(string userId);
+
+        /// <summary>
+        /// Valida si un paciente (por documento) puede recibir un turno este mes (límite: 2 por mes natural)
+        /// Esto evita que un usuario abuse solicitando turnos para la misma persona con diferentes cuentas
+        /// </summary>
+        Task<(bool CanRequest, string? Reason, int TurnosCount)> CanPatientRequestTurnoAsync(string documentoIdentidad);
         
         /// <summary>
         /// Valida si hay disponibilidad para un día específico (límite: 30 turnos por día)
