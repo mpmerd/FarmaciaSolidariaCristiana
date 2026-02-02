@@ -156,6 +156,7 @@ namespace FarmaciaSolidariaCristiana.Services
 
             // 3. Marcar turno como cancelado (por no asistencia)
             turno.Estado = EstadoTurno.Cancelado;
+            turno.CanceladoPorNoPresentacion = true; // ✅ Marca para penalización - cuenta contra límite mensual
             turno.ComentariosFarmaceutico += $"\n[CANCELADO AUTOMÁTICAMENTE - {DateTime.Now:dd/MM/yyyy HH:mm}]";
             turno.ComentariosFarmaceutico += "\nMotivo: Usuario no asistió a la farmacia en la fecha programada";
 

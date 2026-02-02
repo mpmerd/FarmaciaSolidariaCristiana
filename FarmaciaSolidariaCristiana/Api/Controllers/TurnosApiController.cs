@@ -146,6 +146,68 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
         }
 
         /// <summary>
+        /// Obtiene los turnos aprobados de un paciente por su documento de identidad (para entregas)
+        /// </summary>
+        [HttpGet("by-identification/{identification}")]
+        [Authorize(Roles = "Admin,Farmaceutico")]
+        [ProducesResponseType(typeof(ApiResponse<List<TurnoForDeliveryDto>>), 200)]
+        public async Task<IActionResult> GetByIdentification(string identification)
+        {
+            if (string.IsNullOrWhiteSpace(identification))
+            {
+                return ApiError("Identificación requerida");
+            }
+
+            // Normalizar documento
+            identification = identification.Trim().ToUpper();
+            
+            // Calcular hash del documento
+            using var sha256 = System.Security.Cryptography.SHA256.Create();
+            var hashBytes = sha256.ComputeHash(System.Text.Encoding.UTF8.GetBytes(identification));
+            var documentHash = Convert.ToBase64String(hashBytes);
+
+            // Buscar turnos aprobados para este paciente
+            var turnos = await _context.Turnos
+                .Include(t => t.Medicamentos).ThenInclude(tm => tm.Medicine)
+                .Include(t => t.Insumos).ThenInclude(ti => ti.Supply)
+                .Where(t => 
+                    t.DocumentoIdentidadHash == documentHash && 
+                    t.Estado == "Aprobado")
+                .OrderByDescending(t => t.FechaPreferida ?? t.FechaSolicitud)
+                .Select(t => new TurnoForDeliveryDto
+                {
+                    Id = t.Id,
+                    NumeroTurno = t.NumeroTurno,
+                    Estado = t.Estado,
+                    FechaPreferida = t.FechaPreferida,
+                    FechaSolicitud = t.FechaSolicitud,
+                    Medicamentos = t.Medicamentos.Select(tm => new TurnoItemForDeliveryDto
+                    {
+                        Id = tm.MedicineId,
+                        Nombre = tm.Medicine != null ? tm.Medicine.Name : "N/A",
+                        CantidadSolicitada = tm.CantidadSolicitada,
+                        CantidadAprobada = tm.CantidadAprobada,
+                        Unidad = tm.Medicine != null ? tm.Medicine.Unit : "",
+                        StockActual = tm.Medicine != null ? tm.Medicine.StockQuantity : 0,
+                        Tipo = "Medicamento"
+                    }).ToList(),
+                    Insumos = t.Insumos.Select(ti => new TurnoItemForDeliveryDto
+                    {
+                        Id = ti.SupplyId,
+                        Nombre = ti.Supply != null ? ti.Supply.Name : "N/A",
+                        CantidadSolicitada = ti.CantidadSolicitada,
+                        CantidadAprobada = ti.CantidadAprobada,
+                        Unidad = ti.Supply != null ? ti.Supply.Unit : "",
+                        StockActual = ti.Supply != null ? ti.Supply.StockQuantity : 0,
+                        Tipo = "Insumo"
+                    }).ToList()
+                })
+                .ToListAsync();
+
+            return ApiOk(turnos);
+        }
+
+        /// <summary>
         /// Descarga el PDF de un turno aprobado
         /// </summary>
         [HttpGet("{id}/pdf")]
@@ -811,7 +873,8 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
                     ContentType = d.ContentType,
                     Description = d.Description,
                     UploadDate = d.UploadDate
-                }).ToList() ?? new List<TurnoDocumentoDto>()
+                }).ToList() ?? new List<TurnoDocumentoDto>(),
+                CanceladoPorNoPresentacion = t.CanceladoPorNoPresentacion
             };
         }
 

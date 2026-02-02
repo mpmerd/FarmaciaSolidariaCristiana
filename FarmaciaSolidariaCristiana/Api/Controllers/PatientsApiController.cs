@@ -222,6 +222,103 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
         }
 
         /// <summary>
+        /// Sube un nuevo documento médico para un paciente
+        /// </summary>
+        [HttpPost("{patientId}/documents")]
+        [Authorize(Roles = "Admin,Farmaceutico")]
+        [Consumes("multipart/form-data")]
+        [RequestSizeLimit(20 * 1024 * 1024)] // 20MB max
+        [ProducesResponseType(typeof(ApiResponse<PatientDocumentDto>), 200)]
+        [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+        [ProducesResponseType(typeof(ApiResponse<object>), 404)]
+        public async Task<IActionResult> UploadDocument(
+            int patientId,
+            [FromForm] IFormFile document,
+            [FromForm] string documentType,
+            [FromForm] string? notes = null)
+        {
+            var patient = await _context.Patients.FindAsync(patientId);
+            if (patient == null)
+            {
+                return ApiError("Paciente no encontrado", 404);
+            }
+
+            if (document == null || document.Length == 0)
+            {
+                return ApiError("No se proporcionó ningún archivo");
+            }
+
+            // Validar tipo de archivo
+            var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".gif", ".pdf", ".webp" };
+            var extension = Path.GetExtension(document.FileName).ToLowerInvariant();
+            if (!allowedExtensions.Contains(extension))
+            {
+                return ApiError($"Tipo de archivo no permitido. Solo se permiten: {string.Join(", ", allowedExtensions)}");
+            }
+
+            // Validar tipo de contenido
+            var allowedContentTypes = new[] { 
+                "image/jpeg", "image/png", "image/gif", "image/webp",
+                "application/pdf"
+            };
+            if (!allowedContentTypes.Contains(document.ContentType?.ToLowerInvariant()))
+            {
+                return ApiError($"Tipo de contenido no permitido: {document.ContentType}");
+            }
+
+            try
+            {
+                // Crear directorio si no existe
+                var uploadsPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", "patient-documents");
+                Directory.CreateDirectory(uploadsPath);
+
+                // Generar nombre único
+                var fileName = $"{patientId}_{DateTime.Now:yyyyMMddHHmmss}_{Guid.NewGuid():N}{extension}";
+                var filePath = Path.Combine(uploadsPath, fileName);
+                var relativePath = $"uploads/patient-documents/{fileName}";
+
+                // Guardar archivo
+                using (var stream = new FileStream(filePath, FileMode.Create))
+                {
+                    await document.CopyToAsync(stream);
+                }
+
+                // Crear registro en la base de datos
+                var patientDocument = new PatientDocument
+                {
+                    PatientId = patientId,
+                    DocumentType = documentType,
+                    FileName = document.FileName,
+                    FilePath = relativePath,
+                    Description = notes,
+                    UploadDate = DateTime.Now
+                };
+
+                _context.PatientDocuments.Add(patientDocument);
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation("Documento subido para paciente {PatientId}: {FileName} ({ContentType})", 
+                    patientId, document.FileName, document.ContentType);
+
+                return ApiOk(new PatientDocumentDto
+                {
+                    Id = patientDocument.Id,
+                    PatientId = patientDocument.PatientId,
+                    DocumentType = patientDocument.DocumentType,
+                    FileName = patientDocument.FileName,
+                    FilePath = patientDocument.FilePath,
+                    Notes = patientDocument.Description,
+                    UploadedAt = patientDocument.UploadDate
+                }, "Documento subido exitosamente");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error subiendo documento para paciente {PatientId}", patientId);
+                return ApiError($"Error al subir el documento: {ex.Message}");
+            }
+        }
+
+        /// <summary>
         /// Crea un nuevo paciente
         /// </summary>
         [HttpPost]

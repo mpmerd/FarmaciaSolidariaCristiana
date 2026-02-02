@@ -478,6 +478,9 @@ public partial class SolicitarTurnoViewModel : BaseViewModel
 
             // 2. Subir documentos uno por uno
             int docSubidos = 0;
+            int docFallidos = 0;
+            var erroresDocumentos = new List<string>();
+            
             foreach (var doc in DocumentosAdjuntos)
             {
                 try
@@ -493,17 +496,93 @@ public partial class SolicitarTurnoViewModel : BaseViewModel
                     {
                         docSubidos++;
                     }
+                    else
+                    {
+                        docFallidos++;
+                        erroresDocumentos.Add($"{doc.FileName}: {docResult.Message ?? "Error desconocido"}");
+                        Console.WriteLine($"[SolicitarTurno] Error subiendo {doc.FileName}: {docResult.Message}");
+                    }
                 }
                 catch (Exception ex)
                 {
+                    docFallidos++;
+                    erroresDocumentos.Add($"{doc.FileName}: {ex.Message}");
                     Console.WriteLine($"[SolicitarTurno] Error subiendo documento: {ex.Message}");
                 }
             }
 
-            await ShowSuccessAsync(
-                $"¡Turno solicitado exitosamente!\n\n" +
-                $"Se adjuntaron {docSubidos} de {DocumentosAdjuntos.Count} documentos.\n\n" +
-                "Recibirás una notificación cuando sea revisado.");
+            // 3. Verificar resultado de documentos
+            if (DocumentosAdjuntos.Count > 0 && docSubidos == 0)
+            {
+                // Todos los documentos fallaron - ofrecer cancelar el turno
+                var cancelarTurno = await Shell.Current.DisplayAlert(
+                    "Error al Subir Documentos",
+                    $"El turno fue creado pero NO se pudieron subir los documentos.\n\n" +
+                    $"Errores:\n{string.Join("\n", erroresDocumentos.Take(3))}\n\n" +
+                    "¿Desea CANCELAR el turno e intentar de nuevo?",
+                    "Sí, cancelar turno",
+                    "No, mantener turno");
+                    
+                if (cancelarTurno)
+                {
+                    // Intentar cancelar el turno
+                    try
+                    {
+                        var cancelResult = await ApiService.CancelarTurnoAsync(turnoId, "Cancelado por error al subir documentos");
+                        if (cancelResult.Success)
+                        {
+                            await Shell.Current.DisplayAlert(
+                                "Turno Cancelado",
+                                "El turno fue cancelado. Por favor, intente crear la solicitud de nuevo.",
+                                "OK");
+                            // No navegar, permitir que el usuario intente de nuevo
+                            return;
+                        }
+                        else
+                        {
+                            await Shell.Current.DisplayAlert(
+                                "Advertencia",
+                                $"No se pudo cancelar el turno automáticamente.\n\n" +
+                                "Por favor, contacte a la farmacia para cancelar manualmente.",
+                                "Entendido");
+                        }
+                    }
+                    catch
+                    {
+                        await Shell.Current.DisplayAlert(
+                            "Advertencia",
+                            "No se pudo cancelar el turno automáticamente.\n\n" +
+                            "Por favor, contacte a la farmacia.",
+                            "Entendido");
+                    }
+                }
+                else
+                {
+                    await Shell.Current.DisplayAlert(
+                        "Turno Mantenido",
+                        "El turno quedó creado sin documentos.\n\n" +
+                        "Puede intentar subir los documentos desde la vista de turnos.",
+                        "Entendido");
+                }
+            }
+            else if (docFallidos > 0)
+            {
+                // Algunos documentos fallaron
+                await ShowSuccessAsync(
+                    $"¡Turno solicitado!\n\n" +
+                    $"Se adjuntaron {docSubidos} de {DocumentosAdjuntos.Count} documentos.\n" +
+                    $"({docFallidos} documento(s) no se pudieron subir)\n\n" +
+                    "Recibirás una notificación cuando sea revisado.");
+            }
+            else
+            {
+                await ShowSuccessAsync(
+                    $"¡Turno solicitado exitosamente!\n\n" +
+                    (DocumentosAdjuntos.Count > 0 
+                        ? $"Se adjuntaron {docSubidos} documento(s).\n\n" 
+                        : "") +
+                    "Recibirás una notificación cuando sea revisado.");
+            }
 
             // Navegar de vuelta
             await Shell.Current.GoToAsync("..");

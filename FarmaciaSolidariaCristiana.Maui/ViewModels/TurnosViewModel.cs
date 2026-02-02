@@ -154,12 +154,12 @@ public partial class TurnosViewModel : BaseViewModel
         {
             var action = await Shell.Current.DisplayActionSheet(
                 $"Turno #{turno.Id}", "Cancelar", null,
-                "👁️ Ver detalles", "📅 Reprogramar", "📄 Descargar PDF");
+                "👁️ Ver detalles", "📅 Reprogramar", "📄 Descargar Turno");
             switch (action)
             {
                 case "👁️ Ver detalles": await VerDetallesTurnoAsync(turno); break;
                 case "📅 Reprogramar": await ReprogramarTurnoAsync(turno); break;
-                case "📄 Descargar PDF": await DescargarPdfAsync(turno); break;
+                case "📄 Descargar Turno": await DescargarPdfAsync(turno); break;
             }
         }
         // Si es farmacéutico y el turno está aprobado (sin reprogramar)
@@ -167,11 +167,11 @@ public partial class TurnosViewModel : BaseViewModel
         {
             var action = await Shell.Current.DisplayActionSheet(
                 $"Turno #{turno.Id}", "Cancelar", null,
-                "👁️ Ver detalles", "📄 Descargar PDF");
+                "👁️ Ver detalles", "📄 Descargar Turno");
             switch (action)
             {
                 case "👁️ Ver detalles": await VerDetallesTurnoAsync(turno); break;
-                case "📄 Descargar PDF": await DescargarPdfAsync(turno); break;
+                case "📄 Descargar Turno": await DescargarPdfAsync(turno); break;
             }
         }
         // Si es viewerpublic y el turno está aprobado, mostrar opciones incluyendo cancelar
@@ -184,11 +184,11 @@ public partial class TurnosViewModel : BaseViewModel
             {
                 var action = await Shell.Current.DisplayActionSheet(
                     $"Turno #{turno.Id}", "Cerrar", null,
-                    "👁️ Ver detalles", "📄 Ver/Descargar PDF", "🚫 Cancelar turno");
+                    "👁️ Ver detalles", "📄 Ver/Descargar Turno", "🚫 Cancelar turno");
                 switch (action)
                 {
                     case "👁️ Ver detalles": await VerDetallesTurnoAsync(turno); break;
-                    case "📄 Ver/Descargar PDF": await DescargarPdfAsync(turno); break;
+                    case "📄 Ver/Descargar Turno": await DescargarPdfAsync(turno); break;
                     case "🚫 Cancelar turno": await CancelarTurnoAsync(turno); break;
                 }
             }
@@ -196,11 +196,11 @@ public partial class TurnosViewModel : BaseViewModel
             {
                 var action = await Shell.Current.DisplayActionSheet(
                     $"Turno #{turno.Id}", "Cerrar", null,
-                    "👁️ Ver detalles", "📄 Ver/Descargar PDF");
+                    "👁️ Ver detalles", "📄 Ver/Descargar Turno");
                 switch (action)
                 {
                     case "👁️ Ver detalles": await VerDetallesTurnoAsync(turno); break;
-                    case "📄 Ver/Descargar PDF": await DescargarPdfAsync(turno); break;
+                    case "📄 Ver/Descargar Turno": await DescargarPdfAsync(turno); break;
                 }
             }
         }

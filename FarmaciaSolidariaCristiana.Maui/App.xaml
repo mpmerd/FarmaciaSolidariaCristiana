@@ -23,6 +23,8 @@
             <converters:BoolToColorInverseConverter x:Key="BoolToColorInverseConverter"/>
             <converters:BoolToTextConverter x:Key="BoolToTextConverter"/>
             <converters:IntToBoolConverter x:Key="IntToBoolConverter"/>
+            <converters:IsNotNullConverter x:Key="IsNotNullConverter"/>
+            <converters:IsNullConverter x:Key="IsNullConverter"/>
             
             <!-- Additional Colors -->
             <Color x:Key="BackgroundColor">#F5F5F5</Color>
@@ -40,6 +42,9 @@
             <Color x:Key="Gray400">#ced4da</Color>
             <Color x:Key="Gray500">#adb5bd</Color>
             <Color x:Key="Gray600">#6c757d</Color>
+            <Color x:Key="Gray700">#495057</Color>
+            <Color x:Key="Gray800">#343a40</Color>
+            <Color x:Key="Gray900">#212529</Color>
         </ResourceDictionary>
     </Application.Resources>
 </Application>

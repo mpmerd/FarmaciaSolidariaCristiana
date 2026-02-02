@@ -10,6 +10,12 @@ namespace FarmaciaSolidariaCristiana.Maui.ViewModels;
 
 public partial class PacientesViewModel : BaseViewModel
 {
+    // Constantes de límite de tamaño de archivos
+    private const int MaxImageSizeBytes = 5 * 1024 * 1024;  // 5MB para imágenes
+    private const int MaxPdfSizeBytes = 3 * 1024 * 1024;    // 3MB para PDFs (más restrictivo por red)
+    
+    private readonly IImageCompressionService _imageCompressionService;
+    
     [ObservableProperty]
     private ObservableCollection<Patient> pacientes = new();
 
@@ -24,9 +30,10 @@ public partial class PacientesViewModel : BaseViewModel
 
     private List<Patient> _allPacientes = new();
 
-    public PacientesViewModel(IApiService apiService, IAuthService authService)
+    public PacientesViewModel(IApiService apiService, IAuthService authService, IImageCompressionService imageCompressionService)
         : base(authService, apiService)
     {
+        _imageCompressionService = imageCompressionService;
         Title = "Pacientes";
     }
 
@@ -687,26 +694,20 @@ public partial class PacientesViewModel : BaseViewModel
             var isPdf = doc.FileName.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase);
             var isImage = doc.FileName.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase) ||
                          doc.FileName.EndsWith(".jpeg", StringComparison.OrdinalIgnoreCase) ||
-                         doc.FileName.EndsWith(".png", StringComparison.OrdinalIgnoreCase);
+                         doc.FileName.EndsWith(".png", StringComparison.OrdinalIgnoreCase) ||
+                         doc.FileName.EndsWith(".gif", StringComparison.OrdinalIgnoreCase) ||
+                         doc.FileName.EndsWith(".webp", StringComparison.OrdinalIgnoreCase);
             
             if (isPdf)
             {
-                // Usar PdfViewerPage
+                // Usar PdfViewerPage para PDFs
                 var pdfViewer = new PdfViewerPage(fileBytes, doc.FileName);
                 await Shell.Current.Navigation.PushAsync(pdfViewer);
             }
             else if (isImage)
             {
-                // Crear TurnoDocumento temporal para usar DocumentoViewerPage
-                var turnoDoc = new TurnoDocumento
-                {
-                    Id = doc.Id,
-                    FileName = doc.FileName,
-                    DocumentType = doc.DocumentType,
-                    FilePath = doc.FilePath,
-                    ContentType = isImage ? "image/jpeg" : "application/octet-stream"
-                };
-                var docViewer = new DocumentoViewerPage(turnoDoc);
+                // Usar DocumentoViewerPage con bytes pre-descargados para imágenes
+                var docViewer = new DocumentoViewerPage(fileBytes, doc.FileName, doc.DocumentType);
                 await Shell.Current.Navigation.PushAsync(docViewer);
             }
             else
@@ -733,16 +734,36 @@ public partial class PacientesViewModel : BaseViewModel
     {
         try
         {
+            System.Diagnostics.Debug.WriteLine($"[Pacientes] Buscando documentos de turnos para: {paciente.IdentificationDocument}");
+            
+            if (string.IsNullOrWhiteSpace(paciente.IdentificationDocument))
+            {
+                await Shell.Current.DisplayAlert("Aviso", "El paciente no tiene número de identificación registrado.", "OK");
+                return;
+            }
+            
+            IsBusy = true;
+            
             // Buscar documentos de turnos para este número de identificación
             var searchResult = await ApiService.GetTurnoDocumentsByIdentificationAsync(paciente.IdentificationDocument);
             
-            if (!searchResult.Success || searchResult.Data == null || !searchResult.Data.Found)
+            System.Diagnostics.Debug.WriteLine($"[Pacientes] Resultado búsqueda: Success={searchResult.Success}, Data={searchResult.Data != null}, Message={searchResult.Message}");
+            
+            if (!searchResult.Success)
             {
-                // No hay documentos de turnos - no mostrar nada
+                await Shell.Current.DisplayAlert("Error", searchResult.Message ?? "Error al buscar documentos de turnos", "OK");
+                return;
+            }
+            
+            if (searchResult.Data == null || !searchResult.Data.Found || searchResult.Data.Documents.Count == 0)
+            {
+                await Shell.Current.DisplayAlert("Sin Documentos", 
+                    "No se encontraron documentos en turnos aprobados para este número de identificación.", "OK");
                 return;
             }
             
             var docs = searchResult.Data.Documents;
+            System.Diagnostics.Debug.WriteLine($"[Pacientes] Encontrados {docs.Count} documentos");
             
             var importar = await Shell.Current.DisplayAlert(
                 "📋 Documentos de Turnos Encontrados",
@@ -887,6 +908,38 @@ public partial class PacientesViewModel : BaseViewModel
 
             if (archivo == null) return;
 
+            // Leer archivo y validar tamaño antes de continuar
+            using var stream = await archivo.OpenReadAsync();
+            using var memoryStream = new MemoryStream();
+            await stream.CopyToAsync(memoryStream);
+            var fileBytes = memoryStream.ToArray();
+            
+            // Validar tamaño según tipo de archivo
+            bool isPdf = archivo.FileName?.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase) == true ||
+                        archivo.ContentType == "application/pdf";
+            
+            if (isPdf)
+            {
+                if (fileBytes.Length > MaxPdfSizeBytes)
+                {
+                    await ShowErrorAsync(
+                        $"El PDF es demasiado grande ({FormatFileSize(fileBytes.Length)}).\n" +
+                        $"El tamaño máximo permitido es {FormatFileSize(MaxPdfSizeBytes)}.\n\n" +
+                        "Sugerencia: Use un PDF más pequeño o tome una foto del documento.");
+                    return;
+                }
+            }
+            else
+            {
+                if (fileBytes.Length > MaxImageSizeBytes)
+                {
+                    await ShowErrorAsync(
+                        $"La imagen es demasiado grande ({FormatFileSize(fileBytes.Length)}).\n" +
+                        $"El tamaño máximo permitido es {FormatFileSize(MaxImageSizeBytes)}.");
+                    return;
+                }
+            }
+
             // Tipo de documento
             var tipoDoc = await Shell.Current.DisplayActionSheet(
                 "Tipo de documento",
@@ -910,12 +963,7 @@ public partial class PacientesViewModel : BaseViewModel
             // Subir documento
             IsBusy = true;
 
-            using var stream = await archivo.OpenReadAsync();
-            using var memoryStream = new MemoryStream();
-            await stream.CopyToAsync(memoryStream);
-            var fileBytes = memoryStream.ToArray();
-
-            // Comprimir si es imagen
+            // Comprimir si es imagen (los bytes ya fueron leídos arriba)
             if (archivo.ContentType?.StartsWith("image/") == true)
             {
                 fileBytes = await ComprimirImagenAsync(fileBytes);
@@ -955,25 +1003,24 @@ public partial class PacientesViewModel : BaseViewModel
     {
         try
         {
-            // Usar SkiaSharp o similar para comprimir
-            // Por ahora, si la imagen es mayor a 1MB, la devolvemos tal cual
-            // En una implementación completa, se usaría compresión real
-            
-            const int maxBytes = 1024 * 1024; // 1MB
-            if (imageBytes.Length <= maxBytes)
-            {
-                return imageBytes;
-            }
-
-            // Placeholder: en una implementación real se comprimiría la imagen
-            // Por ahora retornamos la imagen original
-            System.Diagnostics.Debug.WriteLine($"Imagen de {imageBytes.Length / 1024}KB - compresión pendiente de implementar");
-            return imageBytes;
+            // Usar el servicio de compresión de imágenes inyectado
+            using var stream = new MemoryStream(imageBytes);
+            var compressed = await _imageCompressionService.CompressImageAsync(stream, "image/jpeg", 1920, 1080, 80);
+            System.Diagnostics.Debug.WriteLine($"[Pacientes] Imagen comprimida: {imageBytes.Length / 1024}KB -> {compressed.Length / 1024}KB");
+            return compressed;
         }
-        catch
+        catch (Exception ex)
         {
+            System.Diagnostics.Debug.WriteLine($"[Pacientes] Error comprimiendo: {ex.Message}");
             return imageBytes;
         }
+    }
+
+    private static string FormatFileSize(long bytes)
+    {
+        if (bytes < 1024) return $"{bytes} B";
+        if (bytes < 1024 * 1024) return $"{bytes / 1024.0:F1} KB";
+        return $"{bytes / (1024.0 * 1024.0):F1} MB";
     }
 
     [RelayCommand]

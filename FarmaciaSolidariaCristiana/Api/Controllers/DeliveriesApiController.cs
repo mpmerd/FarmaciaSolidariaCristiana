@@ -169,7 +169,9 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
         }
 
         /// <summary>
-        /// Crea una nueva entrega (reduce stock automáticamente)
+        /// Crea una nueva entrega (maneja stock según si tiene turno aprobado o no)
+        /// - Con turno aprobado: stock YA reservado, solo devuelve diferencia si es entrega parcial
+        /// - Sin turno: descuenta stock directamente
         /// </summary>
         [HttpPost]
         [Authorize(Roles = "Admin,Farmaceutico")]
@@ -194,8 +196,50 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
             }
 
             string itemName = "";
+            bool stockYaReservado = false;
+            int cantidadAprobada = 0;
 
-            // Verificar stock y actualizar
+            // Verificar si hay turno aprobado asociado (stock ya reservado)
+            FarmaciaSolidariaCristiana.Models.Turno? turnoAprobado = null;
+            if (model.TurnoId.HasValue)
+            {
+                turnoAprobado = await _context.Turnos
+                    .Include(t => t.Medicamentos)
+                    .Include(t => t.Insumos)
+                    .FirstOrDefaultAsync(t => t.Id == model.TurnoId.Value);
+                
+                if (turnoAprobado == null)
+                {
+                    return ApiError("Turno no encontrado", 404);
+                }
+                
+                if (turnoAprobado.Estado == "Aprobado")
+                {
+                    stockYaReservado = true;
+                    
+                    // Obtener cantidad aprobada del turno
+                    if (model.MedicineId.HasValue)
+                    {
+                        var turnoMed = turnoAprobado.Medicamentos
+                            .FirstOrDefault(tm => tm.MedicineId == model.MedicineId.Value);
+                        cantidadAprobada = turnoMed?.CantidadAprobada ?? turnoMed?.CantidadSolicitada ?? 0;
+                    }
+                    else if (model.SupplyId.HasValue)
+                    {
+                        var turnoIns = turnoAprobado.Insumos
+                            .FirstOrDefault(ti => ti.SupplyId == model.SupplyId.Value);
+                        cantidadAprobada = turnoIns?.CantidadAprobada ?? turnoIns?.CantidadSolicitada ?? 0;
+                    }
+                    
+                    // Validar que no se entregue más de lo aprobado
+                    if (model.Quantity > cantidadAprobada)
+                    {
+                        return ApiError($"No se puede entregar más de lo aprobado ({cantidadAprobada} unidades)");
+                    }
+                }
+            }
+
+            // Manejar stock según el caso
             if (model.MedicineId.HasValue)
             {
                 var medicine = await _context.Medicines.FindAsync(model.MedicineId.Value);
@@ -203,12 +247,25 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
                 {
                     return ApiError("Medicamento no encontrado", 404);
                 }
-                if (medicine.StockQuantity < model.Quantity)
-                {
-                    return ApiError($"Stock insuficiente. Disponible: {medicine.StockQuantity} {medicine.Unit}");
-                }
-                medicine.StockQuantity -= model.Quantity;
                 itemName = medicine.Name;
+
+                if (!stockYaReservado)
+                {
+                    // Sin turno: descontar stock
+                    if (medicine.StockQuantity < model.Quantity)
+                    {
+                        return ApiError($"Stock insuficiente. Disponible: {medicine.StockQuantity} {medicine.Unit}");
+                    }
+                    medicine.StockQuantity -= model.Quantity;
+                    _logger.LogInformation("Stock descontado (sin turno) - {Medicine}: -{Qty}", medicine.Name, model.Quantity);
+                }
+                else if (model.Quantity < cantidadAprobada)
+                {
+                    // Entrega parcial: devolver diferencia al stock
+                    int diferencia = cantidadAprobada - model.Quantity;
+                    medicine.StockQuantity += diferencia;
+                    _logger.LogInformation("Entrega parcial - {Medicine}: devueltas {Diff} unidades al stock", medicine.Name, diferencia);
+                }
             }
             else if (model.SupplyId.HasValue)
             {
@@ -217,38 +274,42 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
                 {
                     return ApiError("Insumo no encontrado", 404);
                 }
-                if (supply.StockQuantity < model.Quantity)
-                {
-                    return ApiError($"Stock insuficiente. Disponible: {supply.StockQuantity} {supply.Unit}");
-                }
-                supply.StockQuantity -= model.Quantity;
                 itemName = supply.Name;
-            }
 
-            // Verificar paciente si se proporciona
-            if (model.PatientId.HasValue)
-            {
-                var patient = await _context.Patients.FindAsync(model.PatientId.Value);
-                if (patient == null)
+                if (!stockYaReservado)
                 {
-                    return ApiError("Paciente no encontrado", 404);
+                    // Sin turno: descontar stock
+                    if (supply.StockQuantity < model.Quantity)
+                    {
+                        return ApiError($"Stock insuficiente. Disponible: {supply.StockQuantity} {supply.Unit}");
+                    }
+                    supply.StockQuantity -= model.Quantity;
+                    _logger.LogInformation("Stock descontado (sin turno) - {Supply}: -{Qty}", supply.Name, model.Quantity);
+                }
+                else if (model.Quantity < cantidadAprobada)
+                {
+                    // Entrega parcial: devolver diferencia al stock
+                    int diferencia = cantidadAprobada - model.Quantity;
+                    supply.StockQuantity += diferencia;
+                    _logger.LogInformation("Entrega parcial - {Supply}: devueltas {Diff} unidades al stock", supply.Name, diferencia);
                 }
             }
 
-            // Verificar turno si se proporciona
-            if (model.TurnoId.HasValue)
+            // Buscar o crear relación con paciente
+            int? patientId = model.PatientId;
+            if (!patientId.HasValue && !string.IsNullOrEmpty(model.PatientIdentification))
             {
-                var turno = await _context.Turnos.FindAsync(model.TurnoId.Value);
-                if (turno == null)
-                {
-                    return ApiError("Turno no encontrado", 404);
-                }
+                var patient = await _context.Patients
+                    .FirstOrDefaultAsync(p => p.IdentificationDocument == model.PatientIdentification.Trim().ToUpper());
+                patientId = patient?.Id;
             }
+
+            var deliveredBy = model.DeliveredBy ?? User.Identity?.Name ?? "API";
 
             var delivery = new Delivery
             {
-                PatientIdentification = model.PatientIdentification,
-                PatientId = model.PatientId,
+                PatientIdentification = model.PatientIdentification.Trim().ToUpper(),
+                PatientId = patientId,
                 MedicineId = model.MedicineId,
                 SupplyId = model.SupplyId,
                 TurnoId = model.TurnoId,
@@ -259,7 +320,7 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
                 TreatmentDuration = model.TreatmentDuration,
                 BatchNumber = model.BatchNumber,
                 ExpiryDate = model.ExpiryDate,
-                DeliveredBy = model.DeliveredBy,
+                DeliveredBy = deliveredBy,
                 PatientNote = model.PatientNote,
                 Comments = model.Comments
             };
@@ -267,11 +328,22 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
             _context.Deliveries.Add(delivery);
             await _context.SaveChangesAsync();
 
-            _logger.LogInformation("Entrega creada vía API: {Item} x{Quantity} a {Patient} (ID: {Id})", 
-                itemName, model.Quantity, model.PatientIdentification, delivery.Id);
+            _logger.LogInformation("Entrega creada vía API: {Item} x{Quantity} a {Patient} (ID: {Id}, TurnoId: {TurnoId})", 
+                itemName, model.Quantity, model.PatientIdentification, delivery.Id, model.TurnoId?.ToString() ?? "NULL");
 
-            // Marcar turno como Completado si existe uno aprobado para este paciente y producto
-            await CompleteTurnoIfExistsAsync(model.PatientIdentification, model.MedicineId, model.SupplyId);
+            // Marcar turno como Completado si existe
+            if (model.TurnoId.HasValue && turnoAprobado != null)
+            {
+                turnoAprobado.Estado = "Completado";
+                turnoAprobado.FechaEntrega = DateTime.Now;
+                await _context.SaveChangesAsync();
+                _logger.LogInformation("✅ Turno #{TurnoId} marcado como Completado", model.TurnoId);
+            }
+            else
+            {
+                // Intentar completar turno automáticamente si existe uno aprobado para este paciente/producto
+                await CompleteTurnoIfExistsAsync(model.PatientIdentification, model.MedicineId, model.SupplyId);
+            }
 
             var result = new DeliveryDto
             {

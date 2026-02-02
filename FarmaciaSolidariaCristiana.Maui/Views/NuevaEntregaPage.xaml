@@ -1,0 +1,283 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:viewmodels="clr-namespace:FarmaciaSolidariaCristiana.Maui.ViewModels"
+             xmlns:models="clr-namespace:FarmaciaSolidariaCristiana.Maui.Models"
+             x:Class="FarmaciaSolidariaCristiana.Maui.Views.NuevaEntregaPage"
+             x:DataType="viewmodels:NuevaEntregaViewModel"
+             Title="{Binding Title}"
+             Shell.NavBarIsVisible="True">
+
+    <ContentPage.Resources>
+        <Style x:Key="SectionTitle" TargetType="Label">
+            <Setter Property="FontSize" Value="16"/>
+            <Setter Property="FontAttributes" Value="Bold"/>
+            <Setter Property="TextColor" Value="{StaticResource Primary}"/>
+            <Setter Property="Margin" Value="0,15,0,8"/>
+        </Style>
+        <Style x:Key="FieldLabel" TargetType="Label">
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="TextColor" Value="{StaticResource Gray600}"/>
+            <Setter Property="Margin" Value="0,0,0,4"/>
+        </Style>
+    </ContentPage.Resources>
+
+    <Grid>
+        <!-- Loading Overlay -->
+        <Grid IsVisible="{Binding IsBusy}" 
+              BackgroundColor="#80000000" 
+              ZIndex="100">
+            <VerticalStackLayout VerticalOptions="Center" HorizontalOptions="Center">
+                <ActivityIndicator IsRunning="True" Color="White" HeightRequest="50" WidthRequest="50"/>
+                <Label Text="Procesando..." TextColor="White" Margin="0,10,0,0"/>
+            </VerticalStackLayout>
+        </Grid>
+
+        <ScrollView Padding="16">
+            <VerticalStackLayout Spacing="10">
+
+                <!-- Documento de Identidad -->
+                <Frame BackgroundColor="White" Padding="16" CornerRadius="10" HasShadow="True">
+                    <VerticalStackLayout Spacing="8">
+                        <Label Text="📋 Identificación del Paciente" Style="{StaticResource SectionTitle}"/>
+                        
+                        <Label Text="Carnet de Identidad o Pasaporte *" Style="{StaticResource FieldLabel}"/>
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                            <Entry Grid.Column="0"
+                                   Placeholder="Ej: 88012312345 o A1234567"
+                                   Text="{Binding DocumentoIdentidad}"
+                                   Keyboard="Text"
+                                   MaxLength="20"
+                                   ReturnType="Search"
+                                   ReturnCommand="{Binding BuscarPacienteCommand}"/>
+                            <Button Grid.Column="1" 
+                                    Text="🔍" 
+                                    WidthRequest="50"
+                                    Command="{Binding BuscarPacienteCommand}"
+                                    BackgroundColor="{StaticResource Primary}"/>
+                        </Grid>
+                        
+                        <Label Text="{Binding DocumentoError}"
+                               TextColor="Red"
+                               FontSize="12"
+                               IsVisible="{Binding DocumentoError, Converter={StaticResource StringToBoolConverter}}"/>
+                        
+                        <Label Text="✓ Documento válido"
+                               TextColor="Green"
+                               FontSize="12"
+                               IsVisible="{Binding IsDocumentoValid}"/>
+                    </VerticalStackLayout>
+                </Frame>
+
+                <!-- Información del Paciente (visible cuando se encuentra) -->
+                <Frame BackgroundColor="#E8F5E9" Padding="16" CornerRadius="10" HasShadow="True"
+                       IsVisible="{Binding PacienteEncontrado}">
+                    <VerticalStackLayout Spacing="4">
+                        <Label Text="👤 Paciente Encontrado" FontAttributes="Bold" TextColor="#2E7D32"/>
+                        <Label Text="{Binding PacienteNombre}" FontSize="16" FontAttributes="Bold"/>
+                        <Label Text="{Binding PacienteEdad, StringFormat='Edad: {0} años'}" FontSize="13" TextColor="{StaticResource Gray600}"/>
+                    </VerticalStackLayout>
+                </Frame>
+
+                <!-- Paciente No Encontrado -->
+                <Frame BackgroundColor="#FFF3CD" Padding="16" CornerRadius="10" HasShadow="True"
+                       IsVisible="{Binding PacienteNoEncontrado}">
+                    <VerticalStackLayout Spacing="4">
+                        <Label Text="⚠️ Paciente No Registrado" FontAttributes="Bold" TextColor="#856404"/>
+                        <Label Text="Puede continuar con una entrega sin turno, o registre primero al paciente."
+                               FontSize="13" TextColor="#856404" LineBreakMode="WordWrap"/>
+                    </VerticalStackLayout>
+                </Frame>
+
+                <!-- Turnos Aprobados (visible cuando hay turnos) -->
+                <Frame BackgroundColor="White" Padding="16" CornerRadius="10" HasShadow="True"
+                       IsVisible="{Binding TieneTurnosAprobados}">
+                    <VerticalStackLayout Spacing="8">
+                        <Label Text="📋 Turnos Aprobados" Style="{StaticResource SectionTitle}"/>
+                        <Label Text="Seleccione un turno para entregar o continúe sin turno:" 
+                               Style="{StaticResource FieldLabel}"/>
+                        
+                        <CollectionView ItemsSource="{Binding TurnosAprobados}"
+                                        SelectionMode="Single"
+                                        SelectedItem="{Binding TurnoSeleccionado}"
+                                        HeightRequest="180">
+                            <CollectionView.ItemTemplate>
+                                <DataTemplate x:DataType="models:TurnoForDelivery">
+                                    <Frame Padding="12" Margin="0,4" CornerRadius="8" 
+                                           BackgroundColor="#F0F7FF"
+                                           BorderColor="{StaticResource Primary}">
+                                        <Frame.GestureRecognizers>
+                                            <TapGestureRecognizer 
+                                                Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:NuevaEntregaViewModel}}, Path=SeleccionarTurnoCommand}"
+                                                CommandParameter="{Binding .}"/>
+                                        </Frame.GestureRecognizers>
+                                        <VerticalStackLayout Spacing="4">
+                                            <Label Text="{Binding Display}" FontAttributes="Bold" FontSize="14"/>
+                                            <Label Text="{Binding Estado, StringFormat='Estado: {0}'}" 
+                                                   FontSize="12" TextColor="Green"/>
+                                            <!-- Mostrar items del turno -->
+                                            <Label Text="Items:" FontSize="11" TextColor="{StaticResource Gray600}" Margin="0,4,0,0"/>
+                                            <StackLayout BindableLayout.ItemsSource="{Binding Medicamentos}">
+                                                <BindableLayout.ItemTemplate>
+                                                    <DataTemplate x:DataType="models:TurnoItemForDelivery">
+                                                        <Label Text="{Binding Display}" FontSize="11" TextColor="{StaticResource Gray700}"/>
+                                                    </DataTemplate>
+                                                </BindableLayout.ItemTemplate>
+                                            </StackLayout>
+                                            <StackLayout BindableLayout.ItemsSource="{Binding Insumos}">
+                                                <BindableLayout.ItemTemplate>
+                                                    <DataTemplate x:DataType="models:TurnoItemForDelivery">
+                                                        <Label Text="{Binding Display}" FontSize="11" TextColor="{StaticResource Gray700}"/>
+                                                    </DataTemplate>
+                                                </BindableLayout.ItemTemplate>
+                                            </StackLayout>
+                                        </VerticalStackLayout>
+                                    </Frame>
+                                </DataTemplate>
+                            </CollectionView.ItemTemplate>
+                        </CollectionView>
+                        
+                        <Button Text="Continuar sin turno"
+                                BackgroundColor="{StaticResource Gray400}"
+                                TextColor="White"
+                                Command="{Binding ContinuarSinTurnoCommand}"
+                                IsVisible="{Binding TurnoSeleccionado, Converter={StaticResource IsNullConverter}}"/>
+                    </VerticalStackLayout>
+                </Frame>
+
+                <!-- Selección de Items (cuando hay turno seleccionado o sin turno) -->
+                <Frame BackgroundColor="White" Padding="16" CornerRadius="10" HasShadow="True"
+                       IsVisible="{Binding MostrarSeleccionItems}">
+                    <VerticalStackLayout Spacing="8">
+                        <Label Text="{Binding TituloSeccionItems}" Style="{StaticResource SectionTitle}"/>
+                        
+                        <!-- Tipo de Item (solo visible sin turno) -->
+                        <Grid ColumnDefinitions="*,*" ColumnSpacing="10" 
+                              IsVisible="{Binding EsEntregaSinTurno}">
+                            <Button Grid.Column="0"
+                                    Text="💊 Medicamentos"
+                                    BackgroundColor="{Binding EsMedicamento, Converter={StaticResource BoolToColorConverter}, ConverterParameter='Primary|LightGray'}"
+                                    TextColor="{Binding EsMedicamento, Converter={StaticResource BoolToColorConverter}, ConverterParameter='White|Black'}"
+                                    Command="{Binding SetMedicamentoCommand}"
+                                    CornerRadius="8"/>
+                            <Button Grid.Column="1"
+                                    Text="🩹 Insumos"
+                                    BackgroundColor="{Binding EsMedicamento, Converter={StaticResource BoolToColorInverseConverter}, ConverterParameter='Primary|LightGray'}"
+                                    TextColor="{Binding EsMedicamento, Converter={StaticResource BoolToColorInverseConverter}, ConverterParameter='White|Black'}"
+                                    Command="{Binding SetInsumoCommand}"
+                                    CornerRadius="8"/>
+                        </Grid>
+
+                        <!-- Buscador (solo sin turno) -->
+                        <SearchBar Placeholder="Buscar medicamento o insumo..."
+                                   Text="{Binding SearchText}"
+                                   IsVisible="{Binding EsEntregaSinTurno}"/>
+
+                        <!-- Resultados de Búsqueda -->
+                        <CollectionView ItemsSource="{Binding ResultadosBusqueda}"
+                                        IsVisible="{Binding ShowSearchResults}"
+                                        HeightRequest="150"
+                                        SelectionMode="None">
+                            <CollectionView.ItemTemplate>
+                                <DataTemplate x:DataType="viewmodels:ItemBusquedaEntrega">
+                                    <Frame Padding="10" Margin="0,2" CornerRadius="6" BackgroundColor="#F8F9FA">
+                                        <Frame.GestureRecognizers>
+                                            <TapGestureRecognizer 
+                                                Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:NuevaEntregaViewModel}}, Path=AgregarItemCommand}"
+                                                CommandParameter="{Binding .}"/>
+                                        </Frame.GestureRecognizers>
+                                        <Grid ColumnDefinitions="*,Auto">
+                                            <Label Text="{Binding Name}" FontAttributes="Bold"/>
+                                            <Frame Grid.Column="1" BackgroundColor="{Binding StockColor}" Padding="8,4" CornerRadius="10">
+                                                <Label Text="{Binding StockDisplay}" FontSize="11" TextColor="White"/>
+                                            </Frame>
+                                        </Grid>
+                                    </Frame>
+                                </DataTemplate>
+                            </CollectionView.ItemTemplate>
+                        </CollectionView>
+
+                        <!-- Items a Entregar -->
+                        <Label Text="📦 Items a Entregar:" FontAttributes="Bold" Margin="0,10,0,4"/>
+                        <CollectionView ItemsSource="{Binding ItemsAEntregar}"
+                                        SelectionMode="None">
+                            <CollectionView.EmptyView>
+                                <Frame BackgroundColor="#FFF8E1" Padding="16" CornerRadius="8">
+                                    <Label Text="No hay items seleccionados. Seleccione del turno o busque manualmente." 
+                                           HorizontalTextAlignment="Center" 
+                                           TextColor="#F57C00"
+                                           FontSize="13"/>
+                                </Frame>
+                            </CollectionView.EmptyView>
+                            <CollectionView.ItemTemplate>
+                                <DataTemplate x:DataType="viewmodels:ItemEntrega">
+                                    <Frame Padding="12" Margin="0,4" CornerRadius="8" BackgroundColor="#E8F5E9">
+                                        <Grid ColumnDefinitions="*,100,Auto" ColumnSpacing="10">
+                                            <VerticalStackLayout Grid.Column="0" VerticalOptions="Center">
+                                                <Label Text="{Binding Nombre}" FontAttributes="Bold" LineBreakMode="TailTruncation"/>
+                                                <Label FontSize="11" TextColor="{StaticResource Gray600}">
+                                                    <Label.FormattedText>
+                                                        <FormattedString>
+                                                            <Span Text="Aprobado: "/>
+                                                            <Span Text="{Binding CantidadAprobada}"/>
+                                                            <Span Text=" | Stock: "/>
+                                                            <Span Text="{Binding StockActual}"/>
+                                                        </FormattedString>
+                                                    </Label.FormattedText>
+                                                </Label>
+                                            </VerticalStackLayout>
+                                            
+                                            <HorizontalStackLayout Grid.Column="1" Spacing="5" VerticalOptions="Center">
+                                                <Label Text="Cant:" VerticalOptions="Center" FontSize="12"/>
+                                                <Entry Text="{Binding CantidadAEntregar}" 
+                                                       Keyboard="Numeric" 
+                                                       WidthRequest="60"
+                                                       HorizontalTextAlignment="Center"/>
+                                            </HorizontalStackLayout>
+                                            
+                                            <Button Grid.Column="2" 
+                                                    Text="✕" 
+                                                    BackgroundColor="#FFCDD2"
+                                                    TextColor="#C62828"
+                                                    WidthRequest="40"
+                                                    HeightRequest="40"
+                                                    CornerRadius="20"
+                                                    Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:NuevaEntregaViewModel}}, Path=RemoveItemCommand}"
+                                                    CommandParameter="{Binding .}"/>
+                                        </Grid>
+                                    </Frame>
+                                </DataTemplate>
+                            </CollectionView.ItemTemplate>
+                        </CollectionView>
+                    </VerticalStackLayout>
+                </Frame>
+
+                <!-- Comentarios -->
+                <Frame BackgroundColor="White" Padding="16" CornerRadius="10" HasShadow="True"
+                       IsVisible="{Binding MostrarSeleccionItems}">
+                    <VerticalStackLayout Spacing="8">
+                        <Label Text="💬 Observaciones" Style="{StaticResource SectionTitle}"/>
+                        <Editor Placeholder="Comentarios sobre la entrega (opcional)..."
+                                Text="{Binding Comentarios}"
+                                HeightRequest="80"
+                                AutoSize="TextChanges"/>
+                    </VerticalStackLayout>
+                </Frame>
+
+                <!-- Botón Registrar Entrega -->
+                <Button Text="✅ Registrar Entrega"
+                        BackgroundColor="{StaticResource Success}"
+                        TextColor="White"
+                        FontSize="18"
+                        FontAttributes="Bold"
+                        HeightRequest="55"
+                        CornerRadius="10"
+                        Margin="0,20"
+                        Command="{Binding RegistrarEntregaCommand}"
+                        IsVisible="{Binding MostrarSeleccionItems}"
+                        IsEnabled="{Binding PuedeRegistrar}"/>
+
+            </VerticalStackLayout>
+        </ScrollView>
+    </Grid>
+</ContentPage>

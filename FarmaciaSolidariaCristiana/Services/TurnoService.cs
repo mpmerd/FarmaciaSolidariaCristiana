@@ -48,6 +48,7 @@ namespace FarmaciaSolidariaCristiana.Services
 
         /// <summary>
         /// Valida si el usuario puede solicitar un turno (límite: 2 por mes)
+        /// Los turnos cancelados por no presentación también cuentan contra este límite como penalización.
         /// </summary>
         public async Task<(bool CanRequest, string? Reason)> CanUserRequestTurnoAsync(string userId)
         {
@@ -61,7 +62,9 @@ namespace FarmaciaSolidariaCristiana.Services
                            t.FechaSolicitud <= endOfMonth &&
                            (t.Estado == EstadoTurno.Pendiente || 
                             t.Estado == EstadoTurno.Aprobado ||
-                            t.Estado == EstadoTurno.Completado))
+                            t.Estado == EstadoTurno.Completado ||
+                            // ✅ Turnos cancelados por no presentación también cuentan como penalización
+                            (t.Estado == EstadoTurno.Cancelado && t.CanceladoPorNoPresentacion)))
                 .CountAsync();
 
             if (turnosEsteMes >= 2)
@@ -811,6 +814,10 @@ namespace FarmaciaSolidariaCristiana.Services
                 // 2. Solo enviar email si el usuario NO está activo en la app móvil
                 if (turno.User != null && turno.NumeroTurno.HasValue && turno.FechaPreferida.HasValue)
                 {
+                    // ✅ Primero marcar como leídas las notificaciones anteriores de este turno
+                    // Esto evita que las notificaciones de "turno pendiente" sigan apareciendo
+                    await _pendingNotificationService.MarkNotificationsAsReadByReferenceAsync(turno.Id, "Turno");
+                    
                     // Crear notificación pendiente para polling (funciona siempre)
                     var notificationTitle = "🎉 ¡Turno Aprobado!";
                     var notificationMessage = $"Tu turno #{turno.NumeroTurno.Value} ha sido aprobado para el {turno.FechaPreferida.Value:dd/MM/yyyy} a las {turno.FechaPreferida.Value:HH:mm}";
@@ -904,6 +911,9 @@ namespace FarmaciaSolidariaCristiana.Services
                 // Notificar al usuario: siempre crear notificación para polling, email solo si no está activo en la app
                 if (turno.User != null)
                 {
+                    // ✅ Primero marcar como leídas las notificaciones anteriores de este turno
+                    await _pendingNotificationService.MarkNotificationsAsReadByReferenceAsync(turno.Id, "Turno");
+                    
                     // Siempre crear notificación pendiente para polling
                     await _pendingNotificationService.CreateNotificationAsync(
                         turno.UserId,

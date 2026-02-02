@@ -255,3 +255,77 @@ public class ImportDocumentsResult
     public List<string> Errors { get; set; } = new();
     public string? Message { get; set; }
 }
+
+/// <summary>
+/// Turno simplificado para entregas (coincide con TurnoForDeliveryDto del API)
+/// </summary>
+public class TurnoForDelivery
+{
+    public int Id { get; set; }
+    public int? NumeroTurno { get; set; }
+    public string Estado { get; set; } = string.Empty;
+    public DateTime? FechaPreferida { get; set; }
+    public DateTime FechaSolicitud { get; set; }
+    public List<TurnoItemForDelivery> Medicamentos { get; set; } = new();
+    public List<TurnoItemForDelivery> Insumos { get; set; } = new();
+    
+    // Propiedades para UI
+    public string Display => $"Turno #{NumeroTurno ?? Id} - {(FechaPreferida?.ToString("dd/MM/yyyy") ?? FechaSolicitud.ToString("dd/MM/yyyy"))}";
+    public bool TieneMedicamentos => Medicamentos.Any();
+    public bool TieneInsumos => Insumos.Any();
+}
+
+/// <summary>
+/// Item de turno para entregas (medicamento o insumo con stock actual)
+/// </summary>
+public class TurnoItemForDelivery
+{
+    public int Id { get; set; }
+    public string Nombre { get; set; } = string.Empty;
+    public int CantidadSolicitada { get; set; }
+    public int? CantidadAprobada { get; set; }
+    public string Unidad { get; set; } = string.Empty;
+    public int StockActual { get; set; }
+    public string Tipo { get; set; } = string.Empty; // "Medicamento" o "Insumo"
+    
+    // Cantidad a entregar (editable por el usuario)
+    public int CantidadAEntregar { get; set; }
+    
+    // Propiedades para UI
+    public int CantidadMaxima => CantidadAprobada ?? CantidadSolicitada;
+    public string Display => $"{Nombre} - {CantidadMaxima} {Unidad}";
+    public bool Seleccionado { get; set; }
+}
+
+/// <summary>
+/// Request para crear una entrega desde la app móvil
+/// </summary>
+public class CreateDeliveryRequest
+{
+    public string PatientIdentification { get; set; } = string.Empty;
+    public int? PatientId { get; set; }
+    public int? MedicineId { get; set; }
+    public int? SupplyId { get; set; }
+    public int? TurnoId { get; set; }
+    public int Quantity { get; set; }
+    public DateTime? DeliveryDate { get; set; }
+    public string? Dosage { get; set; }
+    public string? TreatmentDuration { get; set; }
+    public string? BatchNumber { get; set; }
+    public DateTime? ExpiryDate { get; set; }
+    public string? DeliveredBy { get; set; }
+    public string? PatientNote { get; set; }
+    public string? Comments { get; set; }
+}
+
+/// <summary>
+/// Información del paciente para entregas
+/// </summary>
+public class PatientInfo
+{
+    public int Id { get; set; }
+    public string FullName { get; set; } = string.Empty;
+    public string IdentificationDocument { get; set; } = string.Empty;
+    public int? Age { get; set; }
+    public DateTime RegistrationDate { get; set; }
+}
