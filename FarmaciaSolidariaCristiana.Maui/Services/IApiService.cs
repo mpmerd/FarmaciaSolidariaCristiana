@@ -86,6 +86,18 @@ public interface IApiService
     // Reportes
     Task<byte[]?> DescargarReporteAsync(string tipoReporte, DateTime? fechaInicio = null, DateTime? fechaFin = null);
     
+    // Usuarios (Admin)
+    Task<ApiResponse<List<UserDto>>> GetUsuariosAsync();
+    Task<ApiResponse<UserDto>> GetUsuarioAsync(string id);
+    Task<ApiResponse<UserDto>> CrearUsuarioAsync(CreateUserRequest request);
+    Task<ApiResponse<UserDto>> ActualizarUsuarioAsync(string id, UpdateUserRequest request);
+    Task<ApiResponse<bool>> EliminarUsuarioAsync(string id);
+    Task<ApiResponse<List<string>>> GetRolesAsync();
+    
+    // Reprogramación de Turnos (Admin)
+    Task<ApiResponse<ReprogramarPreviewDto>> GetReprogramarPreviewAsync(DateTime fecha);
+    Task<ApiResponse<ReprogramarResultDto>> ReprogramarTurnosAsync(DateTime fechaAfectada, string motivo);
+    
     // Autenticación
     Task<ApiResponse<RegistrationStatusDto>> GetRegistrationStatusAsync();
     Task<ApiResponse<bool>> RegisterAsync(RegisterRequest request);
@@ -122,4 +134,73 @@ public class FechaBloqueadaDto
     public DateTime Fecha { get; set; }
     public string? Motivo { get; set; }
     public DateTime CreatedAt { get; set; }
+}
+
+// DTOs para Usuarios
+public class UserDto
+{
+    public string Id { get; set; } = string.Empty;
+    public string UserName { get; set; } = string.Empty;
+    public string Email { get; set; } = string.Empty;
+    public string Role { get; set; } = string.Empty;
+    public bool EmailConfirmed { get; set; }
+}
+
+public class CreateUserRequest
+{
+    public string UserName { get; set; } = string.Empty;
+    public string Email { get; set; } = string.Empty;
+    public string Password { get; set; } = string.Empty;
+    public string Role { get; set; } = string.Empty;
+}
+
+public class UpdateUserRequest
+{
+    public string UserName { get; set; } = string.Empty;
+    public string Email { get; set; } = string.Empty;
+    public string? NewPassword { get; set; }
+    public string NewRole { get; set; } = string.Empty;
+}
+
+// DTOs para Reprogramación de Turnos
+public class ReprogramarPreviewDto
+{
+    public DateTime Fecha { get; set; }
+    public int TotalTurnos { get; set; }
+    public List<TurnoAfectadoDto> Turnos { get; set; } = new();
+}
+
+public class TurnoAfectadoDto
+{
+    public int Id { get; set; }
+    public string UserName { get; set; } = string.Empty;
+    public string? UserEmail { get; set; }
+    public string Estado { get; set; } = string.Empty;
+    public DateTime? FechaPreferida { get; set; }
+}
+
+public class ReprogramarResultDto
+{
+    public int TotalAfectados { get; set; }
+    public int Reprogramados { get; set; }
+    public int NoReprogramados { get; set; }
+    public string Mensaje { get; set; } = string.Empty;
+    public List<TurnoReprogramadoDto> TurnosReprogramados { get; set; } = new();
+    public List<TurnoNoReprogramadoDto> TurnosNoReprogramados { get; set; } = new();
+}
+
+public class TurnoReprogramadoDto
+{
+    public int TurnoId { get; set; }
+    public string UserName { get; set; } = string.Empty;
+    public string? UserEmail { get; set; }
+    public DateTime FechaOriginal { get; set; }
+    public DateTime FechaNueva { get; set; }
+}
+
+public class TurnoNoReprogramadoDto
+{
+    public int TurnoId { get; set; }
+    public string UserName { get; set; } = string.Empty;
+    public string Razon { get; set; } = string.Empty;
 }

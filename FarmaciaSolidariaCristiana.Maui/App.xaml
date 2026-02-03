@@ -25,6 +25,7 @@
             <converters:IntToBoolConverter x:Key="IntToBoolConverter"/>
             <converters:IsNotNullConverter x:Key="IsNotNullConverter"/>
             <converters:IsNullConverter x:Key="IsNullConverter"/>
+            <converters:RoleToColorConverter x:Key="RoleToColorConverter"/>
             
             <!-- Additional Colors -->
             <Color x:Key="BackgroundColor">#F5F5F5</Color>

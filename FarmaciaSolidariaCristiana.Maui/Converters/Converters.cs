@@ -364,3 +364,30 @@ public class IsNullConverter : IValueConverter
         throw new NotImplementedException();
     }
 }
+
+/// <summary>
+/// Convierte rol de usuario a color
+/// </summary>
+public class RoleToColorConverter : IValueConverter
+{
+    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        if (value is string role)
+        {
+            return role switch
+            {
+                "Admin" => Color.FromArgb("#dc3545"),        // Rojo
+                "Farmaceutico" => Color.FromArgb("#28a745"), // Verde
+                "Viewer" => Color.FromArgb("#17a2b8"),       // Azul info
+                "ViewerPublic" => Color.FromArgb("#6c757d"), // Gris
+                _ => Color.FromArgb("#6c757d")
+            };
+        }
+        return Color.FromArgb("#6c757d");
+    }
+
+    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        throw new NotImplementedException();
+    }
+}

@@ -109,11 +109,17 @@
                       ContentTemplate="{DataTemplate views:ReportesPage}"/>
     </FlyoutItem>
     
-    <!-- Avanzado - Admin only -->
-    <FlyoutItem x:Name="FlyoutAvanzado" Title="Avanzado" Icon="settings.png">
+    <!-- Avanzado - Admin only (con submenús) -->
+    <FlyoutItem x:Name="FlyoutAvanzado" Title="⚙️ Avanzado" Icon="settings.png">
         <ShellContent Route="FechasBloqueadasPage"
-                      Title="Fechas Bloqueadas"
+                      Title="📅 Fechas Bloqueadas"
                       ContentTemplate="{DataTemplate views:FechasBloqueadasPage}"/>
+        <ShellContent Route="ReprogramarTurnosPage"
+                      Title="🔄 Reprogramar Turnos"
+                      ContentTemplate="{DataTemplate views:ReprogramarTurnosPage}"/>
+        <ShellContent Route="UsuariosPage"
+                      Title="👥 Usuarios"
+                      ContentTemplate="{DataTemplate views:UsuariosPage}"/>
     </FlyoutItem>
     
     <!-- Separator -->
