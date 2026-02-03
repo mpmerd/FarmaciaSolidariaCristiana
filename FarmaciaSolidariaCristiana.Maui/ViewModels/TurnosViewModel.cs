@@ -56,11 +56,13 @@ public partial class TurnosViewModel : BaseViewModel
     [RelayCommand]
     public async Task LoadTurnosAsync()
     {
-        if (IsRefreshing) return;
+        if (IsBusy) return;
         
-        IsRefreshing = true;
         try
         {
+            IsBusy = true;
+            IsRefreshing = true;
+
             // Verificar permisos
             CanManageTurnos = await AuthService.IsInAnyRoleAsync(
                 Constants.RoleAdmin, Constants.RoleFarmaceutico);
@@ -94,6 +96,7 @@ public partial class TurnosViewModel : BaseViewModel
         }
         finally
         {
+            IsBusy = false;
             IsRefreshing = false;
         }
     }

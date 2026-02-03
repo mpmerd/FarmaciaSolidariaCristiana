@@ -22,6 +22,9 @@ public partial class MedicamentosViewModel : BaseViewModel
     private bool _canEdit;
 
     [ObservableProperty]
+    private bool _isRefreshing;
+
+    [ObservableProperty]
     private string _searchText = string.Empty;
 
     private List<Medicine> _allMedicamentos = new();
@@ -47,6 +50,7 @@ public partial class MedicamentosViewModel : BaseViewModel
         try
         {
             IsBusy = true;
+            IsRefreshing = true;
 
             var result = await ApiService.GetMedicamentosAsync();
 
@@ -69,6 +73,7 @@ public partial class MedicamentosViewModel : BaseViewModel
         finally
         {
             IsBusy = false;
+            IsRefreshing = false;
         }
     }
 
