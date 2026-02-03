@@ -28,7 +28,7 @@
         
         <!-- Turnos List -->
         <RefreshView Grid.Row="2"
-                     IsRefreshing="{Binding IsRefreshing}"
+                     IsRefreshing="{Binding IsRefreshing, Mode=TwoWay}"
                      Command="{Binding LoadTurnosAsyncCommand}">
             <CollectionView ItemsSource="{Binding Turnos}"
                             SelectionMode="None"
