@@ -53,7 +53,7 @@ adb install -r bin/Release/net9.0-android/com.fsolidaria.app-Signed.apk
 
 ### Release Mode (Producción):
 - Conecta a: `https://farmaciasolidaria.somee.com`
-- BD: `FarmaciaDb.mssql.somee.com`
+- BD: `*.mssdq.somee.com`
 - Build: `dotnet build -c Release`
 
 ---
