@@ -29,7 +29,7 @@
         <!-- Turnos List -->
         <RefreshView Grid.Row="2"
                      IsRefreshing="{Binding IsRefreshing, Mode=TwoWay}"
-                     Command="{Binding LoadTurnosAsyncCommand}">
+                     Command="{Binding RefreshCommand}">
             <CollectionView ItemsSource="{Binding Turnos}"
                             SelectionMode="None"
                             EmptyView="No hay turnos para mostrar">
