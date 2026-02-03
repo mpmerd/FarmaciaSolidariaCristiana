@@ -1,0 +1,245 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:viewmodels="clr-namespace:FarmaciaSolidariaCristiana.Maui.ViewModels"
+             xmlns:services="clr-namespace:FarmaciaSolidariaCristiana.Maui.Services"
+             x:Class="FarmaciaSolidariaCristiana.Maui.Views.ReprogramarTurnosPage"
+             x:DataType="viewmodels:ReprogramarTurnosViewModel"
+             Title="{Binding Title}"
+             BackgroundColor="{StaticResource BackgroundColor}">
+
+    <ScrollView>
+        <StackLayout Padding="15" Spacing="15">
+            
+            <!-- Header -->
+            <Frame BackgroundColor="{StaticResource Primary}" 
+                   CornerRadius="15" 
+                   Padding="20"
+                   HasShadow="True">
+                <StackLayout>
+                    <Label Text="🔄 Reprogramar Turnos por Fecha" 
+                           FontSize="22" 
+                           FontAttributes="Bold"
+                           TextColor="White"/>
+                    <Label Text="Reprograma automáticamente todos los turnos de un día" 
+                           FontSize="14" 
+                           TextColor="#B0D4FF"/>
+                </StackLayout>
+            </Frame>
+
+            <!-- Advertencia -->
+            <Frame BackgroundColor="#FFF3CD" CornerRadius="12" Padding="15" HasShadow="False">
+                <StackLayout Spacing="10">
+                    <Label Text="⚠️ Atención" FontSize="16" FontAttributes="Bold" TextColor="#856404"/>
+                    <Label Text="Esta acción reprogramará automáticamente TODOS los turnos del día seleccionado." 
+                           FontSize="14" TextColor="#856404"/>
+                    <StackLayout Spacing="5" Margin="10,0,0,0">
+                        <Label Text="• Se buscarán nuevos slots disponibles (Martes/Jueves 1-4 PM)" FontSize="13" TextColor="#856404"/>
+                        <Label Text="• El sistema saltará fechas bloqueadas" FontSize="13" TextColor="#856404"/>
+                        <Label Text="• Solo se reprograman turnos Pendientes o Aprobados" FontSize="13" TextColor="#856404"/>
+                    </StackLayout>
+                </StackLayout>
+            </Frame>
+
+            <!-- Formulario -->
+            <Frame BackgroundColor="White" CornerRadius="15" Padding="20" HasShadow="True">
+                <StackLayout Spacing="15">
+                    <Label Text="📅 Seleccionar Fecha a Reprogramar" 
+                           FontSize="18" 
+                           FontAttributes="Bold"
+                           TextColor="{StaticResource Dark}"/>
+
+                    <StackLayout Spacing="5">
+                        <Label Text="Fecha" FontSize="14" TextColor="{StaticResource Gray600}"/>
+                        <DatePicker Date="{Binding FechaSeleccionada}"
+                                    BackgroundColor="{StaticResource Gray100}"
+                                    MinimumDate="2020-01-01"/>
+                        <Label Text="Todos los turnos de esta fecha serán reprogramados" 
+                               FontSize="12" 
+                               TextColor="{StaticResource Gray500}"/>
+                    </StackLayout>
+
+                    <Button Text="🔍 Ver Turnos Afectados"
+                            BackgroundColor="{StaticResource Secondary}"
+                            TextColor="White"
+                            CornerRadius="10"
+                            HeightRequest="45"
+                            Command="{Binding LoadPreviewCommand}"/>
+
+                    <!-- Preview de turnos afectados -->
+                    <Frame IsVisible="{Binding HasPreview}"
+                           BackgroundColor="{StaticResource Gray100}" 
+                           CornerRadius="12" 
+                           Padding="15"
+                           HasShadow="False">
+                        <StackLayout Spacing="10">
+                            <Label FontSize="16" FontAttributes="Bold" TextColor="{StaticResource Dark}">
+                                <Label.FormattedText>
+                                    <FormattedString>
+                                        <Span Text="📊 Turnos encontrados: "/>
+                                        <Span Text="{Binding TurnosAfectados}" FontAttributes="Bold"/>
+                                    </FormattedString>
+                                </Label.FormattedText>
+                            </Label>
+
+                            <CollectionView ItemsSource="{Binding TurnosEnFecha}"
+                                            MaximumHeightRequest="200"
+                                            IsVisible="{Binding TurnosAfectados}">
+                                <CollectionView.ItemTemplate>
+                                    <DataTemplate x:DataType="services:TurnoAfectadoDto">
+                                        <Frame BackgroundColor="White" 
+                                               CornerRadius="8" 
+                                               Padding="10"
+                                               Margin="0,3"
+                                               HasShadow="False">
+                                            <Grid ColumnDefinitions="*,Auto">
+                                                <StackLayout Grid.Column="0">
+                                                    <Label Text="{Binding UserName}" 
+                                                           FontSize="14" 
+                                                           FontAttributes="Bold"
+                                                           TextColor="{StaticResource Dark}"/>
+                                                    <Label Text="{Binding FechaPreferida, StringFormat='{0:dd/MM/yyyy HH:mm}'}" 
+                                                           FontSize="12" 
+                                                           TextColor="{StaticResource Gray600}"/>
+                                                </StackLayout>
+                                                <Frame Grid.Column="1"
+                                                       BackgroundColor="{StaticResource Primary}"
+                                                       CornerRadius="8"
+                                                       Padding="8,4"
+                                                       BorderColor="Transparent">
+                                                    <Label Text="{Binding Estado}" 
+                                                           FontSize="11" 
+                                                           TextColor="White"/>
+                                                </Frame>
+                                            </Grid>
+                                        </Frame>
+                                    </DataTemplate>
+                                </CollectionView.ItemTemplate>
+                            </CollectionView>
+                        </StackLayout>
+                    </Frame>
+
+                    <!-- Motivo -->
+                    <StackLayout Spacing="5" IsVisible="{Binding HasPreview}">
+                        <Label Text="Motivo de la Reprogramación *" FontSize="14" TextColor="{StaticResource Gray600}"/>
+                        <Editor Text="{Binding Motivo}" 
+                                Placeholder="Ej: Día festivo, Emergencia, Mantenimiento..."
+                                BackgroundColor="{StaticResource Gray100}"
+                                HeightRequest="100"
+                                AutoSize="TextChanges"/>
+                        <Label Text="Este motivo quedará registrado en los comentarios de cada turno" 
+                               FontSize="12" 
+                               TextColor="{StaticResource Gray500}"/>
+                    </StackLayout>
+
+                    <!-- Botón Reprogramar -->
+                    <Button Text="🔄 Reprogramar Turnos"
+                            BackgroundColor="#dc3545"
+                            TextColor="White"
+                            CornerRadius="10"
+                            HeightRequest="50"
+                            FontAttributes="Bold"
+                            IsVisible="{Binding HasPreview}"
+                            IsEnabled="{Binding TurnosAfectados}"
+                            Command="{Binding ReprogramarCommand}"/>
+                </StackLayout>
+            </Frame>
+
+            <!-- Información del proceso -->
+            <Frame BackgroundColor="#E8F4FD" CornerRadius="12" Padding="15" HasShadow="False">
+                <StackLayout Spacing="10">
+                    <Label Text="ℹ️ Proceso de Reprogramación" FontSize="16" FontAttributes="Bold" TextColor="#0c5460"/>
+                    <StackLayout Spacing="5">
+                        <Label Text="1. El sistema buscará todos los turnos del día seleccionado" FontSize="13" TextColor="#0c5460"/>
+                        <Label Text="2. Por cada turno, buscará el próximo slot disponible:" FontSize="13" TextColor="#0c5460"/>
+                        <Label Text="   • Solo días Martes o Jueves" FontSize="12" TextColor="#0c5460" Margin="15,0,0,0"/>
+                        <Label Text="   • Horario: 1:00 PM - 4:00 PM" FontSize="12" TextColor="#0c5460" Margin="15,0,0,0"/>
+                        <Label Text="   • Excluye fechas bloqueadas" FontSize="12" TextColor="#0c5460" Margin="15,0,0,0"/>
+                        <Label Text="   • Máximo 30 turnos por día" FontSize="12" TextColor="#0c5460" Margin="15,0,0,0"/>
+                        <Label Text="3. Actualizará la fecha del turno" FontSize="13" TextColor="#0c5460"/>
+                        <Label Text="4. Registrará el cambio en los comentarios" FontSize="13" TextColor="#0c5460"/>
+                    </StackLayout>
+                </StackLayout>
+            </Frame>
+
+            <!-- Resultado de última reprogramación -->
+            <Frame IsVisible="{Binding ShowResult}"
+                   BackgroundColor="#D4EDDA" 
+                   CornerRadius="12" 
+                   Padding="15"
+                   HasShadow="True">
+                <StackLayout Spacing="10">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <Label Grid.Column="0" 
+                               Text="✅ Resultado de Reprogramación" 
+                               FontSize="16" 
+                               FontAttributes="Bold" 
+                               TextColor="#155724"/>
+                        <Button Grid.Column="1"
+                                Text="✕"
+                                BackgroundColor="Transparent"
+                                TextColor="#155724"
+                                FontSize="18"
+                                WidthRequest="30"
+                                HeightRequest="30"
+                                Command="{Binding ClearResultCommand}"/>
+                    </Grid>
+                    
+                    <Label Text="{Binding LastResult.Mensaje}" 
+                           FontSize="14" 
+                           TextColor="#155724"/>
+                    
+                    <Grid ColumnDefinitions="*,*,*" ColumnSpacing="10">
+                        <Frame Grid.Column="0" BackgroundColor="#28a745" CornerRadius="8" Padding="10" BorderColor="Transparent">
+                            <StackLayout HorizontalOptions="Center">
+                                <Label Text="{Binding LastResult.Reprogramados}" 
+                                       FontSize="24" 
+                                       FontAttributes="Bold" 
+                                       TextColor="White"
+                                       HorizontalOptions="Center"/>
+                                <Label Text="Reprogramados" 
+                                       FontSize="11" 
+                                       TextColor="White"
+                                       HorizontalOptions="Center"/>
+                            </StackLayout>
+                        </Frame>
+                        <Frame Grid.Column="1" BackgroundColor="#ffc107" CornerRadius="8" Padding="10" BorderColor="Transparent">
+                            <StackLayout HorizontalOptions="Center">
+                                <Label Text="{Binding LastResult.NoReprogramados}" 
+                                       FontSize="24" 
+                                       FontAttributes="Bold" 
+                                       TextColor="#212529"
+                                       HorizontalOptions="Center"/>
+                                <Label Text="Sin espacio" 
+                                       FontSize="11" 
+                                       TextColor="#212529"
+                                       HorizontalOptions="Center"/>
+                            </StackLayout>
+                        </Frame>
+                        <Frame Grid.Column="2" BackgroundColor="#17a2b8" CornerRadius="8" Padding="10" BorderColor="Transparent">
+                            <StackLayout HorizontalOptions="Center">
+                                <Label Text="{Binding LastResult.TotalAfectados}" 
+                                       FontSize="24" 
+                                       FontAttributes="Bold" 
+                                       TextColor="White"
+                                       HorizontalOptions="Center"/>
+                                <Label Text="Total" 
+                                       FontSize="11" 
+                                       TextColor="White"
+                                       HorizontalOptions="Center"/>
+                            </StackLayout>
+                        </Frame>
+                    </Grid>
+                </StackLayout>
+            </Frame>
+
+            <!-- Loading -->
+            <ActivityIndicator IsRunning="{Binding IsBusy}"
+                               IsVisible="{Binding IsBusy}"
+                               Color="{StaticResource Primary}"
+                               HeightRequest="40"/>
+
+        </StackLayout>
+    </ScrollView>
+
+</ContentPage>

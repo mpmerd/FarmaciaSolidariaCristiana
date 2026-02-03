@@ -729,6 +729,123 @@ public class ApiService : IApiService
         }
     }
 
+    // === USUARIOS (Admin) ===
+
+    public async Task<ApiResponse<List<UserDto>>> GetUsuariosAsync()
+    {
+        try
+        {
+            await SetAuthHeaderAsync();
+            var response = await _httpClient.GetAsync("/api/users");
+            return await ProcessResponseAsync<List<UserDto>>(response);
+        }
+        catch (Exception ex)
+        {
+            return ErrorResponse<List<UserDto>>($"Error de conexión: {ex.Message}");
+        }
+    }
+
+    public async Task<ApiResponse<UserDto>> GetUsuarioAsync(string id)
+    {
+        try
+        {
+            await SetAuthHeaderAsync();
+            var response = await _httpClient.GetAsync($"/api/users/{id}");
+            return await ProcessResponseAsync<UserDto>(response);
+        }
+        catch (Exception ex)
+        {
+            return ErrorResponse<UserDto>($"Error de conexión: {ex.Message}");
+        }
+    }
+
+    public async Task<ApiResponse<UserDto>> CrearUsuarioAsync(CreateUserRequest request)
+    {
+        try
+        {
+            await SetAuthHeaderAsync();
+            var response = await _httpClient.PostAsJsonAsync("/api/users", request);
+            return await ProcessResponseAsync<UserDto>(response);
+        }
+        catch (Exception ex)
+        {
+            return ErrorResponse<UserDto>($"Error de conexión: {ex.Message}");
+        }
+    }
+
+    public async Task<ApiResponse<UserDto>> ActualizarUsuarioAsync(string id, UpdateUserRequest request)
+    {
+        try
+        {
+            await SetAuthHeaderAsync();
+            var response = await _httpClient.PutAsJsonAsync($"/api/users/{id}", request);
+            return await ProcessResponseAsync<UserDto>(response);
+        }
+        catch (Exception ex)
+        {
+            return ErrorResponse<UserDto>($"Error de conexión: {ex.Message}");
+        }
+    }
+
+    public async Task<ApiResponse<bool>> EliminarUsuarioAsync(string id)
+    {
+        try
+        {
+            await SetAuthHeaderAsync();
+            var response = await _httpClient.DeleteAsync($"/api/users/{id}");
+            return await ProcessResponseAsync<bool>(response);
+        }
+        catch (Exception ex)
+        {
+            return ErrorResponse<bool>($"Error de conexión: {ex.Message}");
+        }
+    }
+
+    public async Task<ApiResponse<List<string>>> GetRolesAsync()
+    {
+        try
+        {
+            await SetAuthHeaderAsync();
+            var response = await _httpClient.GetAsync("/api/users/roles");
+            return await ProcessResponseAsync<List<string>>(response);
+        }
+        catch (Exception ex)
+        {
+            return ErrorResponse<List<string>>($"Error de conexión: {ex.Message}");
+        }
+    }
+
+    // === REPROGRAMACIÓN DE TURNOS (Admin) ===
+
+    public async Task<ApiResponse<ReprogramarPreviewDto>> GetReprogramarPreviewAsync(DateTime fecha)
+    {
+        try
+        {
+            await SetAuthHeaderAsync();
+            var response = await _httpClient.GetAsync($"/api/turnos/reprogramar/preview?fecha={fecha:yyyy-MM-dd}");
+            return await ProcessResponseAsync<ReprogramarPreviewDto>(response);
+        }
+        catch (Exception ex)
+        {
+            return ErrorResponse<ReprogramarPreviewDto>($"Error de conexión: {ex.Message}");
+        }
+    }
+
+    public async Task<ApiResponse<ReprogramarResultDto>> ReprogramarTurnosAsync(DateTime fechaAfectada, string motivo)
+    {
+        try
+        {
+            await SetAuthHeaderAsync();
+            var request = new { FechaAfectada = fechaAfectada, Motivo = motivo };
+            var response = await _httpClient.PostAsJsonAsync("/api/turnos/reprogramar", request);
+            return await ProcessResponseAsync<ReprogramarResultDto>(response);
+        }
+        catch (Exception ex)
+        {
+            return ErrorResponse<ReprogramarResultDto>($"Error de conexión: {ex.Message}");
+        }
+    }
+
     // Clases auxiliares para deserializar respuesta de reportes
     private class ApiResponseReport
     {
