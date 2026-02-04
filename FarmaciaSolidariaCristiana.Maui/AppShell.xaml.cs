@@ -13,11 +13,27 @@ public partial class AppShell : Shell
         InitializeComponent();
         _authService = authService;
         
+        // Aplicar tema al Flyout
+        ApplyFlyoutTheme();
+        
         // Register routes for navigation
         RegisterRoutes();
         
         // Check authentication status on startup
         CheckAuthenticationAsync();
+    }
+    
+    private void ApplyFlyoutTheme()
+    {
+        // Aplicar color de fondo según el tema
+        if (Application.Current?.RequestedTheme == AppTheme.Dark)
+        {
+            this.FlyoutBackgroundColor = Color.FromArgb("#1a1a1a");
+        }
+        else
+        {
+            this.FlyoutBackgroundColor = Colors.White;
+        }
     }
     
     private void RegisterRoutes()

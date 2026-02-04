@@ -42,12 +42,12 @@
             </Frame>
 
             <!-- Formulario -->
-            <Frame BackgroundColor="White" CornerRadius="15" Padding="20" HasShadow="True">
+            <Frame BackgroundColor="{AppThemeBinding Light=White, Dark=#2a2a2a}" CornerRadius="15" Padding="20" HasShadow="True">
                 <StackLayout Spacing="15">
                     <Label Text="📅 Seleccionar Fecha a Reprogramar" 
                            FontSize="18" 
                            FontAttributes="Bold"
-                           TextColor="{StaticResource Dark}"/>
+                           TextColor="{AppThemeBinding Light=#1a1a1a, Dark=#e0e0e0}"/>
 
                     <StackLayout Spacing="5">
                         <Label Text="Fecha" FontSize="14" TextColor="{StaticResource Gray600}"/>
@@ -73,7 +73,7 @@
                            Padding="15"
                            HasShadow="False">
                         <StackLayout Spacing="10">
-                            <Label FontSize="16" FontAttributes="Bold" TextColor="{StaticResource Dark}">
+                            <Label FontSize="16" FontAttributes="Bold" TextColor="{AppThemeBinding Light=#1a1a1a, Dark=#e0e0e0}">
                                 <Label.FormattedText>
                                     <FormattedString>
                                         <Span Text="📊 Turnos encontrados: "/>
@@ -87,7 +87,7 @@
                                             IsVisible="{Binding TurnosAfectados}">
                                 <CollectionView.ItemTemplate>
                                     <DataTemplate x:DataType="services:TurnoAfectadoDto">
-                                        <Frame BackgroundColor="White" 
+                                        <Frame BackgroundColor="{AppThemeBinding Light=White, Dark=#2a2a2a}" 
                                                CornerRadius="8" 
                                                Padding="10"
                                                Margin="0,3"
@@ -97,7 +97,7 @@
                                                     <Label Text="{Binding UserName}" 
                                                            FontSize="14" 
                                                            FontAttributes="Bold"
-                                                           TextColor="{StaticResource Dark}"/>
+                                                           TextColor="{AppThemeBinding Light=#1a1a1a, Dark=#e0e0e0}"/>
                                                     <Label Text="{Binding FechaPreferida, StringFormat='{0:dd/MM/yyyy HH:mm}'}" 
                                                            FontSize="12" 
                                                            TextColor="{StaticResource Gray600}"/>

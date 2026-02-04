@@ -33,12 +33,12 @@
                    HorizontalOptions="Center"/>
 
             <!-- Date Range for Entregas and Donaciones -->
-            <Frame BackgroundColor="White" CornerRadius="15" Padding="20" HasShadow="True">
+            <Frame BackgroundColor="{AppThemeBinding Light=White, Dark=#2a2a2a}" CornerRadius="15" Padding="20" HasShadow="True">
                 <StackLayout Spacing="15">
                     <Label Text="📅 Reportes por Rango de Fechas" 
                            FontSize="18" 
                            FontAttributes="Bold"
-                           TextColor="{StaticResource Dark}"/>
+                           TextColor="{AppThemeBinding Light=#1a1a1a, Dark=#e0e0e0}"/>
                     
                     <Grid ColumnDefinitions="*,*" ColumnSpacing="15">
                         <StackLayout Grid.Column="0" Spacing="5">
@@ -73,7 +73,7 @@
                                 <Label Text="🚚" FontSize="20" HorizontalOptions="Center" VerticalOptions="Center"/>
                             </Frame>
                             <StackLayout Grid.Column="1" VerticalOptions="Center" Padding="12,0">
-                                <Label Text="Reporte de Entregas" FontSize="15" FontAttributes="Bold" TextColor="{StaticResource Dark}"/>
+                                <Label Text="Reporte de Entregas" FontSize="15" FontAttributes="Bold" TextColor="{AppThemeBinding Light=#1a1a1a, Dark=#e0e0e0}"/>
                                 <Label Text="Entregas realizadas en el período" FontSize="12" TextColor="{StaticResource Gray600}"/>
                             </StackLayout>
                             <Label Grid.Column="2" Text="›" FontSize="24" TextColor="{StaticResource Primary}" VerticalOptions="Center" FontAttributes="Bold"/>
@@ -96,7 +96,7 @@
                                 <Label Text="❤️" FontSize="20" HorizontalOptions="Center" VerticalOptions="Center"/>
                             </Frame>
                             <StackLayout Grid.Column="1" VerticalOptions="Center" Padding="12,0">
-                                <Label Text="Reporte de Donaciones" FontSize="15" FontAttributes="Bold" TextColor="{StaticResource Dark}"/>
+                                <Label Text="Reporte de Donaciones" FontSize="15" FontAttributes="Bold" TextColor="{AppThemeBinding Light=#1a1a1a, Dark=#e0e0e0}"/>
                                 <Label Text="Donaciones recibidas en el período" FontSize="12" TextColor="{StaticResource Gray600}"/>
                             </StackLayout>
                             <Label Grid.Column="2" Text="›" FontSize="24" TextColor="{StaticResource Primary}" VerticalOptions="Center" FontAttributes="Bold"/>
@@ -106,12 +106,12 @@
             </Frame>
 
             <!-- Monthly Report Section -->
-            <Frame BackgroundColor="White" CornerRadius="15" Padding="20" HasShadow="True">
+            <Frame BackgroundColor="{AppThemeBinding Light=White, Dark=#2a2a2a}" CornerRadius="15" Padding="20" HasShadow="True">
                 <StackLayout Spacing="15">
                     <Label Text="📆 Reporte Mensual General" 
                            FontSize="18" 
                            FontAttributes="Bold"
-                           TextColor="{StaticResource Dark}"/>
+                           TextColor="{AppThemeBinding Light=#1a1a1a, Dark=#e0e0e0}"/>
                     
                     <Grid ColumnDefinitions="*,*" ColumnSpacing="15">
                         <StackLayout Grid.Column="0" Spacing="5">
@@ -139,7 +139,7 @@
                                    WidthRequest="45" 
                                    HeightRequest="45" 
                                    CornerRadius="22"
-                                   BackgroundColor="White"
+                                   BackgroundColor="{AppThemeBinding Light=White, Dark=#2a2a2a}"
                                    BorderColor="Transparent"
                                    Padding="0">
                                 <Label Text="📊" FontSize="20" HorizontalOptions="Center" VerticalOptions="Center"/>

@@ -6,7 +6,6 @@
     xmlns:views="clr-namespace:FarmaciaSolidariaCristiana.Maui.Views"
     Title="Farmacia Solidaria"
     FlyoutBehavior="Flyout"
-    Shell.FlyoutBackgroundColor="#ffffff"
     FlyoutHeaderBehavior="CollapseOnScroll">
     
     <Shell.Resources>
@@ -28,7 +27,7 @@
                    WidthRequest="80" 
                    HeightRequest="80" 
                    CornerRadius="40" 
-                   BackgroundColor="White" 
+                   BackgroundColor="{AppThemeBinding Light=White, Dark=#2a2a2a}" 
                    BorderColor="Transparent"
                    Padding="0"
                    HorizontalOptions="Start"

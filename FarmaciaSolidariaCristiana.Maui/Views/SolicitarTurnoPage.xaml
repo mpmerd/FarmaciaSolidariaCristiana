@@ -61,7 +61,7 @@
                 </Frame>
 
                 <!-- Tipo de Solicitud -->
-                <Frame BackgroundColor="White" Padding="16" CornerRadius="10" HasShadow="True">
+                <Frame BackgroundColor="{AppThemeBinding Light=White, Dark=#2a2a2a}" Padding="16" CornerRadius="10" HasShadow="True">
                     <VerticalStackLayout Spacing="8">
                         <Label Text="📦 Tipo de Solicitud" Style="{StaticResource SectionTitle}"/>
                         <Label Text="Seleccione el tipo de productos *" Style="{StaticResource FieldLabel}"/>
@@ -87,7 +87,7 @@
                 </Frame>
 
                 <!-- Buscador de Items -->
-                <Frame BackgroundColor="White" Padding="16" CornerRadius="10" HasShadow="True">
+                <Frame BackgroundColor="{AppThemeBinding Light=White, Dark=#2a2a2a}" Padding="16" CornerRadius="10" HasShadow="True">
                     <VerticalStackLayout Spacing="8">
                         <Label Text="{Binding IsMedicamento, Converter={StaticResource BoolToTextConverter}, ConverterParameter='🔍 Buscar Medicamento|🔍 Buscar Insumo'}" 
                                Style="{StaticResource SectionTitle}"/>
@@ -169,7 +169,7 @@
                 </Frame>
 
                 <!-- Documentos -->
-                <Frame BackgroundColor="White" Padding="16" CornerRadius="10" HasShadow="True">
+                <Frame BackgroundColor="{AppThemeBinding Light=White, Dark=#2a2a2a}" Padding="16" CornerRadius="10" HasShadow="True">
                     <VerticalStackLayout Spacing="8">
                         <Label Text="📎 Documentos Médicos" Style="{StaticResource SectionTitle}"/>
                         <Label Text="Adjunte recetas, tarjetón sanitario u otros documentos médicos"
@@ -211,7 +211,7 @@
                 </Frame>
 
                 <!-- Notas -->
-                <Frame BackgroundColor="White" Padding="16" CornerRadius="10" HasShadow="True">
+                <Frame BackgroundColor="{AppThemeBinding Light=White, Dark=#2a2a2a}" Padding="16" CornerRadius="10" HasShadow="True">
                     <VerticalStackLayout Spacing="8">
                         <Label Text="📝 Notas Adicionales (Opcional)" Style="{StaticResource SectionTitle}"/>
                         <Editor Placeholder="Información adicional para el farmacéutico..."
@@ -246,7 +246,7 @@
 
         <!-- Loading Overlay -->
         <Grid BackgroundColor="#80000000" IsVisible="{Binding IsBusy}">
-            <Frame BackgroundColor="White" CornerRadius="10" Padding="30" 
+            <Frame BackgroundColor="{AppThemeBinding Light=White, Dark=#2a2a2a}" CornerRadius="10" Padding="30" 
                    HorizontalOptions="Center" VerticalOptions="Center">
                 <VerticalStackLayout Spacing="15">
                     <ActivityIndicator IsRunning="True" Color="{StaticResource Primary}"/>
