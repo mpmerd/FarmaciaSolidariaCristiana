@@ -6,6 +6,11 @@
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
 
+  <!-- Excluir appsettings.Development.json en compilación Release -->
+  <ItemGroup Condition="'$(Configuration)' == 'Release'">
+    <Content Remove="appsettings.Development.json" />
+  </ItemGroup>
+
   <ItemGroup>
     <PackageReference Include="itext7" Version="9.3.0" />
     <PackageReference Include="itext7.bouncy-castle-adapter" Version="9.3.0" />
