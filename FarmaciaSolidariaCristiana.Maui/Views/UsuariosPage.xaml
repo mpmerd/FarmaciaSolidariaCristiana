@@ -53,7 +53,7 @@
 
                     <!-- Formulario Crear/Editar Usuario -->
                     <Frame IsVisible="{Binding IsCreating}"
-                           BackgroundColor="White" 
+                           BackgroundColor="{AppThemeBinding Light=White, Dark=#2a2a2a}" 
                            CornerRadius="15" 
                            Padding="20"
                            HasShadow="True">
@@ -67,6 +67,8 @@
                                 <Label Text="Nombre de Usuario *" FontSize="14" TextColor="{StaticResource Gray600}"/>
                                 <Entry Text="{Binding EditUserName}" 
                                        Placeholder="Ej: JuanPerez"
+                                       TextColor="{AppThemeBinding Light=#1a1a1a, Dark=#e0e0e0}"
+                                       PlaceholderColor="{AppThemeBinding Light=#999999, Dark=#bbbbbb}"
                                        BackgroundColor="{StaticResource Gray100}"/>
                             </StackLayout>
 
@@ -75,6 +77,8 @@
                                 <Entry Text="{Binding EditEmail}" 
                                        Placeholder="correo@ejemplo.com"
                                        Keyboard="Email"
+                                       TextColor="{AppThemeBinding Light=#1a1a1a, Dark=#e0e0e0}"
+                                       PlaceholderColor="{AppThemeBinding Light=#999999, Dark=#bbbbbb}"
                                        BackgroundColor="{StaticResource Gray100}"/>
                             </StackLayout>
 
@@ -83,6 +87,8 @@
                                 <Entry Text="{Binding EditPassword}" 
                                        Placeholder="Mínimo 6 caracteres"
                                        IsPassword="True"
+                                       TextColor="{AppThemeBinding Light=#1a1a1a, Dark=#e0e0e0}"
+                                       PlaceholderColor="{AppThemeBinding Light=#999999, Dark=#bbbbbb}"
                                        BackgroundColor="{StaticResource Gray100}"/>
                             </StackLayout>
 
@@ -112,7 +118,7 @@
 
                     <!-- Formulario Editar Usuario -->
                     <Frame IsVisible="{Binding IsEditing}"
-                           BackgroundColor="White" 
+                           BackgroundColor="{AppThemeBinding Light=White, Dark=#2a2a2a}" 
                            CornerRadius="15" 
                            Padding="20"
                            HasShadow="True">
@@ -125,6 +131,8 @@
                             <StackLayout Spacing="5">
                                 <Label Text="Nombre de Usuario *" FontSize="14" TextColor="{StaticResource Gray600}"/>
                                 <Entry Text="{Binding EditUserName}" 
+                                       TextColor="{AppThemeBinding Light=#1a1a1a, Dark=#e0e0e0}"
+                                       PlaceholderColor="{AppThemeBinding Light=#999999, Dark=#bbbbbb}"
                                        BackgroundColor="{StaticResource Gray100}"/>
                             </StackLayout>
 
@@ -132,6 +140,8 @@
                                 <Label Text="Email *" FontSize="14" TextColor="{StaticResource Gray600}"/>
                                 <Entry Text="{Binding EditEmail}" 
                                        Keyboard="Email"
+                                       TextColor="{AppThemeBinding Light=#1a1a1a, Dark=#e0e0e0}"
+                                       PlaceholderColor="{AppThemeBinding Light=#999999, Dark=#bbbbbb}"
                                        BackgroundColor="{StaticResource Gray100}"/>
                             </StackLayout>
 
@@ -140,6 +150,8 @@
                                 <Entry Text="{Binding EditPassword}" 
                                        Placeholder="Solo si desea cambiarla"
                                        IsPassword="True"
+                                       TextColor="{AppThemeBinding Light=#1a1a1a, Dark=#e0e0e0}"
+                                       PlaceholderColor="{AppThemeBinding Light=#999999, Dark=#bbbbbb}"
                                        BackgroundColor="{StaticResource Gray100}"/>
                             </StackLayout>
 

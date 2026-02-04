@@ -9,6 +9,12 @@
     Shell.FlyoutBackgroundColor="#ffffff"
     FlyoutHeaderBehavior="CollapseOnScroll">
     
+    <Shell.Resources>
+        <Style TargetType="Label">
+            <Setter Property="TextColor" Value="{AppThemeBinding Light=#1a1a1a, Dark=#e0e0e0}" />
+        </Style>
+    </Shell.Resources>
+    
     <!-- Flyout Header -->
     <Shell.FlyoutHeader>
         <Grid HeightRequest="180" BackgroundColor="#0d6efd" Padding="20">

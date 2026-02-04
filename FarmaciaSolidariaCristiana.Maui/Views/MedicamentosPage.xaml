@@ -13,6 +13,9 @@
         <SearchBar Grid.Row="0"
                    Placeholder="Buscar medicamentos..."
                    Text="{Binding SearchText}"
+                   TextColor="{AppThemeBinding Light=#1a1a1a, Dark=#e0e0e0}"
+                   PlaceholderColor="{AppThemeBinding Light=#999999, Dark=#bbbbbb}"
+                   BackgroundColor="{AppThemeBinding Light=White, Dark=#2a2a2a}"
                    SearchCommand="{Binding RefreshCommand}"
                    Margin="10"/>
         

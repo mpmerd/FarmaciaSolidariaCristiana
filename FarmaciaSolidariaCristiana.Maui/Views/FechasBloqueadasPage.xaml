@@ -28,7 +28,7 @@
 
         <!-- Add New Date Form -->
         <Frame Grid.Row="1" 
-               BackgroundColor="White" 
+               BackgroundColor="{AppThemeBinding Light=White, Dark=#2a2a2a}" 
                CornerRadius="15" 
                Margin="15,15,15,0" 
                Padding="15"
@@ -50,12 +50,14 @@
                         <Label Text="Motivo:" FontSize="14" TextColor="{StaticResource Gray600}"/>
                         <Entry Placeholder="Feriado, evento..."
                                Text="{Binding Motivo}"
+                               TextColor="{AppThemeBinding Light=#1a1a1a, Dark=#e0e0e0}"
+                               PlaceholderColor="{AppThemeBinding Light=#999999, Dark=#bbbbbb}"
                                BackgroundColor="{StaticResource Gray100}"/>
                     </StackLayout>
                 </Grid>
                 
                 <Button Text="Agregar Fecha"
-                        BackgroundColor="{StaticResource Primary}"
+                        BackgroundColor="{AppThemeBinding Light=#28a745, Dark=#1e7e34}"
                         TextColor="White"
                         CornerRadius="10"
                         Command="{Binding AddFechaBloqueadaCommand}"
