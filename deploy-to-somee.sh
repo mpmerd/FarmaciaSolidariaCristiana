@@ -131,13 +131,17 @@ echo ""
 
 # Usar lftp para subir archivos (ignorar errores de chmod que Somee no soporta)
 # Usamos --only-newer para actualizar solo los archivos modificados
+# Excluimos carpetas de uploads y pdfs para no subir archivos de prueba o de usuarios
 lftp -c "
 set ssl:verify-certificate no;
 set ftp:use-feat no;
 set ftp:use-site-chmod no;
 open -u $FTP_USER,$FTP_PASS ftp://$FTP_HOST;
 cd $FTP_REMOTE_PATH;
-mirror --reverse --verbose --parallel=3 --only-newer $PUBLISH_DIR .
+mirror --reverse --verbose --parallel=3 --only-newer \
+  --exclude-glob wwwroot/uploads/** \
+  --exclude-glob wwwroot/pdfs/** \
+  $PUBLISH_DIR .
 "
 
 LFTP_EXIT_CODE=$?
@@ -145,6 +149,7 @@ echo ""
 
 if [ $LFTP_EXIT_CODE -eq 0 ]; then
     echo -e "${GREEN}✅ Archivos subidos exitosamente${NC}"
+    echo -e "${BLUE}ℹ️  Nota: Carpetas wwwroot/uploads y wwwroot/pdfs fueron excluidas${NC}"
 else
     echo -e "${YELLOW}⚠️  Proceso completado con advertencias (código: $LFTP_EXIT_CODE)${NC}"
     echo -e "${YELLOW}Los archivos principales se subieron correctamente.${NC}"
