@@ -28,7 +28,7 @@
                             EmptyView="No hay medicamentos para mostrar">
                 <CollectionView.ItemTemplate>
                     <DataTemplate x:DataType="models:Medicine">
-                        <Frame Margin="10,5" Padding="15" CornerRadius="10" HasShadow="True">
+                        <Frame Margin="10,5" Padding="15" CornerRadius="10" HasShadow="True" BackgroundColor="{AppThemeBinding Light=White, Dark=#2a2a2a}">
                             <Frame.GestureRecognizers>
                                 <TapGestureRecognizer 
                                     Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:MedicamentosViewModel}}, Path=SelectMedicamentoCommand}"

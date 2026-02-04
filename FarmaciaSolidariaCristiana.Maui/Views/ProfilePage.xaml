@@ -19,7 +19,7 @@
                     <Frame WidthRequest="100" 
                            HeightRequest="100" 
                            CornerRadius="50"
-                           BackgroundColor="White"
+                           BackgroundColor="{AppThemeBinding Light=White, Dark=#2a2a2a}"
                            BorderColor="Transparent"
                            Padding="0"
                            HorizontalOptions="Center">
@@ -56,11 +56,11 @@
             <Label Text="Configuración" 
                    FontSize="18" 
                    FontAttributes="Bold"
-                   TextColor="{StaticResource Dark}"
+                   TextColor="{AppThemeBinding Light=#1a1a1a, Dark=#e0e0e0}"
                    Margin="0,10,0,0"/>
 
             <!-- Notifications Toggle -->
-            <Frame BackgroundColor="White" CornerRadius="15" Padding="15" HasShadow="True">
+            <Frame BackgroundColor="{AppThemeBinding Light=White, Dark=#2a2a2a}" CornerRadius="15" Padding="15" HasShadow="True">
                 <Grid ColumnDefinitions="Auto,*,Auto">
                     <Frame Grid.Column="0" 
                            WidthRequest="45" 
@@ -73,7 +73,7 @@
                     </Frame>
                     
                     <StackLayout Grid.Column="1" VerticalOptions="Center" Padding="15,0">
-                        <Label Text="Notificaciones Push" FontSize="16" FontAttributes="Bold" TextColor="{StaticResource Dark}"/>
+                        <Label Text="Notificaciones Push" FontSize="16" FontAttributes="Bold" TextColor="{AppThemeBinding Light=#1a1a1a, Dark=#e0e0e0}"/>
                         <Label Text="Recibe alertas de turnos y actualizaciones" FontSize="12" TextColor="{StaticResource Gray600}"/>
                     </StackLayout>
                     
@@ -85,7 +85,7 @@
             </Frame>
 
             <!-- Change Password -->
-            <Frame BackgroundColor="White" CornerRadius="15" Padding="0" HasShadow="True">
+            <Frame BackgroundColor="{AppThemeBinding Light=White, Dark=#2a2a2a}" CornerRadius="15" Padding="0" HasShadow="True">
                 <Frame.GestureRecognizers>
                     <TapGestureRecognizer Command="{Binding ChangePasswordCommand}"/>
                 </Frame.GestureRecognizers>
@@ -101,7 +101,7 @@
                     </Frame>
                     
                     <StackLayout Grid.Column="1" VerticalOptions="Center" Padding="15,0">
-                        <Label Text="Cambiar Contraseña" FontSize="16" FontAttributes="Bold" TextColor="{StaticResource Dark}"/>
+                        <Label Text="Cambiar Contraseña" FontSize="16" FontAttributes="Bold" TextColor="{AppThemeBinding Light=#1a1a1a, Dark=#e0e0e0}"/>
                         <Label Text="Actualiza tu contraseña de acceso" FontSize="12" TextColor="{StaticResource Gray600}"/>
                     </StackLayout>
                     
@@ -117,12 +117,12 @@
                    Margin="0,10,0,0"/>
 
             <!-- About App -->
-            <Frame BackgroundColor="White" CornerRadius="15" Padding="15" HasShadow="True">
+            <Frame BackgroundColor="{AppThemeBinding Light=White, Dark=#2a2a2a}" CornerRadius="15" Padding="15" HasShadow="True">
                 <StackLayout Spacing="10">
                     <Label Text="Farmacia Solidaria Cristiana" 
                            FontSize="16" 
                            FontAttributes="Bold"
-                           TextColor="{StaticResource Dark}"/>
+                           TextColor="{AppThemeBinding Light=#1a1a1a, Dark=#e0e0e0}"/>
                     <Label Text="Versión 1.0.0" 
                            FontSize="14" 
                            TextColor="{StaticResource Gray600}"/>
