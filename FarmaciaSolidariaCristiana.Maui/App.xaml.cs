@@ -10,6 +10,7 @@ namespace FarmaciaSolidariaCristiana.Maui;
 public partial class App : Application
 {
     private readonly IAuthService _authService;
+    private readonly UpdateService _updateService;
     
     // Static property to track OneSignal initialization status
     public static bool IsOneSignalInitialized { get; private set; }
@@ -20,9 +21,17 @@ public partial class App : Application
     {
         InitializeComponent();
         _authService = authService;
+        _updateService = new UpdateService();
         
         // Initialize OneSignal
         InitializeOneSignal();
+        
+        // Check for updates after app starts
+        MainThread.BeginInvokeOnMainThread(async () =>
+        {
+            await Task.Delay(2000); // Esperar 2 segundos después del inicio
+            await _updateService.CheckForUpdatesAsync();
+        });
     }
 
     private void InitializeOneSignal()

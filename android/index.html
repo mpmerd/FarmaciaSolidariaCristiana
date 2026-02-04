@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Farmacia Solidaria Cristiana - Descargar App</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 500px;
+            width: 100%;
+            padding: 40px;
+            text-align: center;
+        }
+        
+        .icon {
+            width: 100px;
+            height: 100px;
+            background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);
+            border-radius: 20px;
+            margin: 0 auto 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 50px;
+        }
+        
+        h1 {
+            color: #1a1a1a;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+        
+        .version {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        
+        .info {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: left;
+        }
+        
+        .info-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .info-item:last-child {
+            border-bottom: none;
+        }
+        
+        .info-label {
+            color: #666;
+            font-weight: 500;
+        }
+        
+        .info-value {
+            color: #1a1a1a;
+            font-weight: 600;
+        }
+        
+        .download-btn {
+            background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);
+            color: white;
+            border: none;
+            padding: 16px 40px;
+            border-radius: 12px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 20px;
+            transition: transform 0.2s, box-shadow 0.2s;
+            text-decoration: none;
+            display: inline-block;
+        }
+        
+        .download-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(13, 110, 253, 0.4);
+        }
+        
+        .release-notes {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 20px;
+            text-align: left;
+        }
+        
+        .release-notes h3 {
+            color: #1a1a1a;
+            margin-bottom: 12px;
+            font-size: 16px;
+        }
+        
+        .release-notes ul {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .release-notes li {
+            color: #666;
+            padding: 6px 0;
+            padding-left: 20px;
+            position: relative;
+        }
+        
+        .release-notes li:before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: #0d6efd;
+            font-weight: bold;
+        }
+        
+        .footer {
+            margin-top: 30px;
+            color: #999;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="icon">💊</div>
+        <h1>Farmacia Solidaria Cristiana</h1>
+        <p class="version" id="version">Versión 1.0.0</p>
+        
+        <div class="info">
+            <div class="info-item">
+                <span class="info-label">📅 Fecha de lanzamiento</span>
+                <span class="info-value" id="releaseDate">2026-02-04</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">📦 Tamaño</span>
+                <span class="info-value" id="fileSize">33 MB</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">📱 Android mínimo</span>
+                <span class="info-value" id="minAndroid">7.0 (API 24)</span>
+            </div>
+        </div>
+        
+        <a href="farmaciasolidaria.apk" class="download-btn" download>
+            📥 Descargar APK
+        </a>
+        
+        <div class="release-notes">
+            <h3>📝 Novedades de esta versión</h3>
+            <ul id="releaseNotes">
+                <li>Versión inicial</li>
+                <li>Sistema de gestión de usuarios</li>
+                <li>Sistema de turnos y pacientes</li>
+                <li>Gestión de medicamentos e insumos</li>
+                <li>Modo oscuro completo</li>
+            </ul>
+        </div>
+        
+        <div class="footer">
+            <p>© 2026 Farmacia Solidaria Cristiana</p>
+        </div>
+    </div>
+    
+    <script>
+        // Cargar información de version.json
+        fetch('version.json')
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('version').textContent = `Versión ${data.version}`;
+                document.getElementById('releaseDate').textContent = data.releaseDate;
+                document.getElementById('fileSize').textContent = data.fileSize;
+                
+                // Actualizar notas de versión
+                const notesList = document.getElementById('releaseNotes');
+                const notes = data.releaseNotes.split('\n').filter(note => note.trim());
+                notesList.innerHTML = notes.map(note => `<li>${note.replace(/^- /, '')}</li>`).join('');
+            })
+            .catch(error => console.error('Error loading version info:', error));
+    </script>
+</body>
+</html>
