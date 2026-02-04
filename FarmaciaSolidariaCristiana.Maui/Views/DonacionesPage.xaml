@@ -13,7 +13,9 @@
         <SearchBar Grid.Row="0"
                    Placeholder="Buscar donaciones..."
                    Text="{Binding SearchText}"
-                   BackgroundColor="White"
+                   TextColor="{AppThemeBinding Light=#1a1a1a, Dark=#e0e0e0}"
+                   PlaceholderColor="{AppThemeBinding Light=#999999, Dark=#bbbbbb}"
+                   BackgroundColor="{AppThemeBinding Light=White, Dark=#2a2a2a}"
                    Margin="10"/>
 
         <!-- Loading Indicator -->

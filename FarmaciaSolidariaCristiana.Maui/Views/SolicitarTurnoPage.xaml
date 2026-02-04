@@ -35,13 +35,15 @@
                 </Frame>
 
                 <!-- Documento de Identidad -->
-                <Frame BackgroundColor="White" Padding="16" CornerRadius="10" HasShadow="True">
+                <Frame BackgroundColor="{AppThemeBinding Light=White, Dark=#2a2a2a}" Padding="16" CornerRadius="10" HasShadow="True">
                     <VerticalStackLayout Spacing="8">
                         <Label Text="📋 Identificación" Style="{StaticResource SectionTitle}"/>
                         
                         <Label Text="Carnet de Identidad o Pasaporte *" Style="{StaticResource FieldLabel}"/>
                         <Entry Placeholder="Ej: 88012312345 o A1234567"
                                Text="{Binding DocumentoIdentidad}"
+                               TextColor="{AppThemeBinding Light=#1a1a1a, Dark=#e0e0e0}"
+                               PlaceholderColor="{AppThemeBinding Light=#999999, Dark=#bbbbbb}"
                                Keyboard="Text"
                                MaxLength="20"
                                ReturnType="Next"/>
@@ -143,6 +145,7 @@
                                                 <Label Text="Cant:" VerticalOptions="Center" FontSize="12"/>
                                                 <Entry Text="{Binding Cantidad}" 
                                                        Keyboard="Numeric" 
+                                                       TextColor="{AppThemeBinding Light=#1a1a1a, Dark=#e0e0e0}"
                                                        WidthRequest="50"
                                                        HorizontalTextAlignment="Center"/>
                                             </HorizontalStackLayout>

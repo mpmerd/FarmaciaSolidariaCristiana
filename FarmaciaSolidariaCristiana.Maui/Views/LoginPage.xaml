@@ -32,23 +32,29 @@
             
             <!-- Email/Usuario -->
             <Frame BorderColor="{StaticResource Gray200}" 
+                   BackgroundColor="{AppThemeBinding Light=White, Dark=#2a2a2a}"
                    Padding="10" 
                    CornerRadius="10"
                    HasShadow="False">
                 <Entry Placeholder="Correo electrónico o usuario"
                        Text="{Binding Email}"
+                       TextColor="{AppThemeBinding Light=#1a1a1a, Dark=#e0e0e0}"
+                       PlaceholderColor="{AppThemeBinding Light=#999999, Dark=#bbbbbb}"
                        Keyboard="Email"
                        ReturnType="Next"/>
             </Frame>
             
             <!-- Password -->
             <Frame BorderColor="{StaticResource Gray200}" 
+                   BackgroundColor="{AppThemeBinding Light=White, Dark=#2a2a2a}"
                    Padding="10" 
                    CornerRadius="10"
                    HasShadow="False">
                 <Grid ColumnDefinitions="*, Auto">
                     <Entry Placeholder="Contraseña"
                            Text="{Binding Password}"
+                           TextColor="{AppThemeBinding Light=#1a1a1a, Dark=#e0e0e0}"
+                           PlaceholderColor="{AppThemeBinding Light=#999999, Dark=#bbbbbb}"
                            IsPassword="{Binding IsPasswordVisible, Converter={toolkit:InvertedBoolConverter}}"
                            ReturnType="Done"/>
                     <ImageButton Grid.Column="1"
@@ -69,7 +75,7 @@
             <Button Text="Iniciar Sesión"
                     Command="{Binding LoginCommand}"
                     IsEnabled="{Binding IsNotBusy}"
-                    BackgroundColor="{StaticResource Primary}"
+                    BackgroundColor="{AppThemeBinding Light=#28a745, Dark=#1e7e34}"
                     TextColor="White"
                     CornerRadius="10"
                     HeightRequest="50"
