@@ -60,7 +60,21 @@ echo ""
 FTP_HOST="farmaciasolidaria.somee.com"
 FTP_USER="maikelpelaez"
 FTP_REMOTE_PATH="/www.farmaciasolidaria.somee.com"
-PUBLISH_DIR="publish"
+
+# Detectar directorio de publish correcto
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [ -d "$SCRIPT_DIR/FarmaciaSolidariaCristiana/publish" ]; then
+    PUBLISH_DIR="$SCRIPT_DIR/FarmaciaSolidariaCristiana/publish"
+elif [ -d "$SCRIPT_DIR/publish" ]; then
+    PUBLISH_DIR="$SCRIPT_DIR/publish"
+else
+    echo -e "${RED}❌ Error: No se encontró directorio publish${NC}"
+    echo "Ejecuta primero:"
+    echo "  cd FarmaciaSolidariaCristiana && dotnet publish -c Release -o publish"
+    exit 1
+fi
+
+echo -e "${BLUE}📁 Usando directorio: $PUBLISH_DIR${NC}"
 
 echo -e "${YELLOW}📋 Verificando archivos compilados...${NC}"
 if [ ! -d "$PUBLISH_DIR" ]; then
@@ -80,6 +94,32 @@ if [ $FILE_COUNT -lt 10 ]; then
 fi
 
 echo -e "${GREEN}✅ Encontrados $FILE_COUNT archivos para subir${NC}"
+echo ""
+
+# Verificar DLLs críticos de JWT (estos causaron problemas en el pasado)
+echo -e "${YELLOW}🔐 Verificando DLLs críticos de JWT...${NC}"
+JWT_DLLS=(
+    "Microsoft.IdentityModel.Tokens.dll"
+    "System.IdentityModel.Tokens.Jwt.dll"
+    "Microsoft.IdentityModel.JsonWebTokens.dll"
+    "Microsoft.IdentityModel.Logging.dll"
+    "Microsoft.IdentityModel.Abstractions.dll"
+)
+JWT_MISSING=0
+for dll in "${JWT_DLLS[@]}"; do
+    if [ ! -f "$PUBLISH_DIR/$dll" ]; then
+        echo -e "${RED}  ❌ Falta: $dll${NC}"
+        JWT_MISSING=1
+    fi
+done
+
+if [ $JWT_MISSING -eq 1 ]; then
+    echo -e "${RED}❌ ERROR: Faltan DLLs críticos de JWT${NC}"
+    echo "Estos son necesarios para la autenticación API."
+    echo "Recompila el proyecto completo."
+    exit 1
+fi
+echo -e "${GREEN}✅ DLLs de JWT verificados${NC}"
 echo ""
 
 # Verificar que appsettings.json tiene configuración de producción
@@ -159,9 +199,21 @@ fi
 
 echo ""
 echo -e "${GREEN}=========================================="
-echo "✅ ¡Despliegue Completado!"
+echo "✅ ¡Archivos Subidos!"
 echo "==========================================${NC}"
 echo ""
+
+echo -e "${YELLOW}⚠️  PASO FINAL IMPORTANTE:${NC}"
+echo "  1. Ve al panel de Somee"
+echo "  2. Inicia la aplicación"
+echo "  3. Verifica que funcione correctamente"
+echo ""
+
+echo -e "${BLUE}📋 Comandos de verificación (ejecutar después de iniciar la app):${NC}"
+echo "  curl https://farmaciasolidaria.somee.com/api/diagnostics/ping"
+echo "  curl https://farmaciasolidaria.somee.com/api/diagnostics/test-jwt-simple"
+echo ""
+
 echo "Tu aplicación está disponible en:"
 echo "  🌐 https://farmaciasolidaria.somee.com"
 echo ""
