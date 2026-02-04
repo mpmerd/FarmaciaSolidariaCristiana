@@ -7,7 +7,8 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
 {
     /// <summary>
     /// Controlador de diagnóstico para verificar que la API funciona correctamente.
-    /// Este controlador NO hereda de ApiBaseController para aislar problemas.
+    /// SEGURIDAD: Solo el endpoint 'ping' está disponible en producción.
+    /// Los demás endpoints solo funcionan en Development.
     /// </summary>
     [Route("api/[controller]")]
     [ApiController]
@@ -15,17 +16,33 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
     {
         private readonly IConfiguration _configuration;
         private readonly IServiceProvider _serviceProvider;
+        private readonly IWebHostEnvironment _environment;
 
         public DiagnosticsController(
             IConfiguration configuration,
-            IServiceProvider serviceProvider)
+            IServiceProvider serviceProvider,
+            IWebHostEnvironment environment)
         {
             _configuration = configuration;
             _serviceProvider = serviceProvider;
+            _environment = environment;
+        }
+
+        /// <summary>
+        /// Verifica si estamos en desarrollo - retorna 404 si no
+        /// </summary>
+        private IActionResult? CheckDevelopmentOnly()
+        {
+            if (!_environment.IsDevelopment())
+            {
+                return NotFound(new { error = "Endpoint not available in production" });
+            }
+            return null;
         }
 
         /// <summary>
         /// Ping simple - retorna OK si el servidor está funcionando
+        /// Este es el ÚNICO endpoint disponible en producción
         /// </summary>
         [HttpGet("ping")]
         [AllowAnonymous]
@@ -33,18 +50,20 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
         {
             return Ok(new { 
                 status = "OK", 
-                timestamp = DateTime.UtcNow,
-                environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Unknown"
+                timestamp = DateTime.UtcNow
             });
         }
 
         /// <summary>
-        /// Verifica la configuración básica
+        /// Verifica la configuración básica (SOLO DEVELOPMENT)
         /// </summary>
         [HttpGet("config")]
         [AllowAnonymous]
         public IActionResult CheckConfig()
         {
+            var devCheck = CheckDevelopmentOnly();
+            if (devCheck != null) return devCheck;
+
             try
             {
                 var hasConnectionString = !string.IsNullOrEmpty(_configuration.GetConnectionString("DefaultConnection"));
@@ -75,12 +94,15 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
         }
 
         /// <summary>
-        /// Verifica los servicios registrados
+        /// Verifica los servicios registrados (SOLO DEVELOPMENT)
         /// </summary>
         [HttpGet("services")]
         [AllowAnonymous]
         public IActionResult CheckServices()
         {
+            var devCheck = CheckDevelopmentOnly();
+            if (devCheck != null) return devCheck;
+
             var results = new Dictionary<string, string>();
             
             try
@@ -128,12 +150,15 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
         }
 
         /// <summary>
-        /// Verifica la conexión a la base de datos
+        /// Verifica la conexión a la base de datos (SOLO DEVELOPMENT)
         /// </summary>
         [HttpGet("database")]
         [AllowAnonymous]
         public async Task<IActionResult> CheckDatabase()
         {
+            var devCheck = CheckDevelopmentOnly();
+            if (devCheck != null) return devCheck;
+
             try
             {
                 using var scope = _serviceProvider.CreateScope();
@@ -176,12 +201,15 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
         }
 
         /// <summary>
-        /// Endpoint que hereda el comportamiento de ApiBaseController para diagnosticar
+        /// Endpoint que hereda el comportamiento de ApiBaseController para diagnosticar (SOLO DEVELOPMENT)
         /// </summary>
         [HttpGet("auth-error-details")]
         [AllowAnonymous]
         public IActionResult GetAuthErrorDetails()
         {
+            var devCheck = CheckDevelopmentOnly();
+            if (devCheck != null) return devCheck;
+
             try
             {
                 // Verificar si la configuración JWT está completa
@@ -223,12 +251,15 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
         }
 
         /// <summary>
-        /// Probar si UserManager funciona
+        /// Probar si UserManager funciona (SOLO DEVELOPMENT)
         /// </summary>
         [HttpGet("test-identity")]
         [AllowAnonymous]
         public async Task<IActionResult> TestIdentity()
         {
+            var devCheck = CheckDevelopmentOnly();
+            if (devCheck != null) return devCheck;
+
             try
             {
                 using var scope = _serviceProvider.CreateScope();
@@ -258,12 +289,15 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
         }
 
         /// <summary>
-        /// Probar login simulado
+        /// Probar login simulado (SOLO DEVELOPMENT)
         /// </summary>
         [HttpPost("test-login")]
         [AllowAnonymous]
         public async Task<IActionResult> TestLogin([FromBody] TestLoginDto model)
         {
+            var devCheck = CheckDevelopmentOnly();
+            if (devCheck != null) return devCheck;
+
             try
             {
                 using var scope = _serviceProvider.CreateScope();
@@ -302,12 +336,15 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
         }
 
         /// <summary>
-        /// Verificar ensamblados JWT cargados
+        /// Verificar ensamblados JWT cargados (SOLO DEVELOPMENT)
         /// </summary>
         [HttpGet("check-assemblies")]
         [AllowAnonymous]
         public IActionResult CheckAssemblies()
         {
+            var devCheck = CheckDevelopmentOnly();
+            if (devCheck != null) return devCheck;
+
             try
             {
                 var assemblies = AppDomain.CurrentDomain.GetAssemblies()
@@ -340,12 +377,15 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
         }
 
         /// <summary>
-        /// Probar solo la creación del handler
+        /// Probar solo la creación del handler (SOLO DEVELOPMENT)
         /// </summary>
         [HttpGet("test-jwt-handler")]
         [AllowAnonymous]
         public IActionResult TestJwtHandler()
         {
+            var devCheck = CheckDevelopmentOnly();
+            if (devCheck != null) return devCheck;
+
             try
             {
                 var handler = new System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler();
@@ -369,12 +409,15 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
         }
 
         /// <summary>
-        /// Probar solo SymmetricSecurityKey
+        /// Probar solo SymmetricSecurityKey (SOLO DEVELOPMENT)
         /// </summary>
         [HttpGet("test-symmetric-key")]
         [AllowAnonymous]
         public IActionResult TestSymmetricKey()
         {
+            var devCheck = CheckDevelopmentOnly();
+            if (devCheck != null) return devCheck;
+
             try
             {
                 var keyBytes = System.Text.Encoding.UTF8.GetBytes("test-key-12345678901234567890123456");
@@ -397,12 +440,15 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
         }
 
         /// <summary>
-        /// Probar generación de token JWT - paso a paso
+        /// Probar generación de token JWT - paso a paso (SOLO DEVELOPMENT)
         /// </summary>
         [HttpGet("test-jwt-simple")]
         [AllowAnonymous]
         public IActionResult TestJwtSimple()
         {
+            var devCheck = CheckDevelopmentOnly();
+            if (devCheck != null) return devCheck;
+
             var steps = new List<string>();
             
             try
@@ -482,12 +528,15 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
         }
 
         /// <summary>
-        /// Probar generación de token JWT - paso a paso
+        /// Probar generación de token JWT - paso a paso (SOLO DEVELOPMENT)
         /// </summary>
         [HttpPost("test-jwt")]
         [AllowAnonymous]
         public async Task<IActionResult> TestJwtGeneration([FromBody] TestLoginDto model)
         {
+            var devCheck = CheckDevelopmentOnly();
+            if (devCheck != null) return devCheck;
+
             var steps = new List<string>();
             
             try

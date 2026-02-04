@@ -44,66 +44,81 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
         [ProducesResponseType(typeof(ApiResponse<object>), 401)]
         public async Task<IActionResult> Login([FromBody] LoginRequestDto model)
         {
-            if (!ModelState.IsValid)
+            try
             {
-                return ApiError("Datos de login inválidos");
-            }
-
-            // Buscar por email o por username
-            var user = await _userManager.FindByEmailAsync(model.Email);
-            if (user == null)
-            {
-                user = await _userManager.FindByNameAsync(model.Email);
-            }
-            
-            if (user == null)
-            {
-                _logger.LogWarning("Intento de login fallido para: {Email}", model.Email);
-                return ApiError("Credenciales inválidas", 401);
-            }
-
-            // Verificar si el usuario está bloqueado
-            if (await _userManager.IsLockedOutAsync(user))
-            {
-                _logger.LogWarning("Usuario bloqueado intentó iniciar sesión: {Email}", model.Email);
-                return ApiError("La cuenta está bloqueada temporalmente. Intente más tarde.", 401);
-            }
-
-            var result = await _signInManager.CheckPasswordSignInAsync(user, model.Password, lockoutOnFailure: true);
-            
-            if (!result.Succeeded)
-            {
-                if (result.IsLockedOut)
+                if (!ModelState.IsValid)
                 {
-                    return ApiError("La cuenta ha sido bloqueada por demasiados intentos fallidos.", 401);
+                    return ApiError("Datos de login inválidos");
+                }
+
+                // Buscar por email o por username
+                var user = await _userManager.FindByEmailAsync(model.Email);
+                if (user == null)
+                {
+                    user = await _userManager.FindByNameAsync(model.Email);
                 }
                 
-                _logger.LogWarning("Contraseña incorrecta para usuario: {Email}", model.Email);
-                return ApiError("Credenciales inválidas", 401);
-            }
-
-            // Obtener roles del usuario
-            var roles = await _userManager.GetRolesAsync(user);
-            
-            // Generar token JWT
-            var token = GenerateJwtToken(user, roles);
-            var refreshToken = GenerateRefreshToken();
-
-            _logger.LogInformation("Login exitoso para usuario: {Email}", model.Email);
-
-            return ApiOk(new LoginResponseDto
-            {
-                Token = token,
-                RefreshToken = refreshToken,
-                Expiration = DateTime.UtcNow.AddMinutes(GetTokenExpirationMinutes()),
-                User = new UserDto
+                if (user == null)
                 {
-                    Id = user.Id,
-                    Email = user.Email!,
-                    UserName = user.UserName!,
-                    Roles = roles.ToList()
+                    _logger.LogWarning("Intento de login fallido para: {Email}", model.Email);
+                    return ApiError("Credenciales inválidas", 401);
                 }
-            }, "Login exitoso");
+
+                // Verificar si el usuario está bloqueado
+                if (await _userManager.IsLockedOutAsync(user))
+                {
+                    _logger.LogWarning("Usuario bloqueado intentó iniciar sesión: {Email}", model.Email);
+                    return ApiError("La cuenta está bloqueada temporalmente. Intente más tarde.", 401);
+                }
+
+                var result = await _signInManager.CheckPasswordSignInAsync(user, model.Password, lockoutOnFailure: true);
+                
+                if (!result.Succeeded)
+                {
+                    if (result.IsLockedOut)
+                    {
+                        return ApiError("La cuenta ha sido bloqueada por demasiados intentos fallidos.", 401);
+                    }
+                    
+                    _logger.LogWarning("Contraseña incorrecta para usuario: {Email}", model.Email);
+                    return ApiError("Credenciales inválidas", 401);
+                }
+
+                // Obtener roles del usuario
+                var roles = await _userManager.GetRolesAsync(user);
+                
+                // Generar token JWT
+                var token = GenerateJwtToken(user, roles);
+                var refreshToken = GenerateRefreshToken();
+
+                _logger.LogInformation("Login exitoso para usuario: {Email}", model.Email);
+
+                return ApiOk(new LoginResponseDto
+                {
+                    Token = token,
+                    RefreshToken = refreshToken,
+                    Expiration = DateTime.UtcNow.AddMinutes(GetTokenExpirationMinutes()),
+                    User = new UserDto
+                    {
+                        Id = user.Id,
+                        Email = user.Email!,
+                        UserName = user.UserName!,
+                        Roles = roles.ToList()
+                    }
+                }, "Login exitoso");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error en login para: {Email}", model.Email);
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message = "Error interno en login",
+                    error = ex.Message,
+                    innerError = ex.InnerException?.Message,
+                    stackTrace = ex.StackTrace?.Substring(0, Math.Min(500, ex.StackTrace?.Length ?? 0))
+                });
+            }
         }
 
         /// <summary>
@@ -370,5 +385,69 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
         }
 
         #endregion
+
+        /// <summary>
+        /// Endpoint de prueba para verificar que la API funciona
+        /// </summary>
+        [HttpGet("ping")]
+        [AllowAnonymous]
+        public IActionResult Ping()
+        {
+            try
+            {
+                // Obtener info de configuración (sin datos sensibles)
+                var connectionString = _configuration.GetConnectionString("DefaultConnection") ?? "No configurado";
+                var hasSomeeInConnection = connectionString.Contains("somee", StringComparison.OrdinalIgnoreCase);
+                var hasLocalIpInConnection = connectionString.Contains("192.168");
+                
+                return Ok(new { 
+                    success = true, 
+                    message = "API funcionando", 
+                    timestamp = DateTime.UtcNow,
+                    environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production",
+                    configInfo = new {
+                        hasSomeeConnection = hasSomeeInConnection,
+                        hasLocalConnection = hasLocalIpInConnection,
+                        jwtConfigured = !string.IsNullOrEmpty(_configuration["JwtSettings:SecretKey"])
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { 
+                    success = false, 
+                    error = ex.Message,
+                    stackTrace = ex.StackTrace
+                });
+            }
+        }
+
+        /// <summary>
+        /// Endpoint de prueba para verificar conexión a base de datos
+        /// </summary>
+        [HttpGet("db-test")]
+        [AllowAnonymous]
+        public async Task<IActionResult> DbTest()
+        {
+            try
+            {
+                // Intentar buscar un usuario para verificar conexión a BD
+                var testUser = await _userManager.FindByEmailAsync("test@test.com");
+                return Ok(new { 
+                    success = true, 
+                    message = "Conexión a BD exitosa",
+                    userFound = testUser != null
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { 
+                    success = false, 
+                    message = "Error de conexión a BD",
+                    error = ex.Message,
+                    innerError = ex.InnerException?.Message
+                });
+            }
+        }
     }
 }

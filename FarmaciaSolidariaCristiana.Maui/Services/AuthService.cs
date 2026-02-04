@@ -132,6 +132,27 @@ public class AuthService : IAuthService
             var response = await _httpClient.PostAsJsonAsync("/api/auth/login", request);
             
             var content = await response.Content.ReadAsStringAsync();
+            
+            // Verificar si la respuesta es HTML (error del servidor)
+            if (content.TrimStart().StartsWith("<", StringComparison.OrdinalIgnoreCase))
+            {
+                return new ApiResponse<LoginResponse>
+                {
+                    Success = false,
+                    Message = $"Error del servidor (HTTP {response.StatusCode}). El servidor devolvió HTML en lugar de JSON."
+                };
+            }
+            
+            // Verificar si el contenido está vacío
+            if (string.IsNullOrWhiteSpace(content))
+            {
+                return new ApiResponse<LoginResponse>
+                {
+                    Success = false,
+                    Message = $"Error del servidor (HTTP {response.StatusCode}). Respuesta vacía."
+                };
+            }
+            
             var result = JsonSerializer.Deserialize<ApiResponse<LoginResponse>>(content, _jsonOptions);
 
             if (result?.Success == true && result.Data != null)
@@ -146,12 +167,20 @@ public class AuthService : IAuthService
                 Message = Constants.ErrorGenerico 
             };
         }
-        catch (HttpRequestException)
+        catch (HttpRequestException ex)
         {
             return new ApiResponse<LoginResponse>
             {
                 Success = false,
-                Message = Constants.ErrorConexion
+                Message = $"{Constants.ErrorConexion}: {ex.Message}"
+            };
+        }
+        catch (JsonException ex)
+        {
+            return new ApiResponse<LoginResponse>
+            {
+                Success = false,
+                Message = $"Error de formato JSON: {ex.Message}"
             };
         }
         catch (Exception ex)
