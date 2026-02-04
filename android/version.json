@@ -1,9 +1,9 @@
 {
-  "version": "1.0.0",
+  "version": "1.0.1",
   "versionCode": 1,
   "releaseDate": "2026-02-04",
   "downloadUrl": "https://farmaciasolidaria.somee.com/android/farmaciasolidaria.apk",
-  "fileSize": "33 MB",
+  "fileSize": "33M",
   "minAndroidVersion": "24",
-  "releaseNotes": "- Versión inicial\n- Sistema de gestión de usuarios\n- Sistema de turnos y pacientes\n- Gestión de medicamentos e insumos\n- Modo oscuro completo"
+  "releaseNotes": "Aplicacion de la Farmacia solidaria cristiana. Pimera versión pública. "
 }
