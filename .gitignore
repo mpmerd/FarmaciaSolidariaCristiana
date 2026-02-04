@@ -517,3 +517,13 @@ local-data-*.sql
 # Scripts de sincronización local (contienen credenciales locales)
 SyncMigrations/
 sync-migrations-local.sql
+
+##
+## Scripts de Deployment - CREDENCIALES SENSIBLES
+##
+# Script de subida de APK (contiene credenciales FTP)
+subir_apk.sh
+
+# APKs compilados (archivos grandes)
+*.apk
+FarmaciaSolidariaCristiana.Maui/bin/Release/net9.0-android/*.apk
