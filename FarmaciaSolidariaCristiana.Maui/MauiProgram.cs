@@ -29,11 +29,23 @@ public static class MauiProgram
         // Configure HttpClient
         builder.Services.AddSingleton(sp =>
         {
+#if ANDROID
+            // En Android, necesitamos configurar HttpClientHandler para SSL
+            var handler = new HttpClientHandler();
+            // Nota: ServerCertificateCustomValidationCallback solo para desarrollo
+            // En producción, Somee.com tiene certificado válido
+            var client = new HttpClient(handler)
+            {
+                BaseAddress = new Uri(Constants.ApiBaseUrl),
+                Timeout = TimeSpan.FromSeconds(60)
+            };
+#else
             var client = new HttpClient
             {
                 BaseAddress = new Uri(Constants.ApiBaseUrl),
-                Timeout = TimeSpan.FromSeconds(60) // 60 segundos para soportar subida de archivos grandes
+                Timeout = TimeSpan.FromSeconds(60)
             };
+#endif
             return client;
         });
 
