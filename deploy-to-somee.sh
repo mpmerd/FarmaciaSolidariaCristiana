@@ -169,19 +169,33 @@ echo ""
 echo -e "${YELLOW}📤 Subiendo archivos (esto puede tardar varios minutos)...${NC}"
 echo ""
 
-# Usar lftp para subir archivos (ignorar errores de chmod que Somee no soporta)
-# Usamos --only-newer para actualizar solo los archivos modificados
-# Excluimos carpetas de uploads y pdfs para no subir archivos de prueba o de usuarios
+# Usar lftp para subir archivos
+# Usamos comandos PUT directos para mayor control y visibilidad
 lftp -c "
 set ssl:verify-certificate no;
 set ftp:use-feat no;
 set ftp:use-site-chmod no;
+set net:timeout 30;
+set net:max-retries 3;
+set cmd:trace true;
 open -u $FTP_USER,$FTP_PASS ftp://$FTP_HOST;
 cd $FTP_REMOTE_PATH;
-mirror --reverse --verbose --parallel=3 --only-newer \
-  --exclude-glob wwwroot/uploads/** \
-  --exclude-glob wwwroot/pdfs/** \
-  $PUBLISH_DIR .
+
+echo '>>> Subiendo DLLs principales...';
+lcd $PUBLISH_DIR;
+mput -O . *.dll *.json *.pdb web.config 2>/dev/null;
+
+echo '>>> Subiendo carpeta runtimes...';
+mirror --reverse --delete --parallel=2 runtimes runtimes 2>/dev/null;
+
+echo '>>> Subiendo carpeta wwwroot (excluyendo uploads y pdfs)...';
+mirror --reverse --delete --parallel=2 \
+  --exclude-glob uploads/** \
+  --exclude-glob pdfs/** \
+  wwwroot wwwroot 2>/dev/null;
+
+echo '>>> Subida completada';
+bye
 "
 
 LFTP_EXIT_CODE=$?
