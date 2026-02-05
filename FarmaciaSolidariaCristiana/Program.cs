@@ -204,10 +204,9 @@ builder.Services.ConfigureApplicationCookie(options =>
     
     // Configuración para compatibilidad con Safari y dispositivos móviles
     options.Cookie.SameSite = SameSiteMode.Lax;
-    // SEGURIDAD: En desarrollo permitir HTTP, en producción SIEMPRE HTTPS
-    options.Cookie.SecurePolicy = builder.Environment.IsDevelopment() 
-        ? CookieSecurePolicy.SameAsRequest 
-        : CookieSecurePolicy.Always;
+    // SEGURIDAD: SameAsRequest para compatibilidad con proxy reverso (Somee.com)
+    // El servidor hace HTTPS redirection, pero las cookies deben funcionar
+    options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
     options.Cookie.HttpOnly = true;
     options.Cookie.IsEssential = true;
     options.Cookie.Name = ".FarmaciaSolidaria.Auth";
@@ -265,7 +264,8 @@ if (!app.Environment.IsDevelopment())
     app.UseHttpsRedirection();
 }
 
-// Añadir encabezado de seguridad HTTPS adicional
+// Middleware HSTS personalizado deshabilitado - UseHsts() ya lo maneja
+/*
 app.Use(async (context, next) =>
 {
     if (!app.Environment.IsDevelopment())
@@ -275,6 +275,7 @@ app.Use(async (context, next) =>
     }
     await next();
 });
+*/
 
 app.UseStaticFiles();
 app.UseRouting();
