@@ -24,6 +24,24 @@ var cultureInfo = new CultureInfo("es-ES");
 CultureInfo.DefaultThreadCurrentCulture = cultureInfo;
 CultureInfo.DefaultThreadCurrentUICulture = cultureInfo;
 
+// ========================================
+// CONFIGURACIÓN DE SEGURIDAD HTTPS/HSTS
+// ========================================
+// Configurar HSTS con opciones personalizadas
+builder.Services.AddHsts(options =>
+{
+    options.MaxAge = TimeSpan.FromDays(365); // 1 año
+    options.IncludeSubDomains = true;
+    options.Preload = true;
+});
+
+// Configurar redirección HTTPS
+builder.Services.AddHttpsRedirection(options =>
+{
+    options.RedirectStatusCode = StatusCodes.Status308PermanentRedirect;
+    options.HttpsPort = 443;
+});
+
 // Add services to the container.
 builder.Services.AddControllersWithViews(options =>
 {
@@ -45,6 +63,9 @@ builder.Services.AddAuthentication(options =>
 })
 .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
 {
+    // Requerir HTTPS para metadatos en producción
+    options.RequireHttpsMetadata = !builder.Environment.IsDevelopment();
+    
     options.TokenValidationParameters = new TokenValidationParameters
     {
         ValidateIssuer = true,
@@ -183,12 +204,13 @@ builder.Services.ConfigureApplicationCookie(options =>
     
     // Configuración para compatibilidad con Safari y dispositivos móviles
     options.Cookie.SameSite = SameSiteMode.Lax;
-    // En desarrollo permitir HTTP, en producción forzar HTTPS
+    // SEGURIDAD: En desarrollo permitir HTTP, en producción SIEMPRE HTTPS
     options.Cookie.SecurePolicy = builder.Environment.IsDevelopment() 
         ? CookieSecurePolicy.SameAsRequest 
         : CookieSecurePolicy.Always;
     options.Cookie.HttpOnly = true;
     options.Cookie.IsEssential = true;
+    options.Cookie.Name = ".FarmaciaSolidaria.Auth";
 });
 
 // Add HttpClient for CIMA API calls with configuration
@@ -231,15 +253,28 @@ using (var scope = app.Services.CreateScope())
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Home/Error");
+    
     // Enable HSTS for production (tells browsers to only use HTTPS)
+    // MaxAge de 1 año, incluir subdominios y preload
     app.UseHsts();
 }
 
-// Force HTTPS redirection in production
+// Force HTTPS redirection - SIEMPRE en producción
 if (!app.Environment.IsDevelopment())
 {
     app.UseHttpsRedirection();
 }
+
+// Añadir encabezado de seguridad HTTPS adicional
+app.Use(async (context, next) =>
+{
+    if (!app.Environment.IsDevelopment())
+    {
+        // Forzar HTTPS con encabezado Strict-Transport-Security
+        context.Response.Headers.Append("Strict-Transport-Security", "max-age=31536000; includeSubDomains; preload");
+    }
+    await next();
+});
 
 app.UseStaticFiles();
 app.UseRouting();
