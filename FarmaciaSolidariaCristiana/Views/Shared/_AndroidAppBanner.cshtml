@@ -1,5 +1,5 @@
 @* Banner para promover la descarga de la aplicación Android *@
-<div id="androidAppBanner" class="android-app-banner d-lg-none mt-4 mb-4" style="display: none;">
+<div id="androidAppBanner" class="android-app-banner mt-4 mb-4">
     <div class="container">
         <div class="card border-success shadow-sm">
             <div class="card-body p-3" style="background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);">
@@ -38,16 +38,26 @@
             transform: translateY(0);
         }
     }
+    
+    @@keyframes slideUp {
+        from {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        to {
+            opacity: 0;
+            transform: translateY(-20px);
+        }
+    }
 </style>
 
 <script>
-    // Mostrar el banner SOLO en dispositivos Android si no ha sido cerrado
+    // Mostrar el banner en TODOS los dispositivos si no ha sido cerrado
     (function() {
-        const isAndroid = /Android/i.test(navigator.userAgent);
         const bannerDismissed = localStorage.getItem('androidBannerDismissed');
         
-        if (isAndroid && !bannerDismissed) {
-            document.getElementById('androidAppBanner').style.display = 'block';
+        if (bannerDismissed) {
+            document.getElementById('androidAppBanner').style.display = 'none';
         }
     })();
     
@@ -60,16 +70,3 @@
         }, 300);
     }
 </script>
-
-<style>
-    @@keyframes slideUp {
-        from {
-            opacity: 1;
-            transform: translateY(0);
-        }
-        to {
-            opacity: 0;
-            transform: translateY(-20px);
-        }
-    }
-</style>

@@ -71,8 +71,40 @@
             </a>
         }
         
-        @* Banner para promover app Android *@
-        @await Html.PartialAsync("_AndroidAppBanner")
+        <!-- Banner para promover app Android -->
+        <div id="androidAppBannerHome" class="mt-4 mb-4">
+            <div class="card border-success shadow-sm mx-auto" style="max-width: 500px;">
+                <div class="card-body p-3" style="background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);">
+                    <button type="button" class="btn-close btn-close-white float-end" aria-label="Cerrar" onclick="dismissAndroidBannerHome()"></button>
+                    <div class="d-flex align-items-center">
+                        <div class="me-3">
+                            <i class="bi bi-android2 text-white" style="font-size: 3rem;"></i>
+                        </div>
+                        <div class="flex-grow-1 text-white text-start">
+                            <h6 class="mb-1 fw-bold">¡Descarga nuestra App para Android!</h6>
+                            <p class="mb-2 small">Accede más rápido y recibe notificaciones</p>
+                            <a href="https://www.farmaciasolidaria.somee.com/android/" 
+                               class="btn btn-light btn-sm shadow"
+                               target="_blank">
+                                <i class="bi bi-download"></i> Descargar APK
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <script>
+            (function() {
+                var bannerDismissed = localStorage.getItem('androidBannerDismissed');
+                if (bannerDismissed) {
+                    document.getElementById('androidAppBannerHome').style.display = 'none';
+                }
+            })();
+            function dismissAndroidBannerHome() {
+                localStorage.setItem('androidBannerDismissed', 'true');
+                document.getElementById('androidAppBannerHome').style.display = 'none';
+            }
+        </script>
 
         <!-- Sección de Patrocinadores -->
         <div class="mt-5 mb-5">
