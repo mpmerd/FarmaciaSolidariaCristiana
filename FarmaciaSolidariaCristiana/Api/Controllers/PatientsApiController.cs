@@ -213,6 +213,8 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
                     DocumentType = d.DocumentType,
                     FileName = d.FileName,
                     FilePath = d.FilePath,
+                    ContentType = d.ContentType,
+                    FileSize = d.FileSize,
                     Notes = d.Description,
                     UploadedAt = d.UploadDate
                 })
@@ -275,7 +277,7 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
                 // Generar nombre único
                 var fileName = $"{patientId}_{DateTime.Now:yyyyMMddHHmmss}_{Guid.NewGuid():N}{extension}";
                 var filePath = Path.Combine(uploadsPath, fileName);
-                var relativePath = $"uploads/patient-documents/{fileName}";
+                var relativePath = $"/uploads/patient-documents/{fileName}";  // Con / inicial para ruta absoluta
 
                 // Guardar archivo
                 using (var stream = new FileStream(filePath, FileMode.Create))
@@ -290,6 +292,8 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
                     DocumentType = documentType,
                     FileName = document.FileName,
                     FilePath = relativePath,
+                    FileSize = document.Length,
+                    ContentType = document.ContentType,
                     Description = notes,
                     UploadDate = DateTime.Now
                 };
@@ -307,6 +311,8 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
                     DocumentType = patientDocument.DocumentType,
                     FileName = patientDocument.FileName,
                     FilePath = patientDocument.FilePath,
+                    ContentType = patientDocument.ContentType,
+                    FileSize = patientDocument.FileSize,
                     Notes = patientDocument.Description,
                     UploadedAt = patientDocument.UploadDate
                 }, "Documento subido exitosamente");
@@ -656,6 +662,17 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
                     // Copiar el archivo
                     System.IO.File.Copy(sourcePath, destPath);
                     var fileInfo = new FileInfo(destPath);
+                    
+                    // Determinar ContentType basado en extensión
+                    var contentType = fileExtension switch
+                    {
+                        ".jpg" or ".jpeg" => "image/jpeg",
+                        ".png" => "image/png",
+                        ".gif" => "image/gif",
+                        ".webp" => "image/webp",
+                        ".pdf" => "application/pdf",
+                        _ => "application/octet-stream"
+                    };
 
                     // Crear registro en base de datos
                     var patientDoc = new PatientDocument
@@ -664,6 +681,8 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
                         DocumentType = docInfo.DocumentType,
                         FileName = docInfo.FileName,
                         FilePath = $"/uploads/patient-documents/{newFileName}",
+                        FileSize = fileInfo.Length,
+                        ContentType = contentType,
                         Description = $"Importado de turno #{docInfo.NumeroTurno} ({docInfo.FechaSolicitud:dd/MM/yyyy})",
                         UploadDate = DateTime.Now
                     };
@@ -678,6 +697,8 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
                         DocumentType = patientDoc.DocumentType,
                         FileName = patientDoc.FileName,
                         FilePath = patientDoc.FilePath,
+                        ContentType = patientDoc.ContentType,
+                        FileSize = patientDoc.FileSize,
                         Notes = patientDoc.Description,
                         UploadedAt = patientDoc.UploadDate
                     });

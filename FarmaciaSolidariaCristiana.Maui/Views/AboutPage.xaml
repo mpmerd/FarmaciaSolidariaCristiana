@@ -1,0 +1,235 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="FarmaciaSolidariaCristiana.Maui.Views.AboutPage"
+             Title="Quiénes Somos"
+             BackgroundColor="{AppThemeBinding Light=#f5f5f5, Dark=#1a1a1a}">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="15" Spacing="15">
+            
+            <!-- Header -->
+            <Frame BackgroundColor="#0d6efd" 
+                   Padding="20" 
+                   CornerRadius="10"
+                   BorderColor="Transparent">
+                <VerticalStackLayout Spacing="10" HorizontalOptions="Center">
+                    <Image Source="logo.png" 
+                           WidthRequest="80" 
+                           HeightRequest="80" 
+                           Aspect="AspectFit"/>
+                    <Label Text="❤️ Quiénes Somos" 
+                           TextColor="White" 
+                           FontSize="24" 
+                           FontAttributes="Bold"
+                           HorizontalOptions="Center"/>
+                </VerticalStackLayout>
+            </Frame>
+            
+            <!-- Introducción -->
+            <Frame BackgroundColor="{AppThemeBinding Light=White, Dark=#2a2a2a}" 
+                   Padding="15" 
+                   CornerRadius="10"
+                   BorderColor="Transparent">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="Farmacia Solidaria Cristiana es un proyecto nacido del corazón de Adriano Solidaire y del Reverendo Maikel Eduardo Pelaez Martínez, pastor de la Iglesia Metodista de Cárdenas."
+                           FontSize="16"
+                           LineHeight="1.4"/>
+                    
+                    <Label Text="Nuestra misión es brindar apoyo en salud a toda la comunidad cardenense, actuando con transparencia, empatía y compromiso humano."
+                           FontSize="15"
+                           TextColor="{AppThemeBinding Light=#444, Dark=#ccc}"
+                           LineHeight="1.4"/>
+                    
+                    <Label Text="Sabemos que nuestras posibilidades son limitadas ante una población de más de 220 mil habitantes, pero creemos firmemente que cada ayuda, por pequeña que parezca, puede transformar una vida."
+                           FontSize="15"
+                           TextColor="{AppThemeBinding Light=#444, Dark=#ccc}"
+                           LineHeight="1.4"/>
+                </VerticalStackLayout>
+            </Frame>
+            
+            <!-- No discriminación -->
+            <Frame BackgroundColor="#e3f2fd" 
+                   Padding="15" 
+                   CornerRadius="10"
+                   BorderColor="#2196F3">
+                <Label Text="ℹ️ No habrá discriminación por religión, ideología política o condición social: todos somos amados por Dios, y todos merecemos ser tratados con respeto y dignidad."
+                       FontSize="14"
+                       TextColor="#1565C0"
+                       LineHeight="1.4"/>
+            </Frame>
+            
+            <!-- Misión -->
+            <Frame BackgroundColor="{AppThemeBinding Light=White, Dark=#2a2a2a}" 
+                   Padding="15" 
+                   CornerRadius="10"
+                   BorderColor="Transparent">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="🎯 Nuestra Misión" 
+                           FontSize="18" 
+                           FontAttributes="Bold" 
+                           TextColor="#0d6efd"/>
+                    
+                    <Label Text="Ser una farmacia del pueblo y para el pueblo, completamente solidaria y sin fines de lucro."
+                           FontSize="15"
+                           LineHeight="1.4"/>
+                    
+                    <Label Text="Todos los medicamentos se entregan de forma gratuita, bajo constancias médicas emitidas por profesionales inscritos en nuestra base de datos, garantizando confidencialidad y equidad en cada atención."
+                           FontSize="15"
+                           TextColor="{AppThemeBinding Light=#444, Dark=#ccc}"
+                           LineHeight="1.4"/>
+                </VerticalStackLayout>
+            </Frame>
+            
+            <!-- Valores -->
+            <Frame BackgroundColor="{AppThemeBinding Light=White, Dark=#2a2a2a}" 
+                   Padding="15" 
+                   CornerRadius="10"
+                   BorderColor="Transparent">
+                <VerticalStackLayout Spacing="12">
+                    <Label Text="⭐ Nuestros Valores" 
+                           FontSize="18" 
+                           FontAttributes="Bold" 
+                           TextColor="#0d6efd"/>
+                    
+                    <Label Text="✅ Solidaridad: Compartir lo que tenemos con quienes más lo necesitan."
+                           FontSize="14"
+                           LineHeight="1.4"/>
+                    
+                    <Label Text="✅ Dignidad: Ver en cada paciente alguien con esperanza y dignidad."
+                           FontSize="14"
+                           LineHeight="1.4"/>
+                    
+                    <Label Text="✅ Transparencia: Cada acción y entrega se realiza con claridad y responsabilidad."
+                           FontSize="14"
+                           LineHeight="1.4"/>
+                    
+                    <Label Text="✅ Igualdad: No hay amigos ni enemigos, solo personas que merecen atención justa."
+                           FontSize="14"
+                           LineHeight="1.4"/>
+                    
+                    <Label Text="✅ Fe: Creemos en el poder del amor cristiano para sanar y servir."
+                           FontSize="14"
+                           LineHeight="1.4"/>
+                </VerticalStackLayout>
+            </Frame>
+            
+            <!-- Colaboradores -->
+            <Frame BackgroundColor="{AppThemeBinding Light=White, Dark=#2a2a2a}" 
+                   Padding="15" 
+                   CornerRadius="10"
+                   BorderColor="Transparent">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="👥 Nuestros Colaboradores" 
+                           FontSize="18" 
+                           FontAttributes="Bold" 
+                           TextColor="#0d6efd"/>
+                    
+                    <Label Text="Este proyecto es posible gracias al apoyo de colaboradores europeos solidarios:"
+                           FontSize="14"
+                           LineHeight="1.4"/>
+                    
+                    <Label Text="• Farmacia Peeters (Bélgica)
+• Farmacia Janeiro (Portugal)
+• AIP Medical Bélgica
+• Hôpital Sans Frontière"
+                           FontSize="14"
+                           TextColor="{AppThemeBinding Light=#444, Dark=#ccc}"
+                           LineHeight="1.6"/>
+                    
+                    <Label Text="Además de nuestros fundadores Adriano Solidaire y el Reverendo Maikel Eduardo Pelaez Martínez."
+                           FontSize="14"
+                           FontAttributes="Italic"
+                           TextColor="{AppThemeBinding Light=#666, Dark=#aaa}"
+                           LineHeight="1.4"/>
+                </VerticalStackLayout>
+            </Frame>
+            
+            <!-- Horario -->
+            <Frame BackgroundColor="#fff3cd" 
+                   Padding="15" 
+                   CornerRadius="10"
+                   BorderColor="#ffc107">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="🕐 Atención al Público" 
+                           FontSize="18" 
+                           FontAttributes="Bold" 
+                           TextColor="#856404"/>
+                    
+                    <Label Text="📅 Horario: Martes y Jueves de 1:00 PM a 4:00 PM"
+                           FontSize="14"
+                           TextColor="#856404"
+                           LineHeight="1.4"/>
+                    
+                    <Label Text="📍 Lugar: Iglesia Metodista de Cárdenas"
+                           FontSize="14"
+                           TextColor="#856404"
+                           LineHeight="1.4"/>
+                    
+                    <Label Text="Para recibir atención, cada persona debe inscribirse previamente en nuestra página web y completar los requisitos solicitados."
+                           FontSize="13"
+                           TextColor="#856404"
+                           LineHeight="1.4"/>
+                </VerticalStackLayout>
+            </Frame>
+            
+            <!-- Contacto -->
+            <Frame BackgroundColor="{AppThemeBinding Light=#f8f9fa, Dark=#333}" 
+                   Padding="15" 
+                   CornerRadius="10"
+                   BorderColor="Transparent">
+                <VerticalStackLayout Spacing="15">
+                    <Label Text="📧 Datos de Contacto" 
+                           FontSize="18" 
+                           FontAttributes="Bold" 
+                           TextColor="#0d6efd"
+                           HorizontalOptions="Center"/>
+                    
+                    <Grid ColumnDefinitions="*,*" RowDefinitions="Auto" ColumnSpacing="10">
+                        <Frame Grid.Column="0" 
+                               BackgroundColor="{AppThemeBinding Light=White, Dark=#2a2a2a}" 
+                               Padding="10" 
+                               CornerRadius="8"
+                               BorderColor="Transparent">
+                            <VerticalStackLayout Spacing="5" HorizontalOptions="Center">
+                                <Label Text="📩" FontSize="28" HorizontalOptions="Center"/>
+                                <Label Text="Email" FontSize="12" FontAttributes="Bold" HorizontalOptions="Center"/>
+                                <Label Text="servicio@farmacia solidaria.somee.com" 
+                                       FontSize="10" 
+                                       TextColor="#0d6efd"
+                                       HorizontalOptions="Center"
+                                       HorizontalTextAlignment="Center"/>
+                            </VerticalStackLayout>
+                        </Frame>
+                        
+                        <Frame Grid.Column="1" 
+                               BackgroundColor="{AppThemeBinding Light=White, Dark=#2a2a2a}" 
+                               Padding="10" 
+                               CornerRadius="8"
+                               BorderColor="Transparent">
+                            <Frame.GestureRecognizers>
+                                <TapGestureRecognizer Tapped="OnWhatsAppTapped"/>
+                            </Frame.GestureRecognizers>
+                            <VerticalStackLayout Spacing="5" HorizontalOptions="Center">
+                                <Label Text="💬" FontSize="28" HorizontalOptions="Center"/>
+                                <Label Text="WhatsApp" FontSize="12" FontAttributes="Bold" HorizontalOptions="Center"/>
+                                <Label Text="+53 53434386" 
+                                       FontSize="12" 
+                                       TextColor="#25D366"
+                                       HorizontalOptions="Center"/>
+                            </VerticalStackLayout>
+                        </Frame>
+                    </Grid>
+                </VerticalStackLayout>
+            </Frame>
+            
+            <!-- Pie -->
+            <Label Text="Farmacia Solidaria Cristiana © 2025"
+                   FontSize="12"
+                   TextColor="{AppThemeBinding Light=#888, Dark=#666}"
+                   HorizontalOptions="Center"
+                   Margin="0,10,0,20"/>
+            
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

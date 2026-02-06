@@ -166,6 +166,8 @@ namespace FarmaciaSolidariaCristiana.Api.Models
         public string DocumentType { get; set; } = string.Empty;
         public string FileName { get; set; } = string.Empty;
         public string? FilePath { get; set; }
+        public string? ContentType { get; set; }
+        public long FileSize { get; set; }
         public string? Notes { get; set; }
         public DateTime UploadedAt { get; set; }
     }

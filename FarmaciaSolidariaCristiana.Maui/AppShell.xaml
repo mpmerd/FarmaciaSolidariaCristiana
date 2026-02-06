@@ -130,6 +130,12 @@
     <!-- Separator -->
     <MenuItem Text="─────────────────" IsEnabled="False"/>
     
+    <!-- Quiénes Somos - All users -->
+    <FlyoutItem Title="Quiénes Somos" Icon="info.png">
+        <ShellContent Route="AboutPage"
+                      ContentTemplate="{DataTemplate views:AboutPage}"/>
+    </FlyoutItem>
+    
     <!-- Profile -->
     <FlyoutItem Title="Mi Perfil" Icon="user.png">
         <ShellContent Route="ProfilePage"

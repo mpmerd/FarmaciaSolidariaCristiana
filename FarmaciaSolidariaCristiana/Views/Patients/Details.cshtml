@@ -158,11 +158,22 @@
                 <div class="row">
                     @foreach (var doc in Model.Documents)
                     {
+                        // Detectar si es imagen por ContentType o por extensión del archivo
+                        var isImage = doc.ContentType?.StartsWith("image/") == true ||
+                                      doc.FilePath?.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase) == true ||
+                                      doc.FilePath?.EndsWith(".jpeg", StringComparison.OrdinalIgnoreCase) == true ||
+                                      doc.FilePath?.EndsWith(".png", StringComparison.OrdinalIgnoreCase) == true ||
+                                      doc.FilePath?.EndsWith(".gif", StringComparison.OrdinalIgnoreCase) == true ||
+                                      doc.FilePath?.EndsWith(".webp", StringComparison.OrdinalIgnoreCase) == true;
+                        
+                        // Asegurar que FilePath sea ruta absoluta (comience con /)
+                        var docPath = doc.FilePath?.StartsWith("/") == true ? doc.FilePath : "/" + doc.FilePath;
+                        
                         <div class="col-md-3 mb-3">
                             <div class="card h-100">
-                                @if (doc.ContentType?.StartsWith("image/") == true)
+                                @if (isImage)
                                 {
-                                    <img src="@doc.FilePath" class="card-img-top" alt="@doc.DocumentType" style="height: 200px; object-fit: cover;">
+                                    <img src="@docPath" class="card-img-top" alt="@doc.DocumentType" style="height: 200px; object-fit: cover;">
                                 }
                                 else
                                 {
@@ -181,7 +192,7 @@
                                     {
                                         <p class="card-text"><small>@doc.Description</small></p>
                                     }
-                                    <a href="@doc.FilePath" target="_blank" class="btn btn-sm btn-primary w-100">
+                                    <a href="@docPath" target="_blank" class="btn btn-sm btn-primary w-100">
                                         <i class="bi bi-eye"></i> Ver Documento
                                     </a>
                                 </div>
