@@ -16,6 +16,14 @@ public interface INotificationService
     string? GetPlayerId();
     
     /// <summary>
+    /// Obtiene el Player ID de OneSignal de manera asíncrona con reintentos
+    /// </summary>
+    /// <param name="maxRetries">Número máximo de reintentos (default: 3)</param>
+    /// <param name="delayMs">Delay entre reintentos en ms (default: 500)</param>
+    /// <returns>Player ID o null si no está disponible</returns>
+    Task<string?> GetPlayerIdAsync(int maxRetries = 3, int delayMs = 500);
+    
+    /// <summary>
     /// Indica si las notificaciones push están habilitadas
     /// </summary>
     bool IsPushEnabled();
