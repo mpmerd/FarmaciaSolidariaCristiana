@@ -35,6 +35,40 @@ public class ApiService : IApiService
         }
     }
 
+    /// <summary>
+    /// Maneja la expiración de sesión: hace logout y navega a login
+    /// </summary>
+    private async Task HandleSessionExpiredAsync()
+    {
+        try
+        {
+            Console.WriteLine("[API] Session expired - forcing logout and navigation to login");
+            
+            // Hacer logout para limpiar credenciales
+            await _authService.LogoutAsync();
+            
+            // Navegar a login en el hilo principal
+            await MainThread.InvokeOnMainThreadAsync(async () =>
+            {
+                // Mostrar mensaje al usuario
+                if (Shell.Current?.CurrentPage != null)
+                {
+                    await Shell.Current.DisplayAlert(
+                        "Sesión Expirada",
+                        "Su sesión ha expirado. Por favor, inicie sesión nuevamente.",
+                        "OK");
+                }
+                
+                // Navegar a login
+                await Shell.Current.GoToAsync("//LoginPage");
+            });
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[API] Error handling session expiration: {ex.Message}");
+        }
+    }
+
     private async Task<ApiResponse<T>> GetAsync<T>(string endpoint)
     {
         try
@@ -123,6 +157,8 @@ public class ApiService : IApiService
         
         if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
         {
+            // Sesión expirada - forzar logout automático y navegar a login
+            await HandleSessionExpiredAsync();
             return ErrorResponse<T>(Constants.SesionExpirada);
         }
 
@@ -142,6 +178,8 @@ public class ApiService : IApiService
         if (content.TrimStart().StartsWith("<"))
         {
             Console.WriteLine($"[API] WARNING: Received HTML instead of JSON!");
+            // También puede indicar sesión expirada (redirect a login)
+            await HandleSessionExpiredAsync();
             return ErrorResponse<T>("Error de autenticación - se recibió HTML en lugar de JSON");
         }
 
@@ -188,15 +226,17 @@ public class ApiService : IApiService
             Console.WriteLine($"[API] Response status: {response.StatusCode}");
             Console.WriteLine($"[API] Content length: {content?.Length ?? 0}");
             
-            // Detectar HTML
+            // Detectar HTML (puede indicar sesión expirada - redirect a login)
             if (content.TrimStart().StartsWith("<"))
             {
                 Console.WriteLine($"[API] WARNING: Received HTML instead of JSON!");
+                await HandleSessionExpiredAsync();
                 return ErrorResponse<List<T>>("Error de autenticación - se recibió HTML");
             }
 
             if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
             {
+                await HandleSessionExpiredAsync();
                 return ErrorResponse<List<T>>(Constants.SesionExpirada);
             }
 
@@ -516,15 +556,41 @@ public class ApiService : IApiService
     {
         try
         {
+            System.Diagnostics.Debug.WriteLine($"[ApiService] SubirDocumento: patientId={patientId}, fileName={fileName}, bytes={fileBytes?.Length ?? 0}");
+            
+            if (fileBytes == null || fileBytes.Length == 0)
+            {
+                return new ApiResponse<PatientDocument> 
+                { 
+                    Success = false, 
+                    Message = "El archivo está vacío" 
+                };
+            }
+
             await SetAuthHeaderAsync();
 
             using var content = new MultipartFormDataContent();
             
             var fileContent = new ByteArrayContent(fileBytes);
-            fileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(
-                fileName.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase) 
-                    ? "application/pdf" 
-                    : "image/jpeg");
+            
+            // Determinar content type basado en extensión
+            string contentType = "application/octet-stream";
+            if (fileName.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
+                contentType = "application/pdf";
+            else if (fileName.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase) || 
+                     fileName.EndsWith(".jpeg", StringComparison.OrdinalIgnoreCase))
+                contentType = "image/jpeg";
+            else if (fileName.EndsWith(".png", StringComparison.OrdinalIgnoreCase))
+                contentType = "image/png";
+            else if (fileName.EndsWith(".webp", StringComparison.OrdinalIgnoreCase))
+                contentType = "image/webp";
+            else if (fileName.EndsWith(".gif", StringComparison.OrdinalIgnoreCase))
+                contentType = "image/gif";
+            
+            fileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(contentType);
+            fileContent.Headers.ContentLength = fileBytes.Length;
+            
+            System.Diagnostics.Debug.WriteLine($"[ApiService] ContentType={contentType}, ContentLength={fileBytes.Length}");
             
             content.Add(fileContent, "document", fileName);
             content.Add(new StringContent(documentType), "documentType");
@@ -535,6 +601,8 @@ public class ApiService : IApiService
 
             var response = await _httpClient.PostAsync($"/api/patients/{patientId}/documents", content);
             var responseContent = await response.Content.ReadAsStringAsync();
+            
+            System.Diagnostics.Debug.WriteLine($"[ApiService] Response: {response.StatusCode} - {responseContent}");
 
             if (response.IsSuccessStatusCode)
             {
@@ -546,11 +614,12 @@ public class ApiService : IApiService
             return new ApiResponse<PatientDocument> 
             { 
                 Success = false, 
-                Message = $"Error: {response.StatusCode}" 
+                Message = $"Error: {response.StatusCode} - {responseContent}" 
             };
         }
         catch (Exception ex)
         {
+            System.Diagnostics.Debug.WriteLine($"[ApiService] SubirDocumento Exception: {ex.Message}");
             return new ApiResponse<PatientDocument> 
             { 
                 Success = false, 

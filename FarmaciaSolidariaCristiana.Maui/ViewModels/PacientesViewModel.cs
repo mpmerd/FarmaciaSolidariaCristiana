@@ -111,7 +111,7 @@ public partial class PacientesViewModel : BaseViewModel
         if (paciente == null) return;
         
         var options = CanEdit 
-            ? new[] { "Ver detalles", "Editar ficha", "Ver documentos médicos", "Agregar documento", "📥 Importar de turnos", "Eliminar" } 
+            ? new[] { "Ver detalles", "Editar ficha", "Ver documentos médicos", "Eliminar" } 
             : new[] { "Ver detalles", "Ver documentos médicos" };
         
         var action = await Shell.Current.DisplayActionSheet(
@@ -130,12 +130,6 @@ public partial class PacientesViewModel : BaseViewModel
                 break;
             case "Ver documentos médicos":
                 await VerDocumentosMedicosAsync(paciente);
-                break;
-            case "Agregar documento":
-                await AgregarDocumentoAsync(paciente);
-                break;
-            case "📥 Importar de turnos":
-                await OfrecerImportarDocumentosTurnoAsync(paciente);
                 break;
             case "Eliminar":
                 await DeletePacienteAsync(paciente);
@@ -391,9 +385,24 @@ public partial class PacientesViewModel : BaseViewModel
             "Datos de contacto",
             "Datos clínicos",
             "Datos vitales",
-            "Observaciones");
+            "Observaciones",
+            "📎 Agregar documento",
+            "📥 Importar de turnos");
 
         if (seccion == "Cancelar" || seccion == null) return;
+
+        // Acciones especiales que no requieren guardar cambios del paciente
+        if (seccion == "📎 Agregar documento")
+        {
+            await AgregarDocumentoAsync(paciente);
+            return;
+        }
+        
+        if (seccion == "📥 Importar de turnos")
+        {
+            await OfrecerImportarDocumentosTurnoAsync(paciente);
+            return;
+        }
 
         bool cambiosRealizados = false;
 
@@ -602,7 +611,8 @@ public partial class PacientesViewModel : BaseViewModel
             if (response.Success && response.Data != null && response.Data.Count > 0)
             {
                 var docs = response.Data;
-                var opciones = docs.Select(d => $"📄 {d.DocumentType}: {d.FileName}").ToArray();
+                // Incluir fecha de subida para distinguir documentos con mismo nombre
+                var opciones = docs.Select((d, i) => $"📄 {d.DocumentType}: {d.FileName} ({d.UploadedAt:dd/MM HH:mm})").ToArray();
                 
                 var seleccion = await Shell.Current.DisplayActionSheet(
                     $"Documentos de {paciente.FullName} ({docs.Count})",
@@ -899,10 +909,9 @@ public partial class PacientesViewModel : BaseViewModel
                         PickerTitle = "Seleccionar PDF",
                         FileTypes = FilePickerFileType.Pdf
                     });
-                    if (pdfResult != null)
-                    {
-                        archivo = new FileResult(pdfResult.FullPath);
-                    }
+                    // FilePickerResult ya es un FileResult - usarlo directamente
+                    // para que OpenReadAsync() funcione en Android con URIs content://
+                    archivo = pdfResult;
                     break;
             }
 
@@ -963,15 +972,38 @@ public partial class PacientesViewModel : BaseViewModel
             // Subir documento
             IsBusy = true;
 
-            // Comprimir si es imagen (los bytes ya fueron leídos arriba)
-            if (archivo.ContentType?.StartsWith("image/") == true)
+            // Comprimir si es imagen (detectar por ContentType o extensión de archivo)
+            bool isImage = archivo.ContentType?.StartsWith("image/") == true ||
+                          (!isPdf && (archivo.FileName?.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase) == true ||
+                                     archivo.FileName?.EndsWith(".jpeg", StringComparison.OrdinalIgnoreCase) == true ||
+                                     archivo.FileName?.EndsWith(".png", StringComparison.OrdinalIgnoreCase) == true ||
+                                     archivo.FileName?.EndsWith(".webp", StringComparison.OrdinalIgnoreCase) == true));
+            
+            // Nombre del archivo a enviar
+            var fileName = archivo.FileName ?? "documento";
+            
+            if (isImage && fileBytes.Length > 0)
             {
+                System.Diagnostics.Debug.WriteLine($"[Pacientes] Comprimiendo imagen: {fileBytes.Length} bytes");
                 fileBytes = await ComprimirImagenAsync(fileBytes);
+                System.Diagnostics.Debug.WriteLine($"[Pacientes] Después de compresión: {fileBytes.Length} bytes");
+                
+                // Después de comprimir, la imagen siempre es JPEG
+                fileName = Path.ChangeExtension(fileName, ".jpg");
             }
+
+            // Validar que tenemos datos antes de enviar
+            if (fileBytes == null || fileBytes.Length == 0)
+            {
+                await ShowErrorAsync("Error: No se pudieron leer los datos del archivo.");
+                return;
+            }
+
+            System.Diagnostics.Debug.WriteLine($"[Pacientes] Subiendo documento: {fileName}, {fileBytes.Length} bytes");
 
             var result = await ApiService.SubirDocumentoPacienteAsync(
                 paciente.Id,
-                archivo.FileName,
+                fileName,
                 tipoDoc,
                 fileBytes,
                 notas);
@@ -1001,11 +1033,25 @@ public partial class PacientesViewModel : BaseViewModel
 
     private async Task<byte[]> ComprimirImagenAsync(byte[] imageBytes)
     {
+        if (imageBytes == null || imageBytes.Length == 0)
+        {
+            System.Diagnostics.Debug.WriteLine("[Pacientes] ComprimirImagenAsync: bytes de entrada vacíos");
+            return imageBytes ?? Array.Empty<byte>();
+        }
+        
         try
         {
             // Usar el servicio de compresión de imágenes inyectado
             using var stream = new MemoryStream(imageBytes);
             var compressed = await _imageCompressionService.CompressImageAsync(stream, "image/jpeg", 1920, 1080, 80);
+            
+            // Verificar que la compresión no devolvió bytes vacíos
+            if (compressed == null || compressed.Length == 0)
+            {
+                System.Diagnostics.Debug.WriteLine("[Pacientes] Compresión devolvió vacío, usando original");
+                return imageBytes;
+            }
+            
             System.Diagnostics.Debug.WriteLine($"[Pacientes] Imagen comprimida: {imageBytes.Length / 1024}KB -> {compressed.Length / 1024}KB");
             return compressed;
         }

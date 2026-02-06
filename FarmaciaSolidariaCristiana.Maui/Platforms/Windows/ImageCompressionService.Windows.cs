@@ -124,15 +124,22 @@ public partial class ImageCompressionService
                 if (inputStream.CanSeek)
                 {
                     inputStream.Position = 0;
+                    using var fallbackStream = new MemoryStream();
+                    await inputStream.CopyToAsync(fallbackStream);
+                    var fallbackBytes = fallbackStream.ToArray();
+                    if (fallbackBytes.Length > 0)
+                    {
+                        Console.WriteLine($"[ImageCompression] Returning original bytes from stream: {fallbackBytes.Length}");
+                        return fallbackBytes;
+                    }
                 }
-                using var fallbackStream = new MemoryStream();
-                await inputStream.CopyToAsync(fallbackStream);
-                return fallbackStream.ToArray();
             }
-            catch
+            catch (Exception innerEx)
             {
-                return Array.Empty<byte>();
+                Console.WriteLine($"[ImageCompression] Fallback also failed: {innerEx.Message}");
             }
+            
+            throw new InvalidOperationException($"No se pudo procesar la imagen: {ex.Message}", ex);
         }
     }
 }

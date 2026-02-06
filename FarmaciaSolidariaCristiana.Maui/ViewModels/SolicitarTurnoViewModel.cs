@@ -336,6 +336,14 @@ public partial class SolicitarTurnoViewModel : BaseViewModel
                     using var stream = await result.OpenReadAsync();
                     fileBytes = await _imageCompressionService.CompressImageAsync(
                         stream, result.ContentType, 1920, 1080, 80);
+                    
+                    // Validar que la compresión devolvió datos
+                    if (fileBytes == null || fileBytes.Length == 0)
+                    {
+                        await ShowErrorAsync("Error al procesar la imagen de la cámara.");
+                        return;
+                    }
+                    
                     fileName = Path.ChangeExtension(result.FileName, ".jpg");
                     contentType = "image/jpeg"; // Siempre JPEG después de compresión
                     
@@ -354,6 +362,14 @@ public partial class SolicitarTurnoViewModel : BaseViewModel
                     using var stream = await result.OpenReadAsync();
                     fileBytes = await _imageCompressionService.CompressImageAsync(
                         stream, result.ContentType, 1920, 1080, 80);
+                    
+                    // Validar que la compresión devolvió datos
+                    if (fileBytes == null || fileBytes.Length == 0)
+                    {
+                        await ShowErrorAsync("Error al procesar la imagen seleccionada.");
+                        return;
+                    }
+                    
                     fileName = Path.ChangeExtension(result.FileName, ".jpg");
                     contentType = "image/jpeg";
                     

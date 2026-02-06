@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="FarmaciaSolidariaCristiana.Maui.Views.TextInputPopup"
+             BackgroundColor="#80000000"
+             Shell.NavBarIsVisible="False">
+
+    <Grid VerticalOptions="Center" HorizontalOptions="Center" Padding="20">
+        <Frame BackgroundColor="White" 
+               CornerRadius="12" 
+               Padding="20" 
+               HasShadow="True"
+               WidthRequest="320">
+            <VerticalStackLayout Spacing="15">
+                <!-- Título -->
+                <Label x:Name="TitleLabel" 
+                       FontSize="18" 
+                       FontAttributes="Bold" 
+                       TextColor="{StaticResource Primary}"
+                       HorizontalOptions="Center"/>
+                
+                <!-- Mensaje/Descripción -->
+                <Label x:Name="MessageLabel" 
+                       FontSize="14" 
+                       TextColor="Gray"
+                       HorizontalTextAlignment="Center"/>
+
+                <!-- Editor multilínea -->
+                <Border Stroke="{StaticResource Primary}" 
+                        StrokeThickness="1" 
+                        Padding="10"
+                        BackgroundColor="White">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="8" />
+                    </Border.StrokeShape>
+                    <Editor x:Name="TextEditor" 
+                            Placeholder="Escriba aquí..."
+                            HeightRequest="120"
+                            MaxLength="1000"
+                            AutoSize="TextChanges"/>
+                </Border>
+
+                <!-- Contador de caracteres -->
+                <Label x:Name="CharCountLabel" 
+                       FontSize="11" 
+                       TextColor="Gray"
+                       HorizontalOptions="End"/>
+
+                <!-- Botones -->
+                <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                    <Button x:Name="CancelButton" 
+                            Text="Cancelar" 
+                            BackgroundColor="LightGray"
+                            TextColor="DarkGray"
+                            CornerRadius="8"
+                            Clicked="OnCancelClicked"/>
+                    
+                    <Button x:Name="ConfirmButton" 
+                            Text="Aceptar" 
+                            BackgroundColor="{StaticResource Primary}"
+                            TextColor="White"
+                            CornerRadius="8"
+                            Grid.Column="1"
+                            Clicked="OnConfirmClicked"/>
+                </Grid>
+            </VerticalStackLayout>
+        </Frame>
+    </Grid>
+</ContentPage>

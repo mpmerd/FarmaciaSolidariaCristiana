@@ -5,6 +5,7 @@ using CommunityToolkit.Mvvm.Input;
 using FarmaciaSolidariaCristiana.Maui.Helpers;
 using FarmaciaSolidariaCristiana.Maui.Models;
 using FarmaciaSolidariaCristiana.Maui.Services;
+using FarmaciaSolidariaCristiana.Maui.Views;
 
 namespace FarmaciaSolidariaCristiana.Maui.ViewModels;
 
@@ -370,12 +371,12 @@ public partial class TurnosViewModel : BaseViewModel
 
         if (!confirm) return;
 
-        // Pedir comentarios opcionales
-        var comentarios = await Shell.Current.DisplayPromptAsync(
+        // Pedir comentarios opcionales con editor multilínea
+        var comentarios = await TextInputPopup.ShowAsync(
             "Comentarios (opcional)",
-            "Puede agregar comentarios para el paciente:",
-            placeholder: "Ej: Traer carnet de identidad...",
-            maxLength: 500);
+            "Puede agregar instrucciones o comentarios para el paciente:",
+            "Ej: Traer carnet de identidad, ayuno previo, etc.",
+            confirmText: "Aprobar turno");
 
         // El usuario puede cancelar el prompt pero aún así aprobar
         // Si presiona Cancel en comentarios, comentarios será null (lo cual está bien)
@@ -406,10 +407,14 @@ public partial class TurnosViewModel : BaseViewModel
             return;
         }
 
-        var motivo = await Shell.Current.DisplayPromptAsync(
+        // Usar editor multilínea para el motivo
+        var motivo = await TextInputPopup.ShowAsync(
             "Rechazar Turno",
-            "Ingrese el motivo del rechazo:",
-            placeholder: "Motivo...");
+            $"Ingrese el motivo del rechazo para el turno #{turno.Id}:",
+            "Explique por qué se rechaza la solicitud...",
+            isRequired: true,
+            confirmText: "Rechazar",
+            cancelText: "Cancelar");
 
         if (string.IsNullOrEmpty(motivo)) return;
 
