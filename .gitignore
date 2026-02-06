@@ -19,6 +19,10 @@ appsettings.*.json
 credentials.txt
 passwords.txt
 
+# Firebase/Google Services configuration files
+google-services.json
+GoogleService-Info.plist
+
 # User-specific files
 *.rsuser
 *.suo
