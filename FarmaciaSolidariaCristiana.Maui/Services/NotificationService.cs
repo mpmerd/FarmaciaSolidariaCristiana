@@ -84,6 +84,30 @@ public class NotificationService : INotificationService
         return _playerId ?? App.OneSignalPlayerId;
     }
 
+    public async Task<string?> GetPlayerIdAsync(int maxRetries = 3, int delayMs = 500)
+    {
+        // Intentar obtener el PlayerId con reintentos
+        for (int i = 0; i < maxRetries; i++)
+        {
+            var playerId = GetPlayerId();
+            
+            if (!string.IsNullOrEmpty(playerId))
+            {
+                System.Diagnostics.Debug.WriteLine($"[NotificationService] PlayerId obtained: {playerId} (attempt {i + 1}/{maxRetries})");
+                return playerId;
+            }
+            
+            if (i < maxRetries - 1) // No esperar en el último intento
+            {
+                System.Diagnostics.Debug.WriteLine($"[NotificationService] PlayerId not available, retrying in {delayMs}ms... (attempt {i + 1}/{maxRetries})");
+                await Task.Delay(delayMs);
+            }
+        }
+        
+        System.Diagnostics.Debug.WriteLine($"[NotificationService] Failed to get PlayerId after {maxRetries} attempts - Push notifications not available");
+        return null;
+    }
+
     public bool IsPushEnabled()
     {
 #if ANDROID || IOS

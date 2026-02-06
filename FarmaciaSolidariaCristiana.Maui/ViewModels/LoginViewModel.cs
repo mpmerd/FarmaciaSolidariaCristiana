@@ -58,6 +58,7 @@ public partial class LoginViewModel : BaseViewModel
             if (result.Success && result.Data != null)
             {
                 // Intentar registrar dispositivo para notificaciones push (puede fallar en Cuba)
+                bool pushWorking = false;
                 try
                 {
                     await _notificationService.RegisterDeviceAsync();
@@ -66,21 +67,36 @@ public partial class LoginViewModel : BaseViewModel
                     var user = result.Data.User;
                     var primaryRole = user.Roles.FirstOrDefault() ?? "user";
                     await _notificationService.SetUserTagsAsync(user.Id, primaryRole);
+                    
+                    // Verificar que realmente tengamos un PlayerId (indica que OneSignal funciona)
+                    var playerId = await _notificationService.GetPlayerIdAsync();
+                    if (!string.IsNullOrEmpty(playerId))
+                    {
+                        pushWorking = true;
+                        System.Diagnostics.Debug.WriteLine($"[Login] Push/OneSignal working correctly. PlayerId: {playerId}");
+                    }
                 }
                 catch (Exception ex)
                 {
                     System.Diagnostics.Debug.WriteLine($"[Login] Push registration failed (expected in Cuba): {ex.Message}");
                 }
                 
-                // Iniciar servicio de polling para notificaciones (funciona siempre)
-                try
+                // Iniciar servicio de polling SOLO si Push/OneSignal NO funciona
+                if (!pushWorking)
                 {
-                    await _pollingService.StartAsync();
-                    System.Diagnostics.Debug.WriteLine("[Login] Polling service started successfully");
+                    try
+                    {
+                        await _pollingService.StartAsync();
+                        System.Diagnostics.Debug.WriteLine("[Login] Push not available - Polling service started as fallback");
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[Login] Failed to start polling: {ex.Message}");
+                    }
                 }
-                catch (Exception ex)
+                else
                 {
-                    System.Diagnostics.Debug.WriteLine($"[Login] Failed to start polling: {ex.Message}");
+                    System.Diagnostics.Debug.WriteLine("[Login] Push/OneSignal is working - Polling service NOT started");
                 }
                 
                 // Navegar al Shell principal
