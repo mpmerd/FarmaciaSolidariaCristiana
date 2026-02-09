@@ -423,28 +423,34 @@ namespace FarmaciaSolidariaCristiana.Services
                     </html>
                 ";
 
-                // Obtener todos los usuarios con rol "Farmaceutico" desde la base de datos
+                // Obtener todos los usuarios con rol "Farmaceutico" o "Admin" desde la base de datos
                 var farmaceuticoRole = await _roleManager.FindByNameAsync("Farmaceutico");
-                if (farmaceuticoRole == null)
+                var adminRole = await _roleManager.FindByNameAsync("Admin");
+                
+                if (farmaceuticoRole == null && adminRole == null)
                 {
-                    _logger.LogWarning("No se encontró el rol 'Farmaceutico' en la base de datos");
+                    _logger.LogWarning("No se encontraron los roles 'Farmaceutico' ni 'Admin' en la base de datos");
                     return false;
                 }
 
                 var farmaceuticos = await _userManager.GetUsersInRoleAsync("Farmaceutico");
-                var farmaceuticoEmails = farmaceuticos
+                var admins = await _userManager.GetUsersInRoleAsync("Admin");
+                
+                // Combinar y obtener emails únicos
+                var allRecipients = farmaceuticos.Union(admins)
                     .Where(u => !string.IsNullOrEmpty(u.Email))
                     .Select(u => u.Email!)
+                    .Distinct()
                     .ToList();
 
-                if (!farmaceuticoEmails.Any())
+                if (!allRecipients.Any())
                 {
-                    _logger.LogWarning("No hay usuarios con rol 'Farmaceutico' que tengan email configurado");
+                    _logger.LogWarning("No hay usuarios con rol 'Farmaceutico' o 'Admin' que tengan email configurado");
                     return false;
                 }
 
-                _logger.LogInformation("Enviando notificación de turno #{TurnoId} a {Count} farmacéuticos", 
-                    turnoId, farmaceuticoEmails.Count);
+                _logger.LogInformation("Enviando notificación de turno #{TurnoId} a {Count} farmacéuticos/admins", 
+                    turnoId, allRecipients.Count);
 
                 var smtpSettings = _configuration.GetSection("SmtpSettings");
                 var host = smtpSettings["Host"];
@@ -462,7 +468,7 @@ namespace FarmaciaSolidariaCristiana.Services
                 };
 
                 int successCount = 0;
-                foreach (var email in farmaceuticoEmails)
+                foreach (var email in allRecipients)
                 {
                     try
                     {
@@ -487,7 +493,7 @@ namespace FarmaciaSolidariaCristiana.Services
                 }
 
                 _logger.LogInformation("Notificaciones enviadas exitosamente: {Success}/{Total}", 
-                    successCount, farmaceuticoEmails.Count);
+                    successCount, allRecipients.Count);
 
                 return successCount > 0;
             }
