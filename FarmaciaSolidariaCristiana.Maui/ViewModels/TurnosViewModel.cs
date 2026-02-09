@@ -381,21 +381,35 @@ public partial class TurnosViewModel : BaseViewModel
         // El usuario puede cancelar el prompt pero aún así aprobar
         // Si presiona Cancel en comentarios, comentarios será null (lo cual está bien)
 
+        bool success = false;
+        string? fechaAsignada = null;
+        string? errorMessage = null;
+
         await ExecuteAsync(async () =>
         {
             var result = await ApiService.AprobarTurnoAsync(turno.Id, comentarios);
             
             if (result.Success)
             {
-                var fechaAsignada = result.Data?.FechaPreferida?.ToString("dd/MM/yyyy HH:mm") ?? "próximo disponible";
-                await ShowSuccessAsync($"Turno aprobado exitosamente.\n\nFecha asignada: {fechaAsignada}");
-                await LoadTurnosAsync();
+                success = true;
+                fechaAsignada = result.Data?.FechaPreferida?.ToString("dd/MM/yyyy HH:mm") ?? "próximo disponible";
             }
             else
             {
-                await ShowErrorAsync(result.Message ?? "Error al aprobar turno");
+                errorMessage = result.Message ?? "Error al aprobar turno";
             }
         });
+
+        // Mostrar resultado y refrescar fuera de ExecuteAsync para evitar que IsBusy bloquee LoadTurnosAsync
+        if (success)
+        {
+            await ShowSuccessAsync($"Turno aprobado exitosamente.\n\nFecha asignada: {fechaAsignada}");
+            await LoadTurnosAsync();
+        }
+        else if (errorMessage != null)
+        {
+            await ShowErrorAsync(errorMessage);
+        }
     }
 
     [RelayCommand]
@@ -418,20 +432,33 @@ public partial class TurnosViewModel : BaseViewModel
 
         if (string.IsNullOrEmpty(motivo)) return;
 
+        bool success = false;
+        string? errorMessage = null;
+
         await ExecuteAsync(async () =>
         {
             var result = await ApiService.RechazarTurnoAsync(turno.Id, motivo);
             
             if (result.Success)
             {
-                await ShowSuccessAsync("Turno rechazado");
-                await LoadTurnosAsync();
+                success = true;
             }
             else
             {
-                await ShowErrorAsync(result.Message ?? "Error al rechazar turno");
+                errorMessage = result.Message ?? "Error al rechazar turno";
             }
         });
+
+        // Mostrar resultado y refrescar fuera de ExecuteAsync para evitar que IsBusy bloquee LoadTurnosAsync
+        if (success)
+        {
+            await ShowSuccessAsync("Turno rechazado");
+            await LoadTurnosAsync();
+        }
+        else if (errorMessage != null)
+        {
+            await ShowErrorAsync(errorMessage);
+        }
     }
 
     [RelayCommand]
@@ -473,20 +500,33 @@ public partial class TurnosViewModel : BaseViewModel
             "Motivo de la reprogramación (opcional):",
             placeholder: "Motivo...");
 
+        bool success = false;
+        string? errorMessage = null;
+
         await ExecuteAsync(async () =>
         {
             var result = await ApiService.ReprogramarTurnoAsync(turno.Id, nuevaFecha, motivo);
             
             if (result.Success)
             {
-                await ShowSuccessAsync($"Turno reprogramado para el {nuevaFecha:dd/MM/yyyy}");
-                await LoadTurnosAsync();
+                success = true;
             }
             else
             {
-                await ShowErrorAsync(result.Message ?? "Error al reprogramar turno");
+                errorMessage = result.Message ?? "Error al reprogramar turno";
             }
         });
+
+        // Mostrar resultado y refrescar fuera de ExecuteAsync para evitar que IsBusy bloquee LoadTurnosAsync
+        if (success)
+        {
+            await ShowSuccessAsync($"Turno reprogramado para el {nuevaFecha:dd/MM/yyyy}");
+            await LoadTurnosAsync();
+        }
+        else if (errorMessage != null)
+        {
+            await ShowErrorAsync(errorMessage);
+        }
     }
 
     [RelayCommand]
@@ -524,21 +564,33 @@ public partial class TurnosViewModel : BaseViewModel
             return;
         }
 
+        bool success = false;
+        string? errorMessage = null;
+
         await ExecuteAsync(async () =>
         {
             var result = await ApiService.CancelarTurnoAsync(turno.Id, motivo);
             
             if (result.Success)
             {
-                // Mostrar notificación local de confirmación (no push)
-                await ShowSuccessAsync("Tu turno ha sido cancelado exitosamente.\n\nLos farmacéuticos han sido notificados.");
-                await LoadTurnosAsync();
+                success = true;
             }
             else
             {
-                await ShowErrorAsync(result.Message ?? "Error al cancelar turno");
+                errorMessage = result.Message ?? "Error al cancelar turno";
             }
         });
+
+        // Mostrar resultado y refrescar fuera de ExecuteAsync para evitar que IsBusy bloquee LoadTurnosAsync
+        if (success)
+        {
+            await ShowSuccessAsync("Tu turno ha sido cancelado exitosamente.\n\nLos farmacéuticos han sido notificados.");
+            await LoadTurnosAsync();
+        }
+        else if (errorMessage != null)
+        {
+            await ShowErrorAsync(errorMessage);
+        }
     }
 
     [RelayCommand]
