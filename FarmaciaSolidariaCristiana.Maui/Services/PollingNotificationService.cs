@@ -219,8 +219,14 @@ public class PollingNotificationService : IPollingNotificationService, IDisposab
                     };
                     NotificationReceived?.Invoke(this, args);
 
-                    // Mostrar notificación local
+                    // Siempre mostrar notificación local desde polling
+                    // Push puede haber registrado PlayerId pero eso no garantiza que entregó la notificación
+                    // Es preferible una leve duplicidad a perder notificaciones
                     await ShowLocalNotificationAsync(notification);
+                    System.Diagnostics.Debug.WriteLine($"[PollingService] Showing local notification: {notification.Title}");
+
+                    // Marcar como leída en el servidor
+                    await MarkAsReadAsync(notification.Id);
                 }
             }
 
@@ -279,8 +285,7 @@ public class PollingNotificationService : IPollingNotificationService, IDisposab
                         await MarkAsReadAsync(notification.Id);
                         
                         // Navegar según el tipo de notificación
-                        if (notification.NotificationType == "TurnoAprobado" || 
-                            notification.NotificationType == "TurnoRechazado")
+                        if (notification.NotificationType?.Contains("Turno") == true)
                         {
                             await Shell.Current.GoToAsync("//TurnosPage");
                         }

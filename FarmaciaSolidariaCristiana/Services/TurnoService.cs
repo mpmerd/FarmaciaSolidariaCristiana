@@ -864,13 +864,25 @@ namespace FarmaciaSolidariaCristiana.Services
                     
                     _logger.LogInformation("Notificación pendiente creada para usuario {UserId}", turno.UserId);
 
+                    // También intentar enviar push (complementario al polling, puede fallar en Cuba)
+                    try
+                    {
+                        await _notificationService.SendTurnoAprobadoNotificationAsync(
+                            turno.UserId, turno.Id, turno.NumeroTurno.Value, turno.FechaPreferida.Value);
+                        _logger.LogInformation("Push notification enviada para aprobación de turno {TurnoId}", turno.Id);
+                    }
+                    catch (Exception pushEx)
+                    {
+                        _logger.LogWarning(pushEx, "Push failed para aprobación de turno {TurnoId} (polling cubre la entrega)", turno.Id);
+                    }
+
                     // Verificar si el usuario está activo en la app móvil (últimos 5 minutos)
                     var isActiveOnMobile = await _notificationService.IsUserActiveOnMobileAsync(turno.UserId);
                     
                     if (isActiveOnMobile)
                     {
                         // Usuario está usando la app móvil -> NO enviar email
-                        // La notificación será recibida vía polling
+                        // La notificación será recibida vía polling y/o push
                         _logger.LogInformation("Usuario {UserId} está activo en la app móvil, no se envía email", turno.UserId);
                         turno.EmailEnviado = false;
                     }
@@ -956,6 +968,21 @@ namespace FarmaciaSolidariaCristiana.Services
                         "Turno");
                     
                     _logger.LogInformation("Notificación de rechazo creada para polling - Usuario {UserId}", turno.UserId);
+
+                    // También intentar enviar push (complementario al polling)
+                    try
+                    {
+                        if (turno.NumeroTurno.HasValue)
+                        {
+                            await _notificationService.SendTurnoRechazadoNotificationAsync(
+                                turno.UserId, turno.Id, turno.NumeroTurno.Value, motivo);
+                            _logger.LogInformation("Push notification enviada para rechazo de turno {TurnoId}", turno.Id);
+                        }
+                    }
+                    catch (Exception pushEx)
+                    {
+                        _logger.LogWarning(pushEx, "Push failed para rechazo de turno {TurnoId} (polling cubre la entrega)", turno.Id);
+                    }
                     
                     // Verificar si el usuario está activo en la app móvil
                     var isActiveOnMobile = await _notificationService.IsUserActiveOnMobileAsync(turno.UserId);
@@ -1424,12 +1451,40 @@ namespace FarmaciaSolidariaCristiana.Services
             
             _logger.LogInformation("Turno {TurnoId} cancelado por usuario {UserId}", turnoId, userId);
             
-            // Enviar notificación push a farmacéuticos y admin
+            // Notificar a farmacéuticos y admin sobre la cancelación
             if (turno.NumeroTurno.HasValue && turno.FechaPreferida.HasValue)
             {
                 try
                 {
                     var nombrePaciente = turno.User?.UserName ?? "Paciente";
+                    var cancelTitle = "❌ Turno Cancelado por Paciente";
+                    var cancelMessage = $"{nombrePaciente} canceló el turno #{turno.NumeroTurno.Value} del {turno.FechaPreferida.Value:dd/MM/yyyy}. Motivo: {motivoCancelacion}";
+
+                    // Crear PendingNotifications para farmacéuticos (para polling)
+                    var farmaceuticos = await _context.Users
+                        .Where(u => _context.UserRoles
+                            .Where(ur => _context.Roles
+                                .Where(r => r.Name == "Farmaceutico" || r.Name == "Admin")
+                                .Select(r => r.Id)
+                                .Contains(ur.RoleId))
+                            .Select(ur => ur.UserId)
+                            .Contains(u.Id))
+                        .Select(u => u.Id)
+                        .ToListAsync();
+
+                    foreach (var farmUserId in farmaceuticos)
+                    {
+                        await _pendingNotificationService.CreateNotificationAsync(
+                            farmUserId,
+                            cancelTitle,
+                            cancelMessage,
+                            NotificationTypes.TurnoCancelado,
+                            turnoId,
+                            "Turno");
+                    }
+                    _logger.LogInformation("Creadas {Count} notificaciones pendientes de cancelación para farmacéuticos", farmaceuticos.Count);
+
+                    // También intentar push (complementario)
                     await _notificationService.SendTurnoCanceladoPorPacienteToFarmaceuticosAsync(
                         turnoId,
                         turno.NumeroTurno.Value,
@@ -1437,11 +1492,11 @@ namespace FarmaciaSolidariaCristiana.Services
                         turno.FechaPreferida.Value,
                         motivoCancelacion);
                     
-                    _logger.LogInformation("Notificación de cancelación enviada a farmacéuticos para turno #{TurnoId}", turnoId);
+                    _logger.LogInformation("Notificación push de cancelación enviada a farmacéuticos para turno #{TurnoId}", turnoId);
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogWarning(ex, "Error enviando notificación de cancelación a farmacéuticos para turno #{TurnoId}", turnoId);
+                    _logger.LogWarning(ex, "Error enviando notificación de cancelación a farmacéuticos para turno #{TurnoId} (polling puede cubrirlo)", turnoId);
                 }
             }
             

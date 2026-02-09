@@ -57,47 +57,45 @@ public partial class LoginViewModel : BaseViewModel
             
             if (result.Success && result.Data != null)
             {
-                // Intentar registrar dispositivo para notificaciones push (puede fallar en Cuba)
-                bool pushWorking = false;
+                // 1. SIEMPRE iniciar polling (canal principal, funciona en Cuba y fuera)
+                // El polling consulta PendingNotifications que el backend siempre crea
                 try
                 {
-                    await _notificationService.RegisterDeviceAsync();
-                    
-                    // Configurar tags de usuario en OneSignal (si funciona)
-                    var user = result.Data.User;
-                    var primaryRole = user.Roles.FirstOrDefault() ?? "user";
-                    await _notificationService.SetUserTagsAsync(user.Id, primaryRole);
-                    
-                    // Verificar que realmente tengamos un PlayerId (indica que OneSignal funciona)
-                    var playerId = await _notificationService.GetPlayerIdAsync();
-                    if (!string.IsNullOrEmpty(playerId))
-                    {
-                        pushWorking = true;
-                        System.Diagnostics.Debug.WriteLine($"[Login] Push/OneSignal working correctly. PlayerId: {playerId}");
-                    }
+                    await _pollingService.StartAsync();
+                    System.Diagnostics.Debug.WriteLine("[Login] ✅ Polling service started - primary notification delivery");
                 }
                 catch (Exception ex)
                 {
-                    System.Diagnostics.Debug.WriteLine($"[Login] Push registration failed (expected in Cuba): {ex.Message}");
+                    System.Diagnostics.Debug.WriteLine($"[Login] ⚠️ Failed to start polling: {ex.Message}");
                 }
-                
-                // Iniciar servicio de polling SOLO si Push/OneSignal NO funciona
-                if (!pushWorking)
+
+                // 2. Registrar push en segundo plano (complementario, no bloquea el login)
+                // Push es un canal ADICIONAL para entrega inmediata fuera de Cuba
+                var userData = result.Data;
+                _ = Task.Run(async () =>
                 {
                     try
                     {
-                        await _pollingService.StartAsync();
-                        System.Diagnostics.Debug.WriteLine("[Login] Push not available - Polling service started as fallback");
+                        var user = userData.User;
+                        var primaryRole = user.Roles.FirstOrDefault() ?? "user";
+                        await _notificationService.SetUserTagsAsync(user.Id, primaryRole);
+                        await _notificationService.RegisterDeviceAsync();
+                        
+                        var playerId = _notificationService.GetPlayerId();
+                        if (!string.IsNullOrEmpty(playerId))
+                        {
+                            System.Diagnostics.Debug.WriteLine($"[Login] ✅ Push also registered. PlayerId: {playerId}");
+                        }
+                        else
+                        {
+                            System.Diagnostics.Debug.WriteLine("[Login] ℹ️ Push not available (expected in Cuba) - Polling covers all notifications");
+                        }
                     }
                     catch (Exception ex)
                     {
-                        System.Diagnostics.Debug.WriteLine($"[Login] Failed to start polling: {ex.Message}");
+                        System.Diagnostics.Debug.WriteLine($"[Login] ℹ️ Push registration failed (expected in Cuba): {ex.Message}");
                     }
-                }
-                else
-                {
-                    System.Diagnostics.Debug.WriteLine("[Login] Push/OneSignal is working - Polling service NOT started");
-                }
+                });
                 
                 // Navegar al Shell principal
                 var appShell = App.Current?.Handler?.MauiContext?.Services.GetService<AppShell>();
