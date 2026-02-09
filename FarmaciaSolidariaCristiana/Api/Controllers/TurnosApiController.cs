@@ -18,6 +18,7 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
         private readonly ApplicationDbContext _context;
         private readonly ITurnoService _turnoService;
         private readonly IOneSignalNotificationService _notificationService;
+        private readonly IEmailService _emailService;
         private readonly ILogger<TurnosApiController> _logger;
         private readonly IWebHostEnvironment _environment;
 
@@ -25,12 +26,14 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
             ApplicationDbContext context,
             ITurnoService turnoService,
             IOneSignalNotificationService notificationService,
+            IEmailService emailService,
             ILogger<TurnosApiController> logger,
             IWebHostEnvironment environment)
         {
             _context = context;
             _turnoService = turnoService;
             _notificationService = notificationService;
+            _emailService = emailService;
             _logger = logger;
             _environment = environment;
         }
@@ -400,7 +403,7 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
 
                 _logger.LogInformation("Turno #{Id} creado vía API por usuario {UserId}", createdTurno.Id, userId);
 
-                // Enviar notificación push a farmacéuticos (no email ya que el usuario vio la confirmación en app)
+                // Enviar notificación push/polling a farmacéuticos
                 try
                 {
                     var nombreUsuario = turnoCompleto?.User?.UserName ?? "Usuario";
@@ -409,12 +412,27 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
                         createdTurno.Id, 
                         numeroTurno, 
                         nombreUsuario);
-                    _logger.LogInformation("Notificación push enviada a farmacéuticos para turno #{TurnoId}", createdTurno.Id);
+                    _logger.LogInformation("Notificación push/polling enviada a farmacéuticos para turno #{TurnoId}", createdTurno.Id);
                 }
                 catch (Exception notifEx)
                 {
                     // No fallar la solicitud si la notificación falla
                     _logger.LogWarning(notifEx, "Error enviando notificación push a farmacéuticos para turno #{TurnoId}", createdTurno.Id);
+                }
+
+                // Enviar email a farmacéuticos/admins que NO estén activos en la app móvil (usan web)
+                try
+                {
+                    var nombreUsuario = turnoCompleto?.User?.UserName ?? "Usuario";
+                    await _emailService.SendTurnoNotificationToFarmaceuticosAsync(
+                        nombreUsuario, 
+                        createdTurno.Id, 
+                        "Nueva Solicitud");
+                    _logger.LogInformation("Email enviado a farmacéuticos inactivos para turno #{TurnoId}", createdTurno.Id);
+                }
+                catch (Exception emailEx)
+                {
+                    _logger.LogWarning(emailEx, "Error enviando email a farmacéuticos para turno #{TurnoId}", createdTurno.Id);
                 }
 
                 return ApiOk(MapToDto(turnoCompleto!), "Turno solicitado exitosamente. Recibirás una notificación cuando sea revisado.");

@@ -51,6 +51,13 @@ public partial class LoginViewModel : BaseViewModel
             return;
         }
 
+        // Verificar conexión a internet antes de intentar login
+        if (Connectivity.Current.NetworkAccess != NetworkAccess.Internet)
+        {
+            await ShowErrorAsync("No hay conexión a internet. Por favor, verifique su conexión e intente nuevamente.");
+            return;
+        }
+
         await ExecuteAsync(async () =>
         {
             var result = await AuthService.LoginAsync(Email, Password);
