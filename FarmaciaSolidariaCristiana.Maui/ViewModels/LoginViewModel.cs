@@ -57,45 +57,58 @@ public partial class LoginViewModel : BaseViewModel
             
             if (result.Success && result.Data != null)
             {
-                // 1. SIEMPRE iniciar polling (canal principal, funciona en Cuba y fuera)
-                // El polling consulta PendingNotifications que el backend siempre crea
+                // Estrategia híbrida: Intentar Push primero, Polling siempre como respaldo
+                // El Polling también envía heartbeat para que el servidor sepa que estamos activos
+                
+                var userData = result.Data;
+                var user = userData.User;
+                var primaryRole = user.Roles.FirstOrDefault() ?? "user";
+                
+                bool pushWorking = false;
+                
+                // 1. Intentar registrar Push (con timeout)
                 try
                 {
-                    await _pollingService.StartAsync();
-                    System.Diagnostics.Debug.WriteLine("[Login] ✅ Polling service started - primary notification delivery");
+                    await _notificationService.SetUserTagsAsync(user.Id, primaryRole);
+                    await _notificationService.RegisterDeviceAsync();
+                    
+                    // Esperar un poco para que OneSignal obtenga el PlayerId
+                    var playerId = await _notificationService.GetPlayerIdAsync(maxRetries: 5, delayMs: 1000);
+                    
+                    if (!string.IsNullOrEmpty(playerId))
+                    {
+                        pushWorking = true;
+                        System.Diagnostics.Debug.WriteLine($"[Login] ✅ Push registrado. PlayerId: {playerId}");
+                    }
+                    else
+                    {
+                        System.Diagnostics.Debug.WriteLine("[Login] ⚠️ Push sin PlayerId");
+                    }
                 }
                 catch (Exception ex)
                 {
-                    System.Diagnostics.Debug.WriteLine($"[Login] ⚠️ Failed to start polling: {ex.Message}");
+                    System.Diagnostics.Debug.WriteLine($"[Login] ⚠️ Push falló: {ex.Message}");
                 }
-
-                // 2. Registrar push en segundo plano (complementario, no bloquea el login)
-                // Push es un canal ADICIONAL para entrega inmediata fuera de Cuba
-                var userData = result.Data;
-                _ = Task.Run(async () =>
+                
+                // 2. SIEMPRE iniciar Polling (para heartbeat y notificaciones de respaldo)
+                // Si Push funciona, Polling sirve como backup y para mantener heartbeat
+                // Si Push no funciona, Polling es el canal principal
+                try
                 {
-                    try
+                    await _pollingService.StartAsync();
+                    if (pushWorking)
                     {
-                        var user = userData.User;
-                        var primaryRole = user.Roles.FirstOrDefault() ?? "user";
-                        await _notificationService.SetUserTagsAsync(user.Id, primaryRole);
-                        await _notificationService.RegisterDeviceAsync();
-                        
-                        var playerId = _notificationService.GetPlayerId();
-                        if (!string.IsNullOrEmpty(playerId))
-                        {
-                            System.Diagnostics.Debug.WriteLine($"[Login] ✅ Push also registered. PlayerId: {playerId}");
-                        }
-                        else
-                        {
-                            System.Diagnostics.Debug.WriteLine("[Login] ℹ️ Push not available (expected in Cuba) - Polling covers all notifications");
-                        }
+                        System.Diagnostics.Debug.WriteLine("[Login] ✅ Polling iniciado como respaldo (Push es primario)");
                     }
-                    catch (Exception ex)
+                    else
                     {
-                        System.Diagnostics.Debug.WriteLine($"[Login] ℹ️ Push registration failed (expected in Cuba): {ex.Message}");
+                        System.Diagnostics.Debug.WriteLine("[Login] ✅ Polling iniciado como canal principal (Push no disponible)");
                     }
-                });
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[Login] ❌ Error iniciando Polling: {ex.Message}");
+                }
                 
                 // Navegar al Shell principal
                 var appShell = App.Current?.Handler?.MauiContext?.Services.GetService<AppShell>();

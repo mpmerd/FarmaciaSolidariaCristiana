@@ -11,16 +11,18 @@ public partial class App : Application
 {
     private readonly IAuthService _authService;
     private readonly UpdateService _updateService;
+    private readonly IServiceProvider _serviceProvider;
     
     // Static property to track OneSignal initialization status
     public static bool IsOneSignalInitialized { get; private set; }
     public static string? OneSignalPlayerId { get; private set; }
     public static string? OneSignalInitError { get; private set; }
     
-    public App(IAuthService authService)
+    public App(IAuthService authService, IServiceProvider serviceProvider)
     {
         InitializeComponent();
         _authService = authService;
+        _serviceProvider = serviceProvider;
         _updateService = new UpdateService();
         
         // Initialize OneSignal
@@ -102,6 +104,32 @@ public partial class App : Application
 
     protected override Window CreateWindow(IActivationState? activationState)
     {
-        return new Window(new AppShell(_authService));
+        var window = new Window(new AppShell(_authService));
+        
+        // Manejar cuando la app vuelve a primer plano
+        window.Resumed += async (s, e) =>
+        {
+            System.Diagnostics.Debug.WriteLine("[App] App resumed - checking for pending notifications");
+            
+            try
+            {
+                var pollingService = _serviceProvider.GetService<IPollingNotificationService>();
+                if (pollingService != null && pollingService.IsRunning)
+                {
+                    // Verificar notificaciones inmediatamente al volver a primer plano
+                    var newCount = await pollingService.CheckNowAsync();
+                    if (newCount > 0)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[App] Found {newCount} new notifications on resume");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[App] Error checking notifications on resume: {ex.Message}");
+            }
+        };
+        
+        return window;
     }
 }
