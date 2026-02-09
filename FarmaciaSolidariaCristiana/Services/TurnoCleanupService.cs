@@ -51,6 +51,7 @@ namespace FarmaciaSolidariaCristiana.Services
             var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
             var emailService = scope.ServiceProvider.GetRequiredService<IEmailService>();
             var notificationService = scope.ServiceProvider.GetRequiredService<IOneSignalNotificationService>();
+            var pendingNotificationService = scope.ServiceProvider.GetRequiredService<IPendingNotificationService>();
             var userManager = scope.ServiceProvider.GetRequiredService<UserManager<IdentityUser>>();
 
             var now = DateTime.Now;
@@ -105,7 +106,7 @@ namespace FarmaciaSolidariaCristiana.Services
             {
                 try
                 {
-                    await CancelExpiredTurno(turno, context, emailService, notificationService, userManager);
+                    await CancelExpiredTurno(turno, context, emailService, notificationService, pendingNotificationService, userManager);
                 }
                 catch (Exception ex)
                 {
@@ -122,6 +123,7 @@ namespace FarmaciaSolidariaCristiana.Services
             ApplicationDbContext context,
             IEmailService emailService,
             IOneSignalNotificationService notificationService,
+            IPendingNotificationService pendingNotificationService,
             UserManager<IdentityUser> userManager)
         {
             _logger.LogInformation("Cancelando turno vencido #{TurnoId} - Usuario: {UserId}, Fecha: {Fecha}",
@@ -159,7 +161,27 @@ namespace FarmaciaSolidariaCristiana.Services
             var fechaTurno = turno.FechaPreferida ?? DateTime.Now;
             var numeroTurno = turno.NumeroTurno ?? 0;
 
-            // 4. Verificar si el paciente tiene la app para enviar push o email
+            // 4. Crear notificación pendiente para el paciente (polling - funciona siempre)
+            var noPresentacionTitle = "⚠️ Turno Cancelado - No Presentación";
+            var noPresentacionMessage = $"Tu turno #{numeroTurno} del {fechaTurno:dd/MM/yyyy} fue cancelado porque no asististe a la farmacia.";
+            
+            try
+            {
+                await pendingNotificationService.CreateNotificationAsync(
+                    turno.UserId,
+                    noPresentacionTitle,
+                    noPresentacionMessage,
+                    NotificationTypes.TurnoCancelado,
+                    turno.Id,
+                    "Turno");
+                _logger.LogInformation("Notificación pendiente de no-presentación creada para paciente: {UserId}", turno.UserId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error creando notificación pendiente de no-presentación para paciente {UserId}", turno.UserId);
+            }
+
+            // También intentar push al paciente (complementario)
             var pacienteTienePush = await notificationService.UserHasPushEnabledAsync(turno.UserId);
 
             if (pacienteTienePush)
@@ -199,7 +221,37 @@ namespace FarmaciaSolidariaCristiana.Services
                 }
             }
 
-            // 5. Enviar notificación push a farmacéuticos y admin
+            // 5. Crear notificaciones pendientes para farmacéuticos (polling)
+            try
+            {
+                var farmaceuticos = await userManager.GetUsersInRoleAsync("Farmaceutico");
+                var admins = await userManager.GetUsersInRoleAsync("Admin");
+                var allFarmUserIds = farmaceuticos.Select(u => u.Id)
+                    .Union(admins.Select(u => u.Id))
+                    .Distinct()
+                    .ToList();
+
+                var farmTitle = "⏰ Turno Cancelado - No Presentación";
+                var farmMessage = $"El turno #{numeroTurno} de {nombrePaciente} ({fechaTurno:dd/MM/yyyy}) fue cancelado automáticamente por no asistencia.";
+
+                foreach (var farmUserId in allFarmUserIds)
+                {
+                    await pendingNotificationService.CreateNotificationAsync(
+                        farmUserId,
+                        farmTitle,
+                        farmMessage,
+                        NotificationTypes.TurnoCancelado,
+                        turno.Id,
+                        "Turno");
+                }
+                _logger.LogInformation("Creadas {Count} notificaciones pendientes de no-presentación para farmacéuticos", allFarmUserIds.Count);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error creando notificaciones pendientes de no-presentación para farmacéuticos");
+            }
+
+            // También intentar enviar push a farmacéuticos (complementario)
             try
             {
                 await notificationService.SendTurnoCanceladoNoPresentacionToFarmaceuticosAsync(
