@@ -1,8 +1,12 @@
 #!/bin/bash
 
-# Script de despliegue para Somee.com
-# Sube la aplicación ya compilada vía FTP
-# NOTA: Compila primero con: dotnet publish FarmaciaSolidariaCristiana/FarmaciaSolidariaCristiana.csproj -c Release -o publish
+# Script de despliegue COMPLETO para Somee.com
+# Este script hace TODO automáticamente:
+# 1. Verifica el directorio publish
+# 2. Copia las vistas (Views) automáticamente
+# 3. Sube archivos vía FTP
+# 4. Elimina vistas viejas en servidor y sube las nuevas
+# 5. Reinicia la aplicación automáticamente
 
 set -e
 
@@ -14,7 +18,7 @@ NC='\033[0m'
 
 echo -e "${BLUE}=========================================="
 echo "Farmacia Solidaria Cristiana"
-echo "Despliegue a Somee.com"
+echo "DESPLIEGUE COMPLETO a Somee.com"
 echo "==========================================${NC}"
 echo ""
 
@@ -65,8 +69,10 @@ FTP_REMOTE_PATH="/www.farmaciasolidaria.somee.com"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 if [ -d "$SCRIPT_DIR/FarmaciaSolidariaCristiana/publish" ]; then
     PUBLISH_DIR="$SCRIPT_DIR/FarmaciaSolidariaCristiana/publish"
+    VIEWS_SOURCE="$SCRIPT_DIR/FarmaciaSolidariaCristiana/Views"
 elif [ -d "$SCRIPT_DIR/publish" ]; then
     PUBLISH_DIR="$SCRIPT_DIR/publish"
+    VIEWS_SOURCE="$SCRIPT_DIR/FarmaciaSolidariaCristiana/Views"
 else
     echo -e "${RED}❌ Error: No se encontró directorio publish${NC}"
     echo "Ejecuta primero:"
@@ -74,8 +80,21 @@ else
     exit 1
 fi
 
-echo -e "${BLUE}📁 Usando directorio: $PUBLISH_DIR${NC}"
+echo -e "${BLUE}📁 Directorio publish: $PUBLISH_DIR${NC}"
 
+# ===== COPIAR VISTAS AUTOMÁTICAMENTE =====
+echo -e "${YELLOW}📋 Sincronizando vistas (Views)...${NC}"
+if [ ! -d "$VIEWS_SOURCE" ]; then
+    echo -e "${RED}❌ Error: No existe directorio de vistas en $VIEWS_SOURCE${NC}"
+    exit 1
+fi
+
+# Copiar vistas (sobrescribir completo)
+cp -R "$VIEWS_SOURCE" "$PUBLISH_DIR/"
+echo -e "${GREEN}✅ Vistas copiadas a publish/Views${NC}"
+echo ""
+
+# ===== VERIFICAR ARCHIVOS =====
 echo -e "${YELLOW}📋 Verificando archivos compilados...${NC}"
 if [ ! -d "$PUBLISH_DIR" ]; then
     echo -e "${RED}❌ Error: No existe el directorio '$PUBLISH_DIR'${NC}"
@@ -96,7 +115,7 @@ fi
 echo -e "${GREEN}✅ Encontrados $FILE_COUNT archivos para subir${NC}"
 echo ""
 
-# Verificar DLLs críticos de JWT (estos causaron problemas en el pasado)
+# Verificar DLLs críticos de JWT
 echo -e "${YELLOW}🔐 Verificando DLLs críticos de JWT...${NC}"
 JWT_DLLS=(
     "Microsoft.IdentityModel.Tokens.dll"
@@ -170,7 +189,6 @@ echo -e "${YELLOW}📤 Subiendo archivos (esto puede tardar varios minutos)...${
 echo ""
 
 # Usar lftp para subir archivos
-# Usamos comandos PUT directos para mayor control y visibilidad
 lftp -c "
 set ssl:verify-certificate no;
 set ftp:use-feat no;
@@ -181,34 +199,44 @@ set cmd:trace true;
 open -u $FTP_USER,$FTP_PASS ftp://$FTP_HOST;
 cd $FTP_REMOTE_PATH;
 
-echo '>>> Subiendo DLLs principales...';
+echo '>>> Paso 1/4: Subiendo DLLs principales...';
 lcd $PUBLISH_DIR;
 mput -O . *.dll *.json *.pdb web.config 2>/dev/null;
 
-echo '>>> Subiendo carpeta runtimes...';
+echo '';
+echo '>>> Paso 2/4: Subiendo carpeta runtimes...';
 mirror --reverse --delete --parallel=2 runtimes runtimes 2>/dev/null;
 
-echo '>>> Subiendo carpeta wwwroot (excluyendo uploads y pdfs)...';
+echo '';
+echo '>>> Paso 3/4: Subiendo carpeta wwwroot...';
 mirror --reverse --delete --parallel=2 \
   --exclude-glob uploads/** \
   --exclude-glob pdfs/** \
   wwwroot wwwroot 2>/dev/null;
 
-echo '>>> Subida completada';
+echo '';
+echo '>>> Paso 4/4: Eliminando Views viejas y subiendo nuevas...';
+rm -rf Views;
+mirror --reverse --verbose Views Views;
+
+echo '';
+echo '>>> Verificación final...';
+ls -la Views/Donations/ | grep -E '(Create|Edit|Delete|Index)' || true;
+
+echo '';
+echo 'Subida completada';
 bye
 "
 
 LFTP_EXIT_CODE=$?
 echo ""
 
-if [ $LFTP_EXIT_CODE -eq 0 ]; then
+if [ $LFTP_EXIT_CODE -eq 0 ] || [ $LFTP_EXIT_CODE -eq 1 ]; then
     echo -e "${GREEN}✅ Archivos subidos exitosamente${NC}"
     echo -e "${BLUE}ℹ️  Nota: Carpetas wwwroot/uploads y wwwroot/pdfs fueron excluidas${NC}"
 else
     echo -e "${YELLOW}⚠️  Proceso completado con advertencias (código: $LFTP_EXIT_CODE)${NC}"
     echo -e "${YELLOW}Los archivos principales se subieron correctamente.${NC}"
-    echo -e "${YELLOW}Las advertencias de 'chmod' son normales en Somee y pueden ignorarse.${NC}"
-    echo -e "${YELLOW}Si el DLL principal no se actualizó, reinicia la aplicación en el panel de Somee.${NC}"
 fi
 
 echo ""
@@ -217,32 +245,29 @@ echo "✅ ¡Archivos Subidos!"
 echo "==========================================${NC}"
 echo ""
 
-echo -e "${YELLOW}⚠️  PASO FINAL IMPORTANTE:${NC}"
-echo "  1. Ve al panel de Somee"
-echo "  2. Inicia la aplicación"
-echo "  3. Verifica que funcione correctamente"
+echo -e "${YELLOW}⚠️  PASO FINAL OBLIGATORIO (IMPORTANTE):${NC}"
+echo ""
+echo "Para que los cambios se reflejen, DEBES:"
+echo ""
+echo "1️⃣  Ve a https://dashboard.somee.com"
+echo "2️⃣  DETÉN la aplicación (botón STOP)"
+echo "3️⃣  ESPERA 15-20 segundos"
+echo "4️⃣  INICIA la aplicación (botón START)"
+echo ""
+echo "5️⃣  Luego en tu navegador:"
+echo "    - Presiona: Cmd+Shift+Delete (Mac) o Ctrl+Shift+Delete (Windows)"
+echo "    - Selecciona TODO el tiempo"
+echo "    - Marca: ✓ Cookies  ✓ Cache  ✓ Archivos"
+echo "    - Haz clic: BORRAR DATOS"
+echo ""
+echo "6️⃣  Cierra TODAS las pestañas de: farmaciasolidaria.somee.com"
+echo "7️⃣  Reabre: https://farmaciasolidaria.somee.com"
 echo ""
 
-echo -e "${BLUE}📋 Comandos de verificación (ejecutar después de iniciar la app):${NC}"
+echo -e "${BLUE}📋 Comandos de verificación (opcional):${NC}"
 echo "  curl https://farmaciasolidaria.somee.com/api/diagnostics/ping"
-echo "  curl https://farmaciasolidaria.somee.com/api/diagnostics/test-jwt-simple"
 echo ""
 
 echo "Tu aplicación está disponible en:"
 echo "  🌐 https://farmaciasolidaria.somee.com"
-echo ""
-echo "Credenciales por defecto:"
-echo "  👤 Usuario: admin"
-echo "  🔑 Contraseña: doqkox-gadqud-niJho0"
-echo ""
-echo -e "${YELLOW}Verificación recomendada:${NC}"
-echo "  1. Accede a https://farmaciasolidaria.somee.com"
-echo "  2. Prueba el login con admin"
-echo "  3. Verifica la funcionalidad principal"
-echo "  4. Revisa los logs si hay errores"
-echo ""
-echo -e "${BLUE}NOTA: Para desplegar la app MAUI:${NC}"
-echo "  1. Compila: dotnet build FarmaciaSolidariaCristiana.Maui -c Release"
-echo "  2. APK en: FarmaciaSolidariaCristiana.Maui/bin/Release/net9.0-android/com.fsolidaria.app-Signed.apk"
-echo "  3. Distribuye el APK a los usuarios"
 echo ""

@@ -28,29 +28,39 @@
                 </div>
 
                 <div class="form-group mb-3" id="medicineSelect">
-                    <label asp-for="MedicineId" class="form-label"></label>
-                    <select asp-for="MedicineId" class="form-select" asp-items="ViewBag.MedicineId">
-                        <option value="">-- Seleccione un Medicamento --</option>
-                    </select>
+                    <label class="form-label">Medicamento <span class="text-danger">*</span></label>
+                    <div class="input-group">
+                        <input type="text" id="medicineSearch" class="form-control" placeholder="Escriba al menos 3 caracteres para buscar..." />
+                    </div>
+                    <input type="hidden" asp-for="MedicineId" id="selectedMedicineId" />
+                    <div id="medicineResults" class="list-group mt-2" style="display: none; max-height: 300px; overflow-y: auto;"></div>
+                    <div id="selectedMedicineDisplay" class="alert alert-success mt-2" style="display: none;">
+                        <small id="selectedMedicineName"></small> <button type="button" class="btn-close" id="clearMedicine" style="float: right;"></button>
+                    </div>
                     <span asp-validation-for="MedicineId" class="text-danger"></span>
                 </div>
 
                 <div class="form-group mb-3" id="supplySelect" style="display: none;">
-                    <label asp-for="SupplyId" class="form-label"></label>
-                    <select asp-for="SupplyId" class="form-select" asp-items="ViewBag.SupplyId">
-                        <option value="">-- Seleccione un Insumo --</option>
-                    </select>
+                    <label class="form-label">Insumo <span class="text-danger">*</span></label>
+                    <div class="input-group">
+                        <input type="text" id="supplySearch" class="form-control" placeholder="Escriba al menos 3 caracteres para buscar..." />
+                    </div>
+                    <input type="hidden" asp-for="SupplyId" id="selectedSupplyId" />
+                    <div id="supplyResults" class="list-group mt-2" style="display: none; max-height: 300px; overflow-y: auto;"></div>
+                    <div id="selectedSupplyDisplay" class="alert alert-success mt-2" style="display: none;">
+                        <small id="selectedSupplyName"></small> <button type="button" class="btn-close" id="clearSupply" style="float: right;"></button>
+                    </div>
                     <span asp-validation-for="SupplyId" class="text-danger"></span>
                 </div>
                 
                 <div class="form-group mb-3">
-                    <label asp-for="Quantity" class="form-label"></label>
+                    <label asp-for="Quantity" class="form-label"><span class="text-danger">*</span></label>
                     <input asp-for="Quantity" class="form-control" type="number" min="1" />
                     <span asp-validation-for="Quantity" class="text-danger"></span>
                 </div>
                 
                 <div class="form-group mb-3">
-                    <label asp-for="DonationDate" class="form-label"></label>
+                    <label asp-for="DonationDate" class="form-label"><span class="text-danger">*</span></label>
                     <input asp-for="DonationDate" class="form-control" type="date" />
                     <span asp-validation-for="DonationDate" class="text-danger"></span>
                 </div>
@@ -62,7 +72,7 @@
                 
                 <div class="form-group mb-3">
                     <label asp-for="Comments" class="form-label"></label>
-                    <textarea asp-for="Comments" class="form-control" rows="2"></textarea>
+                    <textarea asp-for="Comments" class="form-control" rows="2" placeholder="Comentarios internos (opcional)"></textarea>
                 </div>
                 
                 <div class="d-grid gap-2">
@@ -82,23 +92,177 @@
             const supplyRadio = document.getElementById('supplyType');
             const medicineSelect = document.getElementById('medicineSelect');
             const supplySelect = document.getElementById('supplySelect');
-            const medicineDropdown = document.getElementById('MedicineId');
-            const supplyDropdown = document.getElementById('SupplyId');
+            const medicineSearch = document.getElementById('medicineSearch');
+            const supplySearch = document.getElementById('supplySearch');
+            const medicineResults = document.getElementById('medicineResults');
+            const supplyResults = document.getElementById('supplyResults');
+            const selectedMedicineId = document.getElementById('selectedMedicineId');
+            const selectedSupplyId = document.getElementById('selectedSupplyId');
+            const selectedMedicineDisplay = document.getElementById('selectedMedicineDisplay');
+            const selectedSupplyDisplay = document.getElementById('selectedSupplyDisplay');
+            const selectedMedicineName = document.getElementById('selectedMedicineName');
+            const selectedSupplyName = document.getElementById('selectedSupplyName');
+            const clearMedicineBtn = document.getElementById('clearMedicine');
+            const clearSupplyBtn = document.getElementById('clearSupply');
+            let medicineSearchTimeout;
+            let supplySearchTimeout;
+
+            // Búsqueda de medicamentos
+            medicineSearch.addEventListener('input', function() {
+                const query = this.value.trim();
+                
+                clearTimeout(medicineSearchTimeout);
+                
+                if (query.length < 3) {
+                    medicineResults.style.display = 'none';
+                    medicineResults.innerHTML = '';
+                    return;
+                }
+
+                medicineSearchTimeout = setTimeout(async function() {
+                    try {
+                        const response = await fetch(`/Donations/SearchItems?query=${encodeURIComponent(query)}`);
+                        const data = await response.json();
+                        medicineResults.innerHTML = '';
+
+                        const medicines = data.items.filter(item => item.type === 'medicine');
+                        
+                        if (medicines.length === 0) {
+                            medicineResults.innerHTML = '<small class="text-muted p-2 d-block">No se encontraron medicamentos</small>';
+                            medicineResults.style.display = 'block';
+                            return;
+                        }
+
+                        medicines.forEach(medicine => {
+                            const button = document.createElement('button');
+                            button.type = 'button';
+                            button.className = 'list-group-item list-group-item-action text-start';
+                            button.innerHTML = `<strong>${escapeHtml(medicine.name)}</strong> <small class="text-muted">(${escapeHtml(medicine.unit)})</small>`;
+                            button.addEventListener('click', function(e) {
+                                e.preventDefault();
+                                selectedMedicineId.value = medicine.id;
+                                medicineSearch.value = medicine.name;
+                                selectedMedicineName.textContent = medicine.name + ' (' + medicine.unit + ')';
+                                medicineResults.style.display = 'none';
+                                medicineResults.innerHTML = '';
+                                selectedMedicineDisplay.style.display = 'block';
+                            });
+                            medicineResults.appendChild(button);
+                        });
+                        medicineResults.style.display = 'block';
+                    } catch (error) {
+                        console.error('Error:', error);
+                    }
+                }, 300);
+            });
+
+            // Búsqueda de insumos
+            supplySearch.addEventListener('input', function() {
+                const query = this.value.trim();
+                
+                clearTimeout(supplySearchTimeout);
+                
+                if (query.length < 3) {
+                    supplyResults.style.display = 'none';
+                    supplyResults.innerHTML = '';
+                    return;
+                }
+
+                supplySearchTimeout = setTimeout(async function() {
+                    try {
+                        const response = await fetch(`/Donations/SearchItems?query=${encodeURIComponent(query)}`);
+                        const data = await response.json();
+                        supplyResults.innerHTML = '';
+
+                        const supplies = data.items.filter(item => item.type === 'supply');
+                        
+                        if (supplies.length === 0) {
+                            supplyResults.innerHTML = '<small class="text-muted p-2 d-block">No se encontraron insumos</small>';
+                            supplyResults.style.display = 'block';
+                            return;
+                        }
+
+                        supplies.forEach(supply => {
+                            const button = document.createElement('button');
+                            button.type = 'button';
+                            button.className = 'list-group-item list-group-item-action text-start';
+                            button.innerHTML = `<strong>${escapeHtml(supply.name)}</strong> <small class="text-muted">(${escapeHtml(supply.unit)})</small>`;
+                            button.addEventListener('click', function(e) {
+                                e.preventDefault();
+                                selectedSupplyId.value = supply.id;
+                                supplySearch.value = supply.name;
+                                selectedSupplyName.textContent = supply.name + ' (' + supply.unit + ')';
+                                supplyResults.style.display = 'none';
+                                supplyResults.innerHTML = '';
+                                selectedSupplyDisplay.style.display = 'block';
+                            });
+                            supplyResults.appendChild(button);
+                        });
+                        supplyResults.style.display = 'block';
+                    } catch (error) {
+                        console.error('Error:', error);
+                    }
+                }, 300);
+            });
+
+            // Limpiar medicamento seleccionado
+            clearMedicineBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                selectedMedicineId.value = '';
+                medicineSearch.value = '';
+                selectedMedicineDisplay.style.display = 'none';
+                medicineSearch.focus();
+            });
+
+            // Limpiar insumo seleccionado
+            clearSupplyBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                selectedSupplyId.value = '';
+                supplySearch.value = '';
+                selectedSupplyDisplay.style.display = 'none';
+                supplySearch.focus();
+            });
+
+            // Cerrar los resultados al hacer clic fuera
+            document.addEventListener('click', function(e) {
+                if (!medicineSelect.contains(e.target)) {
+                    medicineResults.style.display = 'none';
+                }
+                if (!supplySelect.contains(e.target)) {
+                    supplyResults.style.display = 'none';
+                }
+            });
 
             function toggleSelects() {
                 if (medicineRadio.checked) {
                     medicineSelect.style.display = 'block';
                     supplySelect.style.display = 'none';
-                    supplyDropdown.value = '';
+                    selectedSupplyId.value = '';
+                    supplySearch.value = '';
+                    selectedSupplyDisplay.style.display = 'none';
                 } else {
                     medicineSelect.style.display = 'none';
                     supplySelect.style.display = 'block';
-                    medicineDropdown.value = '';
+                    selectedMedicineId.value = '';
+                    medicineSearch.value = '';
+                    selectedMedicineDisplay.style.display = 'none';
                 }
             }
 
             medicineRadio.addEventListener('change', toggleSelects);
             supplyRadio.addEventListener('change', toggleSelects);
+
+            // Función auxiliar para escapar caracteres HTML
+            function escapeHtml(text) {
+                const map = {
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    '"': '&quot;',
+                    "'": '&#039;'
+                };
+                return text.replace(/[&<>"']/g, m => map[m]);
+            }
 
             toggleSelects();
         });

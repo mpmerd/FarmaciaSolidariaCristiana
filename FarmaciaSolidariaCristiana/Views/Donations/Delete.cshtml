@@ -1,0 +1,78 @@
+@model FarmaciaSolidariaCristiana.Models.Donation
+@{
+    ViewData["Title"] = "Eliminar Donación";
+}
+
+<div class="container mt-4">
+    <div class="card border-danger">
+        <div class="card-header bg-danger text-white">
+            <h4 class="mb-0">@ViewData["Title"]</h4>
+        </div>
+        <div class="card-body">
+            <div class="alert alert-warning">
+                <h5><i class="bi bi-exclamation-triangle"></i> ¿Está seguro de que desea eliminar esta donación?</h5>
+                <p>Esta acción no se puede deshacer y se revertirá el stock.</p>
+            </div>
+            
+            <dl class="row">
+                <dt class="col-sm-3">Tipo</dt>
+                <dd class="col-sm-9">
+                    @if (Model.MedicineId.HasValue)
+                    {
+                        <span class="badge bg-primary">
+                            <i class="bi bi-capsule"></i> Medicamento
+                        </span>
+                    }
+                    else
+                    {
+                        <span class="badge bg-info">
+                            <i class="bi bi-box-seam"></i> Insumo
+                        </span>
+                    }
+                </dd>
+                
+                <dt class="col-sm-3">Artículo</dt>
+                <dd class="col-sm-9">
+                    @if (Model.MedicineId.HasValue)
+                    {
+                        @Model.Medicine?.Name
+                    }
+                    else
+                    {
+                        @Model.Supply?.Name
+                    }
+                </dd>
+                
+                <dt class="col-sm-3">Cantidad</dt>
+                <dd class="col-sm-9">
+                    @Model.Quantity
+                    @if (Model.MedicineId.HasValue)
+                    {
+                        @Model.Medicine?.Unit
+                    }
+                    else
+                    {
+                        @Model.Supply?.Unit
+                    }
+                </dd>
+                
+                <dt class="col-sm-3">Fecha</dt>
+                <dd class="col-sm-9">@Model.DonationDate.ToString("dd/MM/yyyy")</dd>
+                
+                <dt class="col-sm-3">Nota Donante</dt>
+                <dd class="col-sm-9">@(Model.DonorNote ?? "N/A")</dd>
+                
+                <dt class="col-sm-3">Comentarios</dt>
+                <dd class="col-sm-9">@(Model.Comments ?? "N/A")</dd>
+            </dl>
+            
+            <form asp-action="Delete">
+                <input type="hidden" asp-for="Id" />
+                <div class="d-grid gap-2">
+                    <button type="submit" class="btn btn-danger">Confirmar Eliminación</button>
+                    <a asp-action="Index" class="btn btn-secondary">Cancelar</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
