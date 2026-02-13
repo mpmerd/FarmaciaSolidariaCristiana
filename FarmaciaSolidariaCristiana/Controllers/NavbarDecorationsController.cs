@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using FarmaciaSolidariaCristiana.Data;
 using FarmaciaSolidariaCristiana.Models;
 using System.Security.Claims;
@@ -13,15 +14,20 @@ namespace FarmaciaSolidariaCristiana.Controllers
         private readonly ApplicationDbContext _context;
         private readonly IWebHostEnvironment _environment;
         private readonly ILogger<NavbarDecorationsController> _logger;
+        private readonly IMemoryCache _cache;
+        private const string ActiveDecorationCacheKey = "ActiveNavbarDecoration";
+        private static readonly TimeSpan CacheDuration = TimeSpan.FromMinutes(5);
 
         public NavbarDecorationsController(
             ApplicationDbContext context,
             IWebHostEnvironment environment,
-            ILogger<NavbarDecorationsController> logger)
+            ILogger<NavbarDecorationsController> logger,
+            IMemoryCache cache)
         {
             _context = context;
             _environment = environment;
             _logger = logger;
+            _cache = cache;
         }
 
         // GET: NavbarDecorations
@@ -37,29 +43,44 @@ namespace FarmaciaSolidariaCristiana.Controllers
         }
 
         // GET: API endpoint para obtener decoración activa (público, sin autenticación)
+        // Optimizado con caché en memoria y headers HTTP Cache-Control
         [AllowAnonymous]
         [HttpGet("/api/navbar-decoration/active")]
+        [ResponseCache(Duration = 300, Location = ResponseCacheLocation.Any)]
         public async Task<IActionResult> GetActiveDecoration()
         {
-            var activeDecoration = await _context.NavbarDecorations
-                .FirstOrDefaultAsync(d => d.IsActive);
-
-            if (activeDecoration == null)
+            // Intentar obtener del caché
+            if (_cache.TryGetValue(ActiveDecorationCacheKey, out object? cachedResponse))
             {
-                return Ok(new { active = false });
+                return Ok(cachedResponse);
             }
 
-            var response = new
+            var activeDecoration = await _context.NavbarDecorations
+                .AsNoTracking()
+                .FirstOrDefaultAsync(d => d.IsActive);
+
+            object response;
+            if (activeDecoration == null)
             {
-                active = true,
-                name = activeDecoration.Name,
-                displayText = activeDecoration.DisplayText,
-                textColor = activeDecoration.TextColor ?? "#FFFFFF",
-                iconClass = activeDecoration.IconClass,
-                iconColor = activeDecoration.IconColor ?? "#FFFFFF",
-                customIconPath = activeDecoration.CustomIconPath,
-                type = activeDecoration.Type.ToString()
-            };
+                response = new { active = false };
+            }
+            else
+            {
+                response = new
+                {
+                    active = true,
+                    name = activeDecoration.Name,
+                    displayText = activeDecoration.DisplayText,
+                    textColor = activeDecoration.TextColor ?? "#FFFFFF",
+                    iconClass = activeDecoration.IconClass,
+                    iconColor = activeDecoration.IconColor ?? "#FFFFFF",
+                    customIconPath = activeDecoration.CustomIconPath,
+                    type = activeDecoration.Type.ToString()
+                };
+            }
+
+            // Guardar en caché por 5 minutos
+            _cache.Set(ActiveDecorationCacheKey, response, CacheDuration);
 
             return Ok(response);
         }
@@ -123,6 +144,9 @@ namespace FarmaciaSolidariaCristiana.Controllers
             }
 
             await _context.SaveChangesAsync();
+
+            // Invalidar caché
+            _cache.Remove(ActiveDecorationCacheKey);
 
             _logger.LogInformation("Decoración '{PresetName}' activada por {User}", 
                 preset.Name, userName);
@@ -206,6 +230,9 @@ namespace FarmaciaSolidariaCristiana.Controllers
             _context.NavbarDecorations.Add(decoration);
             await _context.SaveChangesAsync();
 
+            // Invalidar caché
+            _cache.Remove(ActiveDecorationCacheKey);
+
             _logger.LogInformation("Decoración personalizada '{Name}' activada por {User}", 
                 name, userName);
 
@@ -220,6 +247,9 @@ namespace FarmaciaSolidariaCristiana.Controllers
         {
             await DeactivateAllDecorationsAsync();
             await _context.SaveChangesAsync();
+
+            // Invalidar caché
+            _cache.Remove(ActiveDecorationCacheKey);
 
             _logger.LogInformation("Todas las decoraciones desactivadas por {User}", 
                 User.Identity?.Name ?? "Admin");
@@ -254,6 +284,12 @@ namespace FarmaciaSolidariaCristiana.Controllers
 
             _context.NavbarDecorations.Remove(decoration);
             await _context.SaveChangesAsync();
+
+            // Invalidar caché si era la decoración activa
+            if (decoration.IsActive)
+            {
+                _cache.Remove(ActiveDecorationCacheKey);
+            }
 
             _logger.LogInformation("Decoración '{Name}' eliminada por {User}", 
                 decoration.Name, User.Identity?.Name ?? "Admin");
