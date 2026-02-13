@@ -260,7 +260,7 @@ public partial class SolicitarTurnoViewModel : BaseViewModel
             Name = item.Name,
             Stock = item.Stock,
             Unit = item.Unit,
-            Cantidad = 1
+            Cantidad = 0
         };
 
         ItemsSeleccionados.Add(seleccionado);
@@ -455,6 +455,15 @@ public partial class SolicitarTurnoViewModel : BaseViewModel
                     ? "Debe seleccionar al menos un item" 
                     : "Complete todos los campos requeridos";
             await ShowErrorAsync(msg);
+            return;
+        }
+
+        // Validar que todos los items tengan cantidad mayor a 0
+        var itemsSinCantidad = ItemsSeleccionados.Where(i => i.Cantidad <= 0).ToList();
+        if (itemsSinCantidad.Any())
+        {
+            var nombres = string.Join(", ", itemsSinCantidad.Select(i => i.Name));
+            await ShowErrorAsync($"Por favor ingrese la cantidad a solicitar para:\n{nombres}\n\nLa cantidad debe ser mayor que 0.");
             return;
         }
 
@@ -668,7 +677,7 @@ public class ItemSeleccionado
     public string Name { get; set; } = string.Empty;
     public int Stock { get; set; }
     public string Unit { get; set; } = string.Empty;
-    public int Cantidad { get; set; } = 1;
+    public int Cantidad { get; set; } = 0;
 
     public string Display => $"{Name} ({Stock} {Unit} disponibles)";
 }
