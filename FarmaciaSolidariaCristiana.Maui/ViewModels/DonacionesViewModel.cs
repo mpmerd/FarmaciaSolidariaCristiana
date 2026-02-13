@@ -100,7 +100,7 @@ public partial class DonacionesViewModel : BaseViewModel
     private async Task AddDonacionAsync()
     {
         if (!CanEdit) return;
-        await Shell.Current.DisplayAlert("Agregar Donación", "Funcionalidad próximamente", "OK");
+        await Shell.Current.GoToAsync("nueva-donacion");
     }
 
     [RelayCommand]

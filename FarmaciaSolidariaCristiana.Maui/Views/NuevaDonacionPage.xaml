@@ -1,0 +1,235 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:viewmodels="clr-namespace:FarmaciaSolidariaCristiana.Maui.ViewModels"
+             xmlns:models="clr-namespace:FarmaciaSolidariaCristiana.Maui.Models"
+             x:Class="FarmaciaSolidariaCristiana.Maui.Views.NuevaDonacionPage"
+             x:DataType="viewmodels:NuevaDonacionViewModel"
+             Title="{Binding Title}"
+             Shell.NavBarIsVisible="True">
+
+    <ContentPage.Resources>
+        <Style x:Key="SectionTitle" TargetType="Label">
+            <Setter Property="FontSize" Value="16"/>
+            <Setter Property="FontAttributes" Value="Bold"/>
+            <Setter Property="TextColor" Value="{StaticResource Primary}"/>
+            <Setter Property="Margin" Value="0,15,0,8"/>
+        </Style>
+        <Style x:Key="FieldLabel" TargetType="Label">
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="TextColor" Value="{StaticResource Gray600}"/>
+            <Setter Property="Margin" Value="0,0,0,4"/>
+        </Style>
+    </ContentPage.Resources>
+
+    <Grid>
+        <ScrollView Padding="16">
+            <VerticalStackLayout Spacing="10">
+
+                <!-- Tipo de Donación -->
+                <Frame BackgroundColor="{AppThemeBinding Light=White, Dark=#2a2a2a}" Padding="16" CornerRadius="10" HasShadow="True">
+                    <VerticalStackLayout Spacing="8">
+                        <Label Text="❤️ Tipo de Donación" Style="{StaticResource SectionTitle}"/>
+                        <Label Text="Seleccione el tipo de producto *" Style="{StaticResource FieldLabel}"/>
+                        
+                        <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                            <Button Grid.Column="0"
+                                    Text="💊 Medicamento"
+                                    BackgroundColor="{Binding IsMedicamento, Converter={StaticResource BoolToColorConverter}, ConverterParameter='Primary|LightGray'}"
+                                    TextColor="{Binding IsMedicamento, Converter={StaticResource BoolToColorConverter}, ConverterParameter='White|Black'}"
+                                    Command="{Binding SetMedicamentoCommand}"
+                                    CornerRadius="8"/>
+                            <Button Grid.Column="1"
+                                    Text="🩹 Insumo"
+                                    BackgroundColor="{Binding IsMedicamento, Converter={StaticResource BoolToColorInverseConverter}, ConverterParameter='Primary|LightGray'}"
+                                    TextColor="{Binding IsMedicamento, Converter={StaticResource BoolToColorInverseConverter}, ConverterParameter='White|Black'}"
+                                    Command="{Binding SetInsumoCommand}"
+                                    CornerRadius="8"/>
+                        </Grid>
+                    </VerticalStackLayout>
+                </Frame>
+
+                <!-- Buscador de Items -->
+                <Frame BackgroundColor="{AppThemeBinding Light=White, Dark=#2a2a2a}" Padding="16" CornerRadius="10" HasShadow="True">
+                    <VerticalStackLayout Spacing="8">
+                        <Label Text="{Binding IsMedicamento, Converter={StaticResource BoolToTextConverter}, ConverterParameter='🔍 Buscar Medicamento|🔍 Buscar Insumo'}" 
+                               Style="{StaticResource SectionTitle}"/>
+                        
+                        <SearchBar Placeholder="Escriba para buscar..."
+                                   Text="{Binding SearchText}"
+                                   TextColor="{AppThemeBinding Light=#1a1a1a, Dark=#e0e0e0}"
+                                   PlaceholderColor="{AppThemeBinding Light=#999999, Dark=#bbbbbb}"
+                                   BackgroundColor="{AppThemeBinding Light=White, Dark=#2a2a2a}"/>
+                        
+                        <!-- Resultados de Búsqueda -->
+                        <CollectionView ItemsSource="{Binding ResultadosBusqueda}"
+                                        IsVisible="{Binding ShowSearchResults}"
+                                        HeightRequest="200"
+                                        SelectionMode="None">
+                            <CollectionView.ItemTemplate>
+                                <DataTemplate x:DataType="viewmodels:ItemBusquedaDonacion">
+                                    <Frame Padding="10" Margin="0,2" CornerRadius="6" 
+                                           BackgroundColor="{AppThemeBinding Light=#F8F9FA, Dark=#3a3a3a}">
+                                        <Frame.GestureRecognizers>
+                                            <TapGestureRecognizer 
+                                                Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:NuevaDonacionViewModel}}, Path=SelectItemCommand}"
+                                                CommandParameter="{Binding .}"/>
+                                        </Frame.GestureRecognizers>
+                                        <Grid ColumnDefinitions="*,Auto">
+                                            <Label Text="{Binding Name}" 
+                                                   FontAttributes="Bold"
+                                                   TextColor="{AppThemeBinding Light=#1a1a1a, Dark=#e0e0e0}"/>
+                                            <Frame Grid.Column="1" BackgroundColor="{StaticResource Info}" Padding="8,4" CornerRadius="10">
+                                                <Label Text="{Binding StockDisplay}" FontSize="11" TextColor="White"/>
+                                            </Frame>
+                                        </Grid>
+                                    </Frame>
+                                </DataTemplate>
+                            </CollectionView.ItemTemplate>
+                        </CollectionView>
+                        
+                        <!-- Item Seleccionado -->
+                        <Frame BackgroundColor="#E8F5E9" Padding="12" CornerRadius="8" Margin="0,10,0,0"
+                               IsVisible="{Binding ItemSeleccionado, Converter={StaticResource NullToBoolConverter}}">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <VerticalStackLayout>
+                                    <Label Text="✓ Item seleccionado" FontSize="12" TextColor="#2E7D32"/>
+                                    <Label Text="{Binding ItemSeleccionado.Name}" FontSize="16" FontAttributes="Bold" TextColor="#1B5E20"/>
+                                    <Label Text="{Binding ItemSeleccionado.StockDisplay, StringFormat='Stock actual: {0}'}" FontSize="12" TextColor="#388E3C"/>
+                                </VerticalStackLayout>
+                                <Button Grid.Column="1"
+                                        Text="✕"
+                                        BackgroundColor="#FFCDD2"
+                                        TextColor="#C62828"
+                                        WidthRequest="36"
+                                        HeightRequest="36"
+                                        CornerRadius="18"
+                                        Padding="0"
+                                        Command="{Binding ClearSelectionCommand}"
+                                        VerticalOptions="Center"/>
+                            </Grid>
+                        </Frame>
+                    </VerticalStackLayout>
+                </Frame>
+
+                <!-- Cantidad -->
+                <Frame BackgroundColor="{AppThemeBinding Light=White, Dark=#2a2a2a}" Padding="16" CornerRadius="10" HasShadow="True"
+                       IsVisible="{Binding ItemSeleccionado, Converter={StaticResource NullToBoolConverter}}">
+                    <VerticalStackLayout Spacing="8">
+                        <Label Text="📦 Cantidad Donada" Style="{StaticResource SectionTitle}"/>
+                        <Label Text="Ingrese la cantidad de unidades donadas *" Style="{StaticResource FieldLabel}"/>
+                        
+                        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
+                            <Button Grid.Column="0"
+                                    Text="-"
+                                    WidthRequest="50"
+                                    HeightRequest="50"
+                                    CornerRadius="25"
+                                    FontSize="24"
+                                    BackgroundColor="{StaticResource Secondary}"
+                                    TextColor="White"
+                                    Command="{Binding DecrementCommand}"/>
+                            
+                            <Entry Grid.Column="1"
+                                   Text="{Binding Cantidad}"
+                                   Keyboard="Numeric"
+                                   HorizontalTextAlignment="Center"
+                                   FontSize="24"
+                                   FontAttributes="Bold"
+                                   TextColor="{AppThemeBinding Light=#1a1a1a, Dark=#e0e0e0}"/>
+                            
+                            <Button Grid.Column="2"
+                                    Text="+"
+                                    WidthRequest="50"
+                                    HeightRequest="50"
+                                    CornerRadius="25"
+                                    FontSize="24"
+                                    BackgroundColor="{StaticResource Primary}"
+                                    TextColor="White"
+                                    Command="{Binding IncrementCommand}"/>
+                        </Grid>
+                        
+                        <Label Text="{Binding CantidadError}"
+                               TextColor="Red"
+                               FontSize="12"
+                               IsVisible="{Binding CantidadError, Converter={StaticResource StringToBoolConverter}}"/>
+                    </VerticalStackLayout>
+                </Frame>
+
+                <!-- Fecha de Donación -->
+                <Frame BackgroundColor="{AppThemeBinding Light=White, Dark=#2a2a2a}" Padding="16" CornerRadius="10" HasShadow="True"
+                       IsVisible="{Binding ItemSeleccionado, Converter={StaticResource NullToBoolConverter}}">
+                    <VerticalStackLayout Spacing="8">
+                        <Label Text="📅 Fecha de Donación" Style="{StaticResource SectionTitle}"/>
+                        <DatePicker Date="{Binding FechaDonacion}"
+                                    MaximumDate="{Binding MaxDate}"
+                                    TextColor="{AppThemeBinding Light=#1a1a1a, Dark=#e0e0e0}"/>
+                    </VerticalStackLayout>
+                </Frame>
+
+                <!-- Nota del Donante -->
+                <Frame BackgroundColor="{AppThemeBinding Light=White, Dark=#2a2a2a}" Padding="16" CornerRadius="10" HasShadow="True"
+                       IsVisible="{Binding ItemSeleccionado, Converter={StaticResource NullToBoolConverter}}">
+                    <VerticalStackLayout Spacing="8">
+                        <Label Text="👤 Nota del Donante (Opcional)" Style="{StaticResource SectionTitle}"/>
+                        <Editor Placeholder="Nombre o referencia del donante..."
+                                Text="{Binding NotaDonante}"
+                                HeightRequest="60"
+                                MaxLength="500"
+                                TextColor="{AppThemeBinding Light=#1a1a1a, Dark=#e0e0e0}"
+                                PlaceholderColor="{AppThemeBinding Light=#999999, Dark=#bbbbbb}"/>
+                    </VerticalStackLayout>
+                </Frame>
+
+                <!-- Comentarios -->
+                <Frame BackgroundColor="{AppThemeBinding Light=White, Dark=#2a2a2a}" Padding="16" CornerRadius="10" HasShadow="True"
+                       IsVisible="{Binding ItemSeleccionado, Converter={StaticResource NullToBoolConverter}}">
+                    <VerticalStackLayout Spacing="8">
+                        <Label Text="📝 Comentarios (Opcional)" Style="{StaticResource SectionTitle}"/>
+                        <Editor Placeholder="Observaciones adicionales..."
+                                Text="{Binding Comentarios}"
+                                HeightRequest="80"
+                                MaxLength="1000"
+                                TextColor="{AppThemeBinding Light=#1a1a1a, Dark=#e0e0e0}"
+                                PlaceholderColor="{AppThemeBinding Light=#999999, Dark=#bbbbbb}"/>
+                    </VerticalStackLayout>
+                </Frame>
+
+                <!-- Botones -->
+                <Grid ColumnDefinitions="*,*" ColumnSpacing="10" Margin="0,20"
+                      IsVisible="{Binding ItemSeleccionado, Converter={StaticResource NullToBoolConverter}}">
+                    <Button Grid.Column="0"
+                            Text="Cancelar"
+                            Command="{Binding CancelCommand}"
+                            BackgroundColor="{StaticResource Gray400}"
+                            TextColor="White"
+                            CornerRadius="10"/>
+                    <Button Grid.Column="1"
+                            Text="Registrar Donación"
+                            Command="{Binding SubmitCommand}"
+                            IsEnabled="{Binding CanSubmit}"
+                            BackgroundColor="{StaticResource Primary}"
+                            TextColor="White"
+                            CornerRadius="10"
+                            FontAttributes="Bold"/>
+                </Grid>
+
+                <!-- Espacio final -->
+                <BoxView HeightRequest="20"/>
+            </VerticalStackLayout>
+        </ScrollView>
+
+        <!-- Loading Overlay -->
+        <Grid BackgroundColor="#80000000" IsVisible="{Binding IsBusy}">
+            <Frame BackgroundColor="{AppThemeBinding Light=White, Dark=#2a2a2a}" CornerRadius="10" Padding="30" 
+                   HorizontalOptions="Center" VerticalOptions="Center">
+                <VerticalStackLayout Spacing="15">
+                    <ActivityIndicator IsRunning="True" Color="{StaticResource Primary}"/>
+                    <Label Text="Registrando donación..." 
+                           HorizontalTextAlignment="Center"
+                           TextColor="{AppThemeBinding Light=#1a1a1a, Dark=#e0e0e0}"/>
+                </VerticalStackLayout>
+            </Frame>
+        </Grid>
+    </Grid>
+</ContentPage>

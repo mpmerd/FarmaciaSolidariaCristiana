@@ -6,7 +6,7 @@
              Shell.NavBarIsVisible="False">
 
     <Grid VerticalOptions="Center" HorizontalOptions="Center" Padding="20">
-        <Frame BackgroundColor="White" 
+        <Frame BackgroundColor="{AppThemeBinding Light=White, Dark=#2a2a2a}" 
                CornerRadius="12" 
                Padding="20" 
                HasShadow="True"
@@ -22,19 +22,21 @@
                 <!-- Mensaje/Descripción -->
                 <Label x:Name="MessageLabel" 
                        FontSize="14" 
-                       TextColor="Gray"
+                       TextColor="{AppThemeBinding Light=Gray, Dark=#bbbbbb}"
                        HorizontalTextAlignment="Center"/>
 
                 <!-- Editor multilínea -->
                 <Border Stroke="{StaticResource Primary}" 
                         StrokeThickness="1" 
                         Padding="10"
-                        BackgroundColor="White">
+                        BackgroundColor="{AppThemeBinding Light=White, Dark=#3a3a3a}">
                     <Border.StrokeShape>
                         <RoundRectangle CornerRadius="8" />
                     </Border.StrokeShape>
                     <Editor x:Name="TextEditor" 
                             Placeholder="Escriba aquí..."
+                            PlaceholderColor="{AppThemeBinding Light=#999999, Dark=#888888}"
+                            TextColor="{AppThemeBinding Light=#1a1a1a, Dark=#e0e0e0}"
                             HeightRequest="120"
                             MaxLength="1000"
                             AutoSize="TextChanges"/>
@@ -43,15 +45,15 @@
                 <!-- Contador de caracteres -->
                 <Label x:Name="CharCountLabel" 
                        FontSize="11" 
-                       TextColor="Gray"
+                       TextColor="{AppThemeBinding Light=Gray, Dark=#999999}"
                        HorizontalOptions="End"/>
 
                 <!-- Botones -->
                 <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
                     <Button x:Name="CancelButton" 
                             Text="Cancelar" 
-                            BackgroundColor="LightGray"
-                            TextColor="DarkGray"
+                            BackgroundColor="{AppThemeBinding Light=LightGray, Dark=#4a4a4a}"
+                            TextColor="{AppThemeBinding Light=DarkGray, Dark=#cccccc}"
                             CornerRadius="8"
                             Clicked="OnCancelClicked"/>
                     

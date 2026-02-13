@@ -93,7 +93,10 @@
                                Style="{StaticResource SectionTitle}"/>
                         
                         <SearchBar Placeholder="Escriba para buscar..."
-                                   Text="{Binding SearchText}"/>
+                                   Text="{Binding SearchText}"
+                                   TextColor="{AppThemeBinding Light=#1a1a1a, Dark=#e0e0e0}"
+                                   PlaceholderColor="{AppThemeBinding Light=#999999, Dark=#bbbbbb}"
+                                   BackgroundColor="{AppThemeBinding Light=White, Dark=#3a3a3a}"/>
                         
                         <!-- Resultados de Búsqueda -->
                         <CollectionView ItemsSource="{Binding ResultadosBusqueda}"
@@ -102,14 +105,17 @@
                                         SelectionMode="None">
                             <CollectionView.ItemTemplate>
                                 <DataTemplate x:DataType="viewmodels:ItemBusqueda">
-                                    <Frame Padding="10" Margin="0,2" CornerRadius="6" BackgroundColor="#F8F9FA">
+                                    <Frame Padding="10" Margin="0,2" CornerRadius="6" 
+                                           BackgroundColor="{AppThemeBinding Light=#F8F9FA, Dark=#3a3a3a}">
                                         <Frame.GestureRecognizers>
                                             <TapGestureRecognizer 
                                                 Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:SolicitarTurnoViewModel}}, Path=SelectItemCommand}"
                                                 CommandParameter="{Binding .}"/>
                                         </Frame.GestureRecognizers>
                                         <Grid ColumnDefinitions="*,Auto">
-                                            <Label Text="{Binding Name}" FontAttributes="Bold"/>
+                                            <Label Text="{Binding Name}" 
+                                                   FontAttributes="Bold"
+                                                   TextColor="{AppThemeBinding Light=#1a1a1a, Dark=#e0e0e0}"/>
                                             <Frame Grid.Column="1" BackgroundColor="{Binding StockColor}" Padding="8,4" CornerRadius="10">
                                                 <Label Text="{Binding StockDisplay}" FontSize="11" TextColor="White"/>
                                             </Frame>
@@ -120,29 +126,42 @@
                         </CollectionView>
                         
                         <!-- Items Seleccionados -->
-                        <Label Text="Items Seleccionados:" FontAttributes="Bold" Margin="0,10,0,4"
+                        <Label Text="Items Seleccionados:" 
+                               FontAttributes="Bold" 
+                               Margin="0,10,0,4"
+                               TextColor="{AppThemeBinding Light=#1a1a1a, Dark=#e0e0e0}"
                                IsVisible="{Binding ItemsSeleccionados.Count, Converter={StaticResource IntToBoolConverter}}"/>
                         
                         <CollectionView ItemsSource="{Binding ItemsSeleccionados}"
                                         SelectionMode="None">
                             <CollectionView.EmptyView>
-                                <Frame BackgroundColor="#F8F9FA" Padding="20" CornerRadius="8">
+                                <Frame BackgroundColor="{AppThemeBinding Light=#F8F9FA, Dark=#3a3a3a}" 
+                                       Padding="20" CornerRadius="8">
                                     <Label Text="No ha seleccionado ningún item aún" 
                                            HorizontalTextAlignment="Center" 
-                                           TextColor="{StaticResource Gray500}"/>
+                                           TextColor="{AppThemeBinding Light={StaticResource Gray500}, Dark=#999999}"/>
                                 </Frame>
                             </CollectionView.EmptyView>
                             <CollectionView.ItemTemplate>
                                 <DataTemplate x:DataType="viewmodels:ItemSeleccionado">
-                                    <Frame Padding="10" Margin="0,2" CornerRadius="6" BackgroundColor="#E8F4FD">
+                                    <Frame Padding="10" Margin="0,2" CornerRadius="6" 
+                                           BackgroundColor="{AppThemeBinding Light=#E8F4FD, Dark=#1a3a4a}">
                                         <Grid ColumnDefinitions="*,80,Auto" ColumnSpacing="10">
                                             <VerticalStackLayout Grid.Column="0" VerticalOptions="Center">
-                                                <Label Text="{Binding Name}" FontAttributes="Bold" LineBreakMode="TailTruncation"/>
-                                                <Label Text="{Binding Stock, StringFormat='Disponible: {0}'}" FontSize="11" TextColor="{StaticResource Gray500}"/>
+                                                <Label Text="{Binding Name}" 
+                                                       FontAttributes="Bold" 
+                                                       LineBreakMode="TailTruncation"
+                                                       TextColor="{AppThemeBinding Light=#1a1a1a, Dark=#e0e0e0}"/>
+                                                <Label Text="{Binding Stock, StringFormat='Disponible: {0}'}" 
+                                                       FontSize="11" 
+                                                       TextColor="{AppThemeBinding Light={StaticResource Gray500}, Dark=#999999}"/>
                                             </VerticalStackLayout>
                                             
                                             <HorizontalStackLayout Grid.Column="1" Spacing="5" VerticalOptions="Center">
-                                                <Label Text="Cant:" VerticalOptions="Center" FontSize="12"/>
+                                                <Label Text="Cant:" 
+                                                       VerticalOptions="Center" 
+                                                       FontSize="12"
+                                                       TextColor="{AppThemeBinding Light=#1a1a1a, Dark=#e0e0e0}"/>
                                                 <Entry Text="{Binding Cantidad}" 
                                                        Keyboard="Numeric" 
                                                        TextColor="{AppThemeBinding Light=#1a1a1a, Dark=#e0e0e0}"

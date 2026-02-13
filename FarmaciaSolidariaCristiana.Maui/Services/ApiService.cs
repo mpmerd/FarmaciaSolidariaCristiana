@@ -401,7 +401,7 @@ public class ApiService : IApiService
     // === MEDICAMENTOS ===
 
     public Task<ApiResponse<List<Medicine>>> GetMedicamentosAsync()
-        => GetPagedAsync<Medicine>("/api/medicines?pageSize=500");
+        => GetPagedAsync<Medicine>("/api/medicines?pageSize=2000");
 
     public Task<ApiResponse<Medicine>> GetMedicamentoAsync(int id)
         => GetAsync<Medicine>($"/api/medicines/{id}");
@@ -418,7 +418,7 @@ public class ApiService : IApiService
     // === INSUMOS ===
 
     public Task<ApiResponse<List<Supply>>> GetInsumosAsync()
-        => GetPagedAsync<Supply>("/api/supplies?pageSize=500");
+        => GetPagedAsync<Supply>("/api/supplies?pageSize=2000");
 
     public Task<ApiResponse<Supply>> GetInsumoAsync(int id)
         => GetAsync<Supply>($"/api/supplies/{id}");
