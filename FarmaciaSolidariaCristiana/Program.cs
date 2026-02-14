@@ -42,6 +42,9 @@ builder.Services.AddHttpsRedirection(options =>
     options.HttpsPort = 443;
 });
 
+// Agregar caché en memoria para optimización de API
+builder.Services.AddMemoryCache();
+
 // Add services to the container.
 builder.Services.AddControllersWithViews(options =>
 {

@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using FarmaciaSolidariaCristiana.Data;
 using FarmaciaSolidariaCristiana.Models;
 using FarmaciaSolidariaCristiana.Api.Models;
@@ -17,15 +18,20 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
         private readonly ApplicationDbContext _context;
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly ILogger<MedicinesApiController> _logger;
+        private readonly IMemoryCache _cache;
+        private const string MedicinesCacheKeyPrefix = "Medicines_";
+        private static readonly TimeSpan CacheDuration = TimeSpan.FromMinutes(2);
 
         public MedicinesApiController(
             ApplicationDbContext context,
             IHttpClientFactory httpClientFactory,
-            ILogger<MedicinesApiController> logger)
+            ILogger<MedicinesApiController> logger,
+            IMemoryCache cache)
         {
             _context = context;
             _httpClientFactory = httpClientFactory;
             _logger = logger;
+            _cache = cache;
         }
 
         /// <summary>
@@ -36,7 +42,15 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
         [ProducesResponseType(typeof(ApiResponse<List<MedicineDto>>), 200)]
         public async Task<IActionResult> GetAll([FromQuery] int page = 1, [FromQuery] int pageSize = 20, [FromQuery] string? search = null)
         {
-            var query = _context.Medicines.AsQueryable();
+            // Clave de caché única por parámetros
+            var cacheKey = $"{MedicinesCacheKeyPrefix}list_{page}_{pageSize}_{search ?? "all"}";
+
+            if (_cache.TryGetValue(cacheKey, out PagedResult<MedicineDto>? cachedResult))
+            {
+                return ApiOk(cachedResult);
+            }
+
+            var query = _context.Medicines.AsNoTracking().AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(search))
             {
@@ -62,14 +76,19 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
                 })
                 .ToListAsync();
 
-            return ApiOk(new PagedResult<MedicineDto>
+            var result = new PagedResult<MedicineDto>
             {
                 Items = medicines,
                 Page = page,
                 PageSize = pageSize,
                 TotalItems = totalItems,
                 TotalPages = totalPages
-            });
+            };
+
+            // Cachear resultado
+            _cache.Set(cacheKey, result, CacheDuration);
+
+            return ApiOk(result);
         }
 
         /// <summary>
@@ -128,6 +147,9 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
             _context.Medicines.Add(medicine);
             await _context.SaveChangesAsync();
 
+            // Invalidar caché
+            InvalidateMedicinesCache();
+
             _logger.LogInformation("Medicamento creado vía API: {Name} (ID: {Id})", medicine.Name, medicine.Id);
 
             var result = new MedicineDto
@@ -177,6 +199,9 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
 
             await _context.SaveChangesAsync();
 
+            // Invalidar caché
+            InvalidateMedicinesCache();
+
             _logger.LogInformation("Medicamento actualizado vía API: {Name} (ID: {Id})", medicine.Name, medicine.Id);
 
             return ApiOk(new MedicineDto
@@ -216,6 +241,9 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
 
             _context.Medicines.Remove(medicine);
             await _context.SaveChangesAsync();
+
+            // Invalidar caché
+            InvalidateMedicinesCache();
 
             _logger.LogInformation("Medicamento eliminado vía API: {Name} (ID: {Id})", medicine.Name, id);
 
@@ -335,6 +363,20 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
             {
                 _logger.LogError(ex, "Error calling CIMA API for CN: {CN}", cn);
                 return ApiError($"Error al conectar con CIMA API: {ex.Message}", 500);
+            }
+        }
+
+        /// <summary>
+        /// Invalida todas las entradas de caché de medicamentos
+        /// </summary>
+        private void InvalidateMedicinesCache()
+        {
+            // IMemoryCache no tiene método para eliminar por prefijo,
+            // pero podemos usar un token de cancelación compartido
+            // Por ahora, incrementamos una versión que invalida las claves
+            if (_cache is MemoryCache memoryCache)
+            {
+                memoryCache.Compact(1.0); // Fuerza limpieza completa
             }
         }
     }

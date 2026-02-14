@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using FarmaciaSolidariaCristiana.Data;
 using FarmaciaSolidariaCristiana.Models;
 using FarmaciaSolidariaCristiana.Api.Models;
@@ -15,13 +16,18 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
     {
         private readonly ApplicationDbContext _context;
         private readonly ILogger<SuppliesApiController> _logger;
+        private readonly IMemoryCache _cache;
+        private const string SuppliesCacheKeyPrefix = "Supplies_";
+        private static readonly TimeSpan CacheDuration = TimeSpan.FromMinutes(2);
 
         public SuppliesApiController(
             ApplicationDbContext context,
-            ILogger<SuppliesApiController> logger)
+            ILogger<SuppliesApiController> logger,
+            IMemoryCache cache)
         {
             _context = context;
             _logger = logger;
+            _cache = cache;
         }
 
         /// <summary>
@@ -32,7 +38,15 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
         [ProducesResponseType(typeof(ApiResponse<List<SupplyDto>>), 200)]
         public async Task<IActionResult> GetAll([FromQuery] int page = 1, [FromQuery] int pageSize = 20, [FromQuery] string? search = null)
         {
-            var query = _context.Supplies.AsQueryable();
+            // Clave de caché única por parámetros
+            var cacheKey = $"{SuppliesCacheKeyPrefix}list_{page}_{pageSize}_{search ?? "all"}";
+
+            if (_cache.TryGetValue(cacheKey, out PagedResult<SupplyDto>? cachedResult))
+            {
+                return ApiOk(cachedResult);
+            }
+
+            var query = _context.Supplies.AsNoTracking().AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(search))
             {
@@ -57,14 +71,19 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
                 })
                 .ToListAsync();
 
-            return ApiOk(new PagedResult<SupplyDto>
+            var result = new PagedResult<SupplyDto>
             {
                 Items = supplies,
                 Page = page,
                 PageSize = pageSize,
                 TotalItems = totalItems,
                 TotalPages = totalPages
-            });
+            };
+
+            // Cachear resultado
+            _cache.Set(cacheKey, result, CacheDuration);
+
+            return ApiOk(result);
         }
 
         /// <summary>
@@ -121,6 +140,9 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
             _context.Supplies.Add(supply);
             await _context.SaveChangesAsync();
 
+            // Invalidar caché
+            InvalidateSuppliesCache();
+
             _logger.LogInformation("Insumo creado vía API: {Name} (ID: {Id})", supply.Name, supply.Id);
 
             var result = new SupplyDto
@@ -168,6 +190,9 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
 
             await _context.SaveChangesAsync();
 
+            // Invalidar caché
+            InvalidateSuppliesCache();
+
             _logger.LogInformation("Insumo actualizado vía API: {Name} (ID: {Id})", supply.Name, supply.Id);
 
             return ApiOk(new SupplyDto
@@ -207,6 +232,9 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
             _context.Supplies.Remove(supply);
             await _context.SaveChangesAsync();
 
+            // Invalidar caché
+            InvalidateSuppliesCache();
+
             _logger.LogInformation("Insumo eliminado vía API: {Name} (ID: {Id})", supply.Name, id);
 
             return ApiOk(true, "Insumo eliminado exitosamente");
@@ -220,7 +248,15 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
         [ProducesResponseType(typeof(ApiResponse<List<SupplyDto>>), 200)]
         public async Task<IActionResult> GetAvailable()
         {
+            var cacheKey = $"{SuppliesCacheKeyPrefix}available";
+
+            if (_cache.TryGetValue(cacheKey, out List<SupplyDto>? cachedResult))
+            {
+                return ApiOk(cachedResult);
+            }
+
             var supplies = await _context.Supplies
+                .AsNoTracking()
                 .Where(s => s.StockQuantity > 0)
                 .OrderBy(s => s.Name)
                 .Select(s => new SupplyDto
@@ -233,7 +269,20 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
                 })
                 .ToListAsync();
 
+            _cache.Set(cacheKey, supplies, CacheDuration);
+
             return ApiOk(supplies);
+        }
+
+        /// <summary>
+        /// Invalida todas las entradas de caché de insumos
+        /// </summary>
+        private void InvalidateSuppliesCache()
+        {
+            if (_cache is MemoryCache memoryCache)
+            {
+                memoryCache.Compact(1.0);
+            }
         }
     }
 }
