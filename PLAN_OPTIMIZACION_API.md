@@ -1,5 +1,28 @@
 # Plan de Optimización de API - Farmacia Solidaria Cristiana
 
+## Cambios publicados en versión MAUI 1.0.4 (desde commit c339eed)
+
+- **Optimización de caché en endpoints críticos:**
+    - Se implementó `AddMemoryCache` y se eliminaron decoradores `ResponseCache` en endpoints autenticados para evitar expiración de sesión en la app MAUI.
+    - Endpoints `/api/medicines` y `/api/supplies` ahora usan caché en memoria por 2 minutos y headers HTTP Cache-Control.
+    - Mejoras en el endpoint `/api/navbar-decoration/active` (solo web) con caché de 5 minutos y reducción drástica de consultas.
+
+- **Mejoras en la app MAUI:**
+    - Implementación completa del sistema de donaciones: creación, edición, eliminación y búsqueda autocomplete.
+    - Corrección de bug en búsqueda de medicamentos y manejo de cantidad de turno igual a 0.
+    - Mejoras visuales y de experiencia en modo oscuro.
+    - Refresco inmediato de la CollectionView tras aprobar/rechazar turnos.
+
+- **Scripts y herramientas:**
+    - Nuevo script para comparar archivos `appsettings.json` local y remoto.
+    - Scripts para actualización y subida forzada de vistas.
+
+- **Otros:**
+    - Optimización de caché en navbar-decoration para web MVC.
+    - Documentación actualizada y plan de optimización revisado.
+
+Estos cambios mejoran el rendimiento, la experiencia de usuario y la mantenibilidad de la API y la app MAUI.
+
 **Fecha:** 13 de febrero de 2026  
 **Estado:** En progreso
 
