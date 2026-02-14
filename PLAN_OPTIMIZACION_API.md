@@ -32,43 +32,31 @@ Análisis de rendimiento de la API basado en logs del servidor. Se identificaron
 
 ## 🔴 PENDIENTE: Endpoints a Optimizar
 
-### 1. `/api/medicines` - PRIORIDAD ALTA
+### 1. `/api/medicines` - ✅ COMPLETADO
 
-**Problema:** Tiempo promedio de 14 segundos (inaceptable)
+**Problema original:** Tiempo promedio de 14 segundos
 
-**Posibles causas:**
-- Falta de índices en la tabla Medicines
-- Carga de datos relacionados sin necesidad
-- Paginación ineficiente
-- Consultas N+1
-
-**Plan de acción:**
-1. [ ] Revisar índices en BD (campos: Name, IsActive, CategoryId)
-2. [ ] Implementar caché de listados (5-10 min)
-3. [ ] Verificar uso de AsNoTracking()
-4. [ ] Revisar includes innecesarios
-5. [ ] Implementar paginación correcta si no existe
-6. [ ] Considerar endpoint separado para búsqueda vs listado completo
-
-**Script SQL para verificar índices:**
-```sql
--- Verificar índices existentes
-SELECT 
-    i.name AS IndexName,
-    COL_NAME(ic.object_id, ic.column_id) AS ColumnName
-FROM sys.indexes i
-INNER JOIN sys.index_columns ic ON i.object_id = ic.object_id AND i.index_id = ic.index_id
-WHERE OBJECT_NAME(i.object_id) = 'Medicines'
-
--- Crear índices recomendados si no existen
-CREATE INDEX IX_Medicines_IsActive ON Medicines(IsActive);
-CREATE INDEX IX_Medicines_Name ON Medicines(Name);
-CREATE INDEX IX_Medicines_CategoryId ON Medicines(CategoryId);
-```
+**Solución implementada:**
+- [x] Caché en memoria (IMemoryCache) por 2 minutos
+- [x] Headers HTTP Cache-Control (60s)
+- [x] AsNoTracking() en consultas EF Core
+- [x] Invalidación automática en Create/Update/Delete
 
 ---
 
-### 2. `/api/turns/my` - PRIORIDAD MEDIA
+### 2. `/api/supplies` - ✅ COMPLETADO
+
+**Problema original:** Similar a medicines, consultas lentas
+
+**Solución implementada:**
+- [x] Caché en memoria (IMemoryCache) por 2 minutos
+- [x] Headers HTTP Cache-Control (60s)
+- [x] AsNoTracking() en consultas EF Core
+- [x] Invalidación automática en Create/Update/Delete
+
+---
+
+### 3. `/api/turns/my` - PRIORIDAD MEDIA (PENDIENTE)
 
 **Problema:** Llamado frecuentemente, puede beneficiarse de caché
 
@@ -79,7 +67,7 @@ CREATE INDEX IX_Medicines_CategoryId ON Medicines(CategoryId);
 
 ---
 
-### 3. `/api/notifications/pending` - PRIORIDAD MEDIA
+### 4. `/api/notifications/pending` - PRIORIDAD MEDIA (PENDIENTE)
 
 **Problema:** Polling frecuente desde la app
 
@@ -121,21 +109,24 @@ return Ok(result);
 
 ## Métricas Objetivo
 
-| Endpoint | Tiempo Actual | Objetivo |
-|----------|---------------|----------|
-| /api/navbar-decoration/active | ~500ms | <50ms ✅ |
-| /api/medicines | 14s | <1s |
-| /api/turns/my | ? | <500ms |
-| /api/notifications/pending | ? | <200ms |
+| Endpoint | Tiempo Anterior | Objetivo | Estado |
+|----------|-----------------|----------|--------|
+| /api/navbar-decoration/active | ~500ms | <50ms | ✅ Completado |
+| /api/medicines | 14s | <1s | ✅ Completado (caché 2min) |
+| /api/supplies | ~5s | <500ms | ✅ Completado (caché 2min) |
+| /api/turns/my | ? | <500ms | ⏳ Pendiente |
+| /api/notifications/pending | ? | <200ms | ⏳ Pendiente |
 
 ---
 
 ## Próximos Pasos
 
-1. **Inmediato:** Monitorear mejora de navbar-decoration después del despliegue
-2. **Esta semana:** Analizar y optimizar /api/medicines
-3. **Siguiente:** Implementar caché en endpoints de turnos y notificaciones
-4. **Futuro:** Considerar Redis para caché distribuida si escala
+1. ✅ **Completado:** Optimización navbar-decoration (caché 5min)
+2. ✅ **Completado:** Optimización medicines (caché 2min + HTTP cache 60s)
+3. ✅ **Completado:** Optimización supplies (caché 2min + HTTP cache 60s)
+4. **Pendiente:** Implementar caché en endpoints de turnos por usuario
+5. **Pendiente:** Optimizar notificaciones pending (caché corta por usuario)
+6. **Futuro:** Considerar Redis para caché distribuida si escala
 
 ---
 
