@@ -254,6 +254,47 @@
         let turnoDocuments = [];
         let importedDocumentPaths = []; // Rutas de documentos importados (para limpieza si se cancela)
 
+        // Función para calcular la edad a partir del carnet de identidad cubano
+        // Formato: AAMMDDXXXXX (11 dígitos)
+        // AA = año, MM = mes, DD = día
+        function calculateAgeFromCI(ci) {
+            try {
+                const yearDigits = parseInt(ci.substring(0, 2));
+                const month = parseInt(ci.substring(2, 4));
+                const day = parseInt(ci.substring(4, 6));
+                
+                // Determinar el siglo basándose en el séptimo dígito del CI
+                // En Cuba: 0-5 = siglo XX (1900s), 6-9 = siglo XXI (2000s)
+                const centuryDigit = parseInt(ci.substring(6, 7));
+                let year;
+                if (centuryDigit <= 5) {
+                    year = 1900 + yearDigits;
+                } else {
+                    year = 2000 + yearDigits;
+                }
+                
+                // Verificar que la fecha sea válida
+                const birthDate = new Date(year, month - 1, day);
+                if (isNaN(birthDate.getTime())) {
+                    return null;
+                }
+                
+                // Calcular la edad
+                const today = new Date();
+                let age = today.getFullYear() - birthDate.getFullYear();
+                const monthDiff = today.getMonth() - birthDate.getMonth();
+                
+                if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+                    age--;
+                }
+                
+                return age;
+            } catch (e) {
+                console.error('Error calculando edad:', e);
+                return null;
+            }
+        }
+
         // Función para deshabilitar todos los campos del formulario
         function disableFormFields() {
             patientExists = true; // Marcar que el paciente existe
@@ -451,6 +492,15 @@
                         
                         // HABILITAR TODOS LOS CAMPOS DEL FORMULARIO
                         enableFormFields();
+                        
+                        // Calcular edad automáticamente si es carnet de identidad (11 dígitos numéricos)
+                        const ciPattern = /^\d{11}$/;
+                        if (ciPattern.test(identification)) {
+                            const calculatedAge = calculateAgeFromCI(identification);
+                            if (calculatedAge !== null && calculatedAge >= 0 && calculatedAge <= 150) {
+                                document.getElementById('Age').value = calculatedAge;
+                            }
+                        }
                         
                         // Buscar documentos de turnos para este número de identificación
                         searchTurnoDocuments(identification);
