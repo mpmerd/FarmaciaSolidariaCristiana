@@ -28,12 +28,22 @@ namespace FarmaciaSolidariaCristiana.Controllers
         }
 
         // GET: Patients
-        public async Task<IActionResult> Index()
+        public async Task<IActionResult> Index(string searchString)
         {
-            var patients = await _context.Patients
-                .Where(p => p.IsActive)
+            ViewData["SearchString"] = searchString;
+            
+            var patientsQuery = _context.Patients
+                .Where(p => p.IsActive);
+
+            if (!string.IsNullOrEmpty(searchString))
+            {
+                patientsQuery = patientsQuery.Where(p => p.FullName.Contains(searchString));
+            }
+
+            var patients = await patientsQuery
                 .OrderBy(p => p.FullName)
                 .ToListAsync();
+                
             return View(patients);
         }
 
