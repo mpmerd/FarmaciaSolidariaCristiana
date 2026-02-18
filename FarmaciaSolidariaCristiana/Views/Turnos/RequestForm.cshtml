@@ -347,7 +347,7 @@
                                     <div class="input-group input-group-sm">
                                         <span class="input-group-text">Cantidad</span>
                                         <input type="number" name="quantities" class="form-control quantity-input" 
-                                               min="1" max="${stock}" value="1" required />
+                                               min="1" max="${stock}" value="0" required placeholder="Cantidad solicitada" />
                                         <span class="input-group-text">${unit}</span>
                                     </div>
                                     <small class="text-muted">Stock disponible: ${stock}</small>
@@ -384,8 +384,8 @@
                     if (value > stock) {
                         alert(`La cantidad no puede ser mayor al stock disponible (${stock})`);
                         $(this).val(stock);
-                    } else if (value < 1) {
-                        $(this).val(1);
+                    } else if (value < 0 || isNaN(value)) {
+                        $(this).val(0);
                     }
                 });
             }
@@ -476,7 +476,7 @@
                                     <div class="input-group input-group-sm">
                                         <span class="input-group-text">Cantidad</span>
                                         <input type="number" name="supplyQuantities" class="form-control quantity-input" 
-                                               min="1" max="${stock}" value="1" required />
+                                               min="1" max="${stock}" value="0" required placeholder="Cantidad solicitada" />
                                         <span class="input-group-text">${unit}</span>
                                     </div>
                                     <small class="text-muted">Stock disponible: ${stock}</small>
@@ -513,8 +513,8 @@
                     if (value > stock) {
                         alert(`La cantidad no puede ser mayor al stock disponible (${stock})`);
                         $(this).val(stock);
-                    } else if (value < 1) {
-                        $(this).val(1);
+                    } else if (value < 0 || isNaN(value)) {
+                        $(this).val(0);
                     }
                 });
             }
@@ -533,6 +533,37 @@
                 if (turnoType === 'supply' && selectedSupplies.length === 0) {
                     e.preventDefault();
                     alert('Debes seleccionar al menos un insumo');
+                    return false;
+                }
+
+                // Validar que todas las cantidades sean mayores a 0
+                let itemsSinCantidad = [];
+                if (turnoType === 'medicine') {
+                    $('#medicinesList .quantity-input').each(function() {
+                        const val = parseInt($(this).val());
+                        if (isNaN(val) || val <= 0) {
+                            itemsSinCantidad.push($(this).closest('.medicine-card').find('strong').first().text());
+                            $(this).addClass('is-invalid');
+                        } else {
+                            $(this).removeClass('is-invalid');
+                        }
+                    });
+                } else {
+                    $('#suppliesList .quantity-input').each(function() {
+                        const val = parseInt($(this).val());
+                        if (isNaN(val) || val <= 0) {
+                            itemsSinCantidad.push($(this).closest('.supply-card').find('strong').first().text());
+                            $(this).addClass('is-invalid');
+                        } else {
+                            $(this).removeClass('is-invalid');
+                        }
+                    });
+                }
+
+                if (itemsSinCantidad.length > 0) {
+                    e.preventDefault();
+                    const lista = itemsSinCantidad.map((n, i) => `  ${i + 1}. ${n}`).join('\n');
+                    alert('Por favor, escribe la cantidad solicitada para:\n' + lista + '\n\nLa cantidad debe ser mayor a 0.');
                     return false;
                 }
 
