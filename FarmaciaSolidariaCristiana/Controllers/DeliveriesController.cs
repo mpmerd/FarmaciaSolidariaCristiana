@@ -122,30 +122,10 @@ namespace FarmaciaSolidariaCristiana.Controllers
                 var createdAt = DateTime.Now;
                 int deliveriesCount = 0;
 
-                // ✅ NUEVO: Determinar el TurnoId y su estado ANTES de crear las entregas
-                // El estado es importante porque:
-                // - Aprobado: el stock YA está reservado, no descontar
-                // - Pendiente: el stock NO está reservado, SÍ descontar
-                int? turnoId = null;
-                bool stockYaReservado = false; // true solo si turno está Aprobado
-                if (hasMedicines)
-                {
-                    var firstMedicineId = MedicineIds!.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(int.Parse).First();
-                    var turnoInfo = await FindTurnoIdWithStateAsync(PatientIdentification, firstMedicineId, null);
-                    turnoId = turnoInfo.turnoId;
-                    stockYaReservado = turnoInfo.stockReservado;
-                    _logger.LogInformation("🔍 Buscando turno para paciente {PatientId} con medicamento {MedicineId}. TurnoId: {TurnoId}, StockReservado: {StockReservado}",
-                        PatientIdentification, firstMedicineId, turnoId?.ToString() ?? "NULL", stockYaReservado);
-                }
-                else if (hasSupplies)
-                {
-                    var firstSupplyId = SupplyIds!.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(int.Parse).First();
-                    var turnoInfo = await FindTurnoIdWithStateAsync(PatientIdentification, null, firstSupplyId);
-                    turnoId = turnoInfo.turnoId;
-                    stockYaReservado = turnoInfo.stockReservado;
-                    _logger.LogInformation("🔍 Buscando turno para paciente {PatientId} con insumo {SupplyId}. TurnoId: {TurnoId}, StockReservado: {StockReservado}",
-                        PatientIdentification, firstSupplyId, turnoId?.ToString() ?? "NULL", stockYaReservado);
-                }
+                // ✅ FIX: El turnoId se busca individualmente por cada medicamento/insumo dentro del loop
+                // para soportar el caso en que una misma persona tiene múltiples turnos aprobados,
+                // cada uno con un medicamento distinto. Buscar solo por el primer item causaba que
+                // todos los ítems quedaran asociados al turno del primero (bug).
 
                 if (hasMedicines)
                 {
@@ -160,6 +140,15 @@ namespace FarmaciaSolidariaCristiana.Controllers
 
                     for (int i = 0; i < medicineIdsList.Count; i++)
                     {
+                        // ✅ FIX: Buscar el turno individualmente por CADA medicamento.
+                        // Un paciente puede tener múltiples turnos aprobados con distintos medicamentos.
+                        // Usar el turno del primer medicamento para todos era incorrecto.
+                        var turnoInfo = await FindTurnoIdWithStateAsync(PatientIdentification, medicineIdsList[i], null);
+                        int? turnoId = turnoInfo.turnoId;
+                        bool stockYaReservado = turnoInfo.stockReservado;
+                        _logger.LogInformation("🔍 Turno para medicamento {MedicineId}: TurnoId={TurnoId}, StockReservado={StockReservado}",
+                            medicineIdsList[i], turnoId?.ToString() ?? "NULL", stockYaReservado);
+
                         // ⚠️ Bloquear fila para evitar race conditions (SQL Server: UPDLOCK + ROWLOCK)
                         // Solo bloquear si NO es de un turno (turno ya reservó stock con lock)
                         Medicine? medicine;
@@ -227,12 +216,12 @@ namespace FarmaciaSolidariaCristiana.Controllers
                                 medicine.Name, turnoId, medicine.StockQuantity);
                         }
 
-                        // Crear entrega
+                        // Crear entrega con el TurnoId específico de ESTE medicamento
                         var delivery = new Delivery
                         {
                             PatientIdentification = PatientIdentification,
                             PatientId = patient.Id,
-                            TurnoId = turnoId, // ✅ Asignar TurnoId
+                            TurnoId = turnoId, // ✅ TurnoId individual por medicamento
                             MedicineId = medicineIdsList[i],
                             Quantity = medicineQuantitiesList[i],
                             DeliveryDate = DeliveryDate,
@@ -291,8 +280,8 @@ namespace FarmaciaSolidariaCristiana.Controllers
                         _context.Add(delivery);
                         deliveriesCount++;
                         
-                        _logger.LogInformation("Delivery created for patient: {PatientName}, Medicine: {MedicineName}, Quantity: {Quantity}",
-                            patient.FullName, medicine.Name, medicineQuantitiesList[i]);
+                        _logger.LogInformation("Delivery created for patient: {PatientName}, Medicine: {MedicineName}, Quantity: {Quantity}, TurnoId: {TurnoId}",
+                            patient.FullName, medicine.Name, medicineQuantitiesList[i], turnoId?.ToString() ?? "NULL");
                     }
                 }
                 else if (hasSupplies)
@@ -308,6 +297,13 @@ namespace FarmaciaSolidariaCristiana.Controllers
 
                     for (int i = 0; i < supplyIdsList.Count; i++)
                     {
+                        // ✅ FIX: Buscar el turno individualmente por CADA insumo.
+                        var turnoInfo = await FindTurnoIdWithStateAsync(PatientIdentification, null, supplyIdsList[i]);
+                        int? turnoId = turnoInfo.turnoId;
+                        bool stockYaReservado = turnoInfo.stockReservado;
+                        _logger.LogInformation("🔍 Turno para insumo {SupplyId}: TurnoId={TurnoId}, StockReservado={StockReservado}",
+                            supplyIdsList[i], turnoId?.ToString() ?? "NULL", stockYaReservado);
+
                         // ⚠️ Bloquear fila para evitar race conditions (SQL Server: UPDLOCK + ROWLOCK)
                         // Solo bloquear si NO es de un turno (turno ya reservó stock con lock)
                         Supply? supply;
@@ -370,12 +366,12 @@ namespace FarmaciaSolidariaCristiana.Controllers
                             }
                         }
 
-                        // Crear entrega
+                        // Crear entrega con el TurnoId específico de ESTE insumo
                         var delivery = new Delivery
                         {
                             PatientIdentification = PatientIdentification,
                             PatientId = patient.Id,
-                            TurnoId = turnoId, // ✅ Asignar TurnoId
+                            TurnoId = turnoId, // ✅ TurnoId individual por insumo
                             SupplyId = supplyIdsList[i],
                             Quantity = supplyQuantitiesList[i],
                             DeliveryDate = DeliveryDate,
@@ -434,23 +430,30 @@ namespace FarmaciaSolidariaCristiana.Controllers
                         _context.Add(delivery);
                         deliveriesCount++;
                         
-                        _logger.LogInformation("Delivery created for patient: {PatientName}, Supply: {SupplyName}, Quantity: {Quantity}",
-                            patient.FullName, supply.Name, supplyQuantitiesList[i]);
+                        _logger.LogInformation("Delivery created for patient: {PatientName}, Supply: {SupplyName}, Quantity: {Quantity}, TurnoId: {TurnoId}",
+                            patient.FullName, supply.Name, supplyQuantitiesList[i], turnoId?.ToString() ?? "NULL");
                     }
                 }
 
                 await _context.SaveChangesAsync();
 
-                // ✅ Marcar turno como completado si corresponde (usar el primer item como referencia)
+                // ✅ FIX: Marcar como completados TODOS los turnos afectados por esta sesión de entrega,
+                // buscando por cada medicamento/insumo individualmente (no solo el primero).
                 if (hasMedicines)
                 {
-                    var firstMedicineId = MedicineIds!.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(int.Parse).First();
-                    await CompleteTurnoIfExistsAsync(PatientIdentification, firstMedicineId, null);
+                    var medicineIdsList2 = MedicineIds!.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(int.Parse).ToList();
+                    foreach (var medId in medicineIdsList2)
+                    {
+                        await CompleteTurnoIfExistsAsync(PatientIdentification, medId, null);
+                    }
                 }
                 else if (hasSupplies)
                 {
-                    var firstSupplyId = SupplyIds!.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(int.Parse).First();
-                    await CompleteTurnoIfExistsAsync(PatientIdentification, null, firstSupplyId);
+                    var supplyIdsList2 = SupplyIds!.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(int.Parse).ToList();
+                    foreach (var supId in supplyIdsList2)
+                    {
+                        await CompleteTurnoIfExistsAsync(PatientIdentification, null, supId);
+                    }
                 }
 
                 // ✅ Confirmar transacción - todos los cambios se aplicaron correctamente
