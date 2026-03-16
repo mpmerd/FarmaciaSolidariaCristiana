@@ -30,16 +30,40 @@ namespace FarmaciaSolidariaCristiana.Filters
             if (controller == "Maintenance")
                 return;
 
+            // Permitir acceso al endpoint de estado de mantenimiento de la API
+            if (controller == "MaintenanceApi")
+                return;
+
             // Permitir acceso a rutas de autenticación (Login, Logout)
             // Esto permite que los Admin puedan iniciar sesión durante el mantenimiento
             if (controller == "Account" && (action == "Login" || action == "Logout"))
                 return;
 
-            // Permitir a los Admin y Farmaceuticos seguir usando la aplicación
-            if (context.HttpContext.User.IsInRole("Admin") || context.HttpContext.User.IsInRole("Farmaceutico"))
+            // Determinar si es una petición de API (para retornar JSON en vez de redirect)
+            var isApiRequest = context.HttpContext.Request.Path.StartsWithSegments("/api");
+
+            // Permitir a los Admin y Farmaceuticos seguir usando la aplicación web
+            // (la app móvil se bloquea completamente vía su propia verificación)
+            if (!isApiRequest && (context.HttpContext.User.IsInRole("Admin") || context.HttpContext.User.IsInRole("Farmaceutico")))
                 return;
 
-            // Para todos los demás usuarios, redirigir a la página de mantenimiento
+            // Para peticiones de API, retornar 503 JSON
+            if (isApiRequest)
+            {
+                var reason = _maintenanceService.GetMaintenanceReason() ?? "Sistema en mantenimiento";
+                context.Result = new ObjectResult(new
+                {
+                    success = false,
+                    message = reason,
+                    isMaintenanceMode = true
+                })
+                {
+                    StatusCode = 503
+                };
+                return;
+            }
+
+            // Para todos los demás usuarios web, redirigir a la página de mantenimiento
             context.Result = new RedirectToActionResult("Index", "Maintenance", null);
         }
 

@@ -28,10 +28,15 @@ public partial class App : Application
         // Initialize OneSignal
         InitializeOneSignal();
         
-        // Check for updates after app starts
+        // Check maintenance mode and updates after app starts
         MainThread.BeginInvokeOnMainThread(async () =>
         {
             await Task.Delay(2000); // Esperar 2 segundos después del inicio
+            
+            // Verificar mantenimiento primero
+            await CheckMaintenanceModeAsync();
+            
+            // Luego verificar actualizaciones
             await _updateService.CheckForUpdatesAsync();
         });
     }
@@ -102,6 +107,34 @@ public partial class App : Application
         }
     }
 
+    private async Task CheckMaintenanceModeAsync()
+    {
+        try
+        {
+            var maintenance = await _updateService.CheckMaintenanceAsync();
+            if (maintenance != null)
+            {
+                System.Diagnostics.Debug.WriteLine($"[App] Maintenance mode active: {maintenance.reason}");
+
+                await MainThread.InvokeOnMainThreadAsync(async () =>
+                {
+                    await Shell.Current.GoToAsync("//MaintenancePage");
+
+                    // Esperar un poco para que la página se cargue y luego setear la razón
+                    await Task.Delay(300);
+                    if (Shell.Current?.CurrentPage is Views.MaintenancePage page)
+                    {
+                        page.SetReason(maintenance.reason);
+                    }
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[App] Error checking maintenance: {ex.Message}");
+        }
+    }
+
     protected override Window CreateWindow(IActivationState? activationState)
     {
         var window = new Window(new AppShell(_authService));
@@ -109,7 +142,10 @@ public partial class App : Application
         // Manejar cuando la app vuelve a primer plano
         window.Resumed += async (s, e) =>
         {
-            System.Diagnostics.Debug.WriteLine("[App] App resumed - checking for pending notifications");
+            System.Diagnostics.Debug.WriteLine("[App] App resumed - checking maintenance and notifications");
+            
+            // Verificar mantenimiento al volver a primer plano
+            await CheckMaintenanceModeAsync();
             
             try
             {

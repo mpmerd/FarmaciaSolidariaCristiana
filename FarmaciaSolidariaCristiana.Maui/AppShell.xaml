@@ -63,6 +63,11 @@
         </Grid>
     </Shell.FlyoutHeader>
     
+    <!-- Maintenance Page (separate, no flyout) -->
+    <ShellContent Route="MaintenancePage"
+                  ContentTemplate="{DataTemplate views:MaintenancePage}"
+                  FlyoutItemIsVisible="False"/>
+    
     <!-- Login Page (separate, no flyout) -->
     <ShellContent Route="LoginPage"
                   ContentTemplate="{DataTemplate views:LoginPage}"
