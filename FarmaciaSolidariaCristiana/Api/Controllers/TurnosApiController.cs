@@ -310,6 +310,27 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
         }
 
         /// <summary>
+        /// Obtiene los IDs de medicamentos que un paciente ya tiene en turnos activos del mes actual.
+        /// Permite a la app móvil validar antes de enviar la solicitud.
+        /// </summary>
+        [HttpGet("restricted-medicines/{documentoIdentidad}")]
+        [Authorize(Roles = "ViewerPublic")]
+        [ProducesResponseType(typeof(ApiResponse<List<int>>), 200)]
+        public async Task<IActionResult> GetRestrictedMedicines(string documentoIdentidad)
+        {
+            try
+            {
+                var medicineIds = await _turnoService.GetPatientMedicineIdsThisMonthAsync(documentoIdentidad);
+                return ApiOk(medicineIds);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error obteniendo medicamentos restringidos");
+                return ApiError("Error al verificar medicamentos restringidos");
+            }
+        }
+
+        /// <summary>
         /// Crea una nueva solicitud de turno (para usuarios ViewerPublic desde app móvil)
         /// </summary>
         [HttpPost]
@@ -362,6 +383,28 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
                         if (item.Cantidad > 0)
                         {
                             medicamentos.Add((item.Id, item.Cantidad));
+                        }
+                    }
+
+                    // ✅ Verificar restricción: mismo medicamento no puede estar en más de un turno por mes
+                    if (medicamentos.Any())
+                    {
+                        var medicineIdsThisMonth = await _turnoService.GetPatientMedicineIdsThisMonthAsync(model.DocumentoIdentidad);
+                        var duplicados = medicamentos
+                            .Where(m => medicineIdsThisMonth.Contains(m.MedicineId))
+                            .Select(m => m.MedicineId)
+                            .ToList();
+
+                        if (duplicados.Any())
+                        {
+                            var nombres = await _context.Medicines
+                                .Where(m => duplicados.Contains(m.Id))
+                                .Select(m => m.Name)
+                                .ToListAsync();
+                            
+                            return ApiError(
+                                $"Este paciente ya solicitó los siguientes medicamentos este mes: {string.Join(", ", nombres)}. " +
+                                "Un mismo paciente no puede retirar el mismo medicamento en más de un turno por mes natural.");
                         }
                     }
                 }

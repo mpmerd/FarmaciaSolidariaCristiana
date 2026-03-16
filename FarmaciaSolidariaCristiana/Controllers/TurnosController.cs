@@ -231,6 +231,44 @@ namespace FarmaciaSolidariaCristiana.Controllers
                     }
                 }
 
+                // ✅ Verificar restricción: mismo medicamento no puede estar en más de un turno por mes
+                if (medicamentos.Any())
+                {
+                    var medicineIdsThisMonth = await _turnoService.GetPatientMedicineIdsThisMonthAsync(model.DocumentoIdentidad);
+                    var duplicados = medicamentos
+                        .Where(m => medicineIdsThisMonth.Contains(m.MedicineId))
+                        .Select(m => m.MedicineId)
+                        .ToList();
+
+                    if (duplicados.Any())
+                    {
+                        var nombres = await _context.Medicines
+                            .Where(m => duplicados.Contains(m.Id))
+                            .Select(m => m.Name)
+                            .ToListAsync();
+                        
+                        ModelState.AddModelError("", 
+                            $"Este paciente ya solicitó los siguientes medicamentos este mes: {string.Join(", ", nombres)}. " +
+                            "Un mismo paciente no puede retirar el mismo medicamento en más de un turno por mes natural.");
+
+                        var medicinesReload2 = await _context.Medicines
+                            .Where(m => m.StockQuantity > 0)
+                            .OrderBy(m => m.Name)
+                            .Select(m => new { m.Id, m.Name, m.StockQuantity, m.Unit })
+                            .ToListAsync();
+                        ViewBag.Medicines = medicinesReload2;
+
+                        var suppliesReload2 = await _context.Supplies
+                            .Where(s => s.StockQuantity > 0)
+                            .OrderBy(s => s.Name)
+                            .Select(s => new { s.Id, s.Name, s.StockQuantity, s.Unit })
+                            .ToListAsync();
+                        ViewBag.Supplies = suppliesReload2;
+
+                        return View(model);
+                    }
+                }
+
                 // Crear lista de insumos solicitados
                 var insumos = new List<(int SupplyId, int Quantity)>();
                 if (supplyIds != null)

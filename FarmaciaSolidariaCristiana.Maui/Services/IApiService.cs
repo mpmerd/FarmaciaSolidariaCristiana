@@ -110,6 +110,9 @@ public interface IApiService
     
     // Diagnóstico
     Task<bool> CheckApiHealthAsync();
+    
+    // Restricción de medicamentos por mes
+    Task<ApiResponse<List<int>>> GetRestrictedMedicinesAsync(string documentoIdentidad);
 }
 
 public class BroadcastResultDto

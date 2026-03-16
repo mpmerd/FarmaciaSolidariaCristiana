@@ -118,5 +118,11 @@ namespace FarmaciaSolidariaCristiana.Services
         /// Cancela un turno por solicitud del usuario
         /// </summary>
         Task<bool> CancelTurnoByUserAsync(int turnoId, string userId, string motivoCancelacion);
+
+        /// <summary>
+        /// Obtiene los IDs de medicamentos que un paciente ya tiene en turnos activos del mes actual.
+        /// Un paciente no puede retirar el mismo medicamento en más de un turno por mes natural.
+        /// </summary>
+        Task<List<int>> GetPatientMedicineIdsThisMonthAsync(string documentoIdentidad);
     }
 }
