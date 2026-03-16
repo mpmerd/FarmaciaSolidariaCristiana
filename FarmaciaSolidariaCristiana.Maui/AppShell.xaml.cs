@@ -84,6 +84,7 @@ public partial class AppShell : Shell
         // Update header
         LblUserName.Text = userInfo?.UserName ?? "Usuario";
         LblUserRole.Text = GetRoleDisplayName(role);
+        LblAppVersion.Text = $"v{AppInfo.VersionString}";
         
         // Configure menu visibility based on role
         ConfigureMenuForRole(role);

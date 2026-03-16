@@ -5,5 +5,6 @@
   "downloadUrl": "https://farmaciasolidaria.somee.com/android/farmaciasolidaria.apk",
   "fileSize": "33M",
   "minAndroidVersion": "24",
+  "minimumVersion": "1.0.0",
   "releaseNotes": "En esta versión se mejora el rendimiento, la experiencia de usuario y la mantenibilidad de la aplicación android.  - Implementación completa del sistema de donaciones: creación, edición, eliminación y búsqueda autocomplete.  - Corrección de bug en búsqueda de medicamentos y manejo de cantidad de turno igual a 0. No permite que se solicite el turno si el paciente no pone la cantidad.  - Mejoras visuales y de experiencia en modo oscuro.  - Refresco inmediato de la informaciónn tras aprobar/rechazar turnos. "
 }
