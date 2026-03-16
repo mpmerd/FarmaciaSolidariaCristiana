@@ -84,15 +84,15 @@ namespace FarmaciaSolidariaCristiana.Controllers
                 {
                     try
                     {
-                        // Pausa entre envíos para evitar rate-limiting del servidor SMTP de Somee
+                        // Pausa de 1 minuto entre envíos para respetar límites SMTP de Somee
                         if (emailsSent > 0 || emailsFailed > 0)
-                            await Task.Delay(3000);
+                            await Task.Delay(60_000);
 
                         var emailBody = BuildEmailBody(title, message);
                         await _emailService.SendEmailAsync(user.Email, $"📢 {title}", emailBody);
                         emailsSent++;
 
-                        if (emailsSent % 20 == 0)
+                        if (emailsSent % 10 == 0)
                             _logger.LogInformation("[Broadcast] Progreso emails: {Sent} enviados, {Failed} fallidos de {Total}",
                                 emailsSent, emailsFailed, users.Count);
                     }
@@ -101,9 +101,8 @@ namespace FarmaciaSolidariaCristiana.Controllers
                         emailsFailed++;
                         _logger.LogWarning(ex, "[Broadcast] Error enviando email a {Email}", user.Email);
 
-                        // Si hay muchos fallos consecutivos, aumentar pausa (probable rate-limit)
-                        if (emailsFailed > 3 && emailsFailed > emailsSent)
-                            await Task.Delay(8000);
+                        // Si falla, esperar 2 minutos antes del siguiente intento
+                        await Task.Delay(120_000);
                     }
                 }
 
