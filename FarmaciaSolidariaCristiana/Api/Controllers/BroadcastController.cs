@@ -63,44 +63,15 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
                     .ToListAsync()
                 : new List<string>();
 
-            int emailsSent = 0;
-            int emailsFailed = 0;
             int notificationsCreated = 0;
 
             _logger.LogInformation(
                 "[Broadcast] Admin iniciando broadcast: '{Title}' a {Count} usuarios ({MobileCount} con app). Email={SendEmail}, App={SendApp}",
                 request.Title, users.Count, mobileUserIds.Count, request.SendEmail, request.SendNotification);
 
+            // Canal 2: Notificaciones in-app - se crean inmediatamente (son rápidas)
             foreach (var user in users)
             {
-                // Canal 1: Email - se envía a TODOS los usuarios
-                if (request.SendEmail && !string.IsNullOrEmpty(user.Email))
-                {
-                    try
-                    {
-                        // Pausa de 1 minuto entre envíos para respetar límites SMTP de Somee
-                        if (emailsSent > 0 || emailsFailed > 0)
-                            await Task.Delay(60_000);
-
-                        var emailBody = BuildEmailBody(request.Title, request.Message);
-                        await _emailService.SendEmailAsync(user.Email, $"📢 {request.Title}", emailBody);
-                        emailsSent++;
-
-                        if (emailsSent % 10 == 0)
-                            _logger.LogInformation("[Broadcast] Progreso emails: {Sent} enviados, {Failed} fallidos de {Total}",
-                                emailsSent, emailsFailed, users.Count);
-                    }
-                    catch (Exception ex)
-                    {
-                        emailsFailed++;
-                        _logger.LogWarning(ex, "[Broadcast] Error enviando email a {Email}", user.Email);
-
-                        // Si falla, esperar 2 minutos antes del siguiente intento
-                        await Task.Delay(120_000);
-                    }
-                }
-
-                // Canal 2: Notificación in-app (polling) - solo a usuarios con app móvil registrada
                 if (request.SendNotification && mobileUserIds.Contains(user.Id))
                 {
                     try
@@ -119,17 +90,62 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
                 }
             }
 
+            // Canal 1: Emails - se envían en segundo plano (1 por minuto, tarda horas)
+            int totalEmailTargets = 0;
+            if (request.SendEmail)
+            {
+                var emailTargets = users
+                    .Where(u => !string.IsNullOrEmpty(u.Email))
+                    .Select(u => u.Email!)
+                    .ToList();
+                totalEmailTargets = emailTargets.Count;
+
+                var emailTitle = request.Title;
+                var emailMessage = request.Message;
+
+                _ = Task.Run(async () =>
+                {
+                    int sent = 0;
+                    int failed = 0;
+                    foreach (var email in emailTargets)
+                    {
+                        try
+                        {
+                            if (sent > 0 || failed > 0)
+                                await Task.Delay(60_000);
+
+                            var emailBody = BuildEmailBody(emailTitle, emailMessage);
+                            await _emailService.SendEmailAsync(email, $"📢 {emailTitle}", emailBody);
+                            sent++;
+
+                            if (sent % 10 == 0)
+                                _logger.LogInformation("[Broadcast] Progreso emails: {Sent} enviados, {Failed} fallidos de {Total}",
+                                    sent, failed, emailTargets.Count);
+                        }
+                        catch (Exception ex)
+                        {
+                            failed++;
+                            _logger.LogWarning(ex, "[Broadcast] Error enviando email a {Email}", email);
+                            await Task.Delay(120_000);
+                        }
+                    }
+                    _logger.LogInformation(
+                        "[Broadcast] Emails completados: {Sent} enviados, {Failed} fallidos de {Total}",
+                        sent, failed, emailTargets.Count);
+                });
+            }
+
             _logger.LogInformation(
-                "[Broadcast] Completado: {EmailsSent} emails enviados, {EmailsFailed} fallidos, {NotificationsCreated} notificaciones creadas",
-                emailsSent, emailsFailed, notificationsCreated);
+                "[Broadcast] Respuesta inmediata: {Notifications} notificaciones creadas, {EmailTargets} emails en cola",
+                notificationsCreated, totalEmailTargets);
 
             return ApiOk(new BroadcastResult
             {
                 TotalUsers = users.Count,
-                EmailsSent = emailsSent,
-                EmailsFailed = emailsFailed,
+                EmailsSent = totalEmailTargets,
+                EmailsFailed = 0,
                 NotificationsCreated = notificationsCreated
-            }, "Notificación masiva enviada correctamente");
+            }, $"Notificación masiva iniciada. {notificationsCreated} notificaciones creadas. {totalEmailTargets} emails enviándose en segundo plano.");
         }
 
         private static string BuildEmailBody(string title, string message)
