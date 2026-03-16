@@ -63,14 +63,14 @@
         </Grid>
     </Shell.FlyoutHeader>
     
+    <!-- Login Page (separate, no flyout) - MUST be first to avoid flash of other pages -->
+    <ShellContent Route="LoginPage"
+                  ContentTemplate="{DataTemplate views:LoginPage}"
+                  FlyoutItemIsVisible="False"/>
+    
     <!-- Maintenance Page (separate, no flyout) -->
     <ShellContent Route="MaintenancePage"
                   ContentTemplate="{DataTemplate views:MaintenancePage}"
-                  FlyoutItemIsVisible="False"/>
-    
-    <!-- Login Page (separate, no flyout) -->
-    <ShellContent Route="LoginPage"
-                  ContentTemplate="{DataTemplate views:LoginPage}"
                   FlyoutItemIsVisible="False"/>
     
     <!-- Dashboard - All roles -->
