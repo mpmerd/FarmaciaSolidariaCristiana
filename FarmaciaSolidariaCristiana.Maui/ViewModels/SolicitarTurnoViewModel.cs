@@ -60,6 +60,8 @@ public partial class SolicitarTurnoViewModel : BaseViewModel
 
     private List<Medicine> _allMedicamentos = new();
     private List<Supply> _allInsumos = new();
+    private HashSet<int> _restrictedMedicineIds = new();
+    private string _lastCheckedDocument = string.Empty;
 
     // Tipos de documento permitidos
     public List<string> TiposDocumento { get; } = new()
@@ -87,6 +89,7 @@ public partial class SolicitarTurnoViewModel : BaseViewModel
     {
         ValidateDocumento();
         UpdateCanSubmit();
+        _ = LoadRestrictedMedicinesAsync();
     }
 
     partial void OnIsMedicamentoChanged(bool value)
@@ -143,6 +146,46 @@ public partial class SolicitarTurnoViewModel : BaseViewModel
     private void UpdateCanSubmit()
     {
         CanSubmit = IsDocumentoValid && ItemsSeleccionados.Count > 0;
+    }
+
+    private async Task LoadRestrictedMedicinesAsync()
+    {
+        if (!IsDocumentoValid)
+        {
+            _restrictedMedicineIds.Clear();
+            _lastCheckedDocument = string.Empty;
+            return;
+        }
+
+        var doc = DocumentoIdentidad.Trim().ToUpper();
+        if (doc == _lastCheckedDocument) return;
+        _lastCheckedDocument = doc;
+
+        try
+        {
+            var result = await ApiService.GetRestrictedMedicinesAsync(doc);
+            if (result.Success && result.Data != null)
+            {
+                _restrictedMedicineIds = new HashSet<int>(result.Data);
+                // Remover items ya seleccionados que estén restringidos
+                var itemsToRemove = ItemsSeleccionados
+                    .Where(i => _restrictedMedicineIds.Contains(i.Id) && IsMedicamento)
+                    .ToList();
+                foreach (var item in itemsToRemove)
+                    ItemsSeleccionados.Remove(item);
+                if (itemsToRemove.Any())
+                {
+                    UpdateCanSubmit();
+                    await ShowErrorAsync(
+                        "Se removieron medicamentos que este paciente ya solicitó este mes. " +
+                        "Un mismo medicamento no puede retirarse en más de un turno por mes.");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[SolicitarTurno] Error loading restricted medicines: {ex.Message}");
+        }
     }
 
     #endregion
@@ -218,7 +261,9 @@ public partial class SolicitarTurnoViewModel : BaseViewModel
                 .Select(m => new ItemBusqueda
                 {
                     Id = m.Id,
-                    Name = m.Name,
+                    Name = _restrictedMedicineIds.Contains(m.Id) 
+                        ? $"{m.Name} (ya solicitado este mes)" 
+                        : m.Name,
                     Stock = m.StockQuantity,
                     Unit = m.Unit,
                     Tipo = "Medicamento"
@@ -241,18 +286,31 @@ public partial class SolicitarTurnoViewModel : BaseViewModel
                 .ToList();
         }
 
-        // Excluir items ya seleccionados
+        // Excluir items ya seleccionados y medicamentos restringidos
         var idsSeleccionados = ItemsSeleccionados.Select(i => i.Id).ToHashSet();
         results = results.Where(r => !idsSeleccionados.Contains(r.Id)).ToList();
+        if (IsMedicamento)
+        {
+            results = results.Where(r => !_restrictedMedicineIds.Contains(r.Id)).ToList();
+        }
 
         ResultadosBusqueda = new ObservableCollection<ItemBusqueda>(results);
         ShowSearchResults = results.Count > 0;
     }
 
     [RelayCommand]
-    private void SelectItem(ItemBusqueda item)
+    private async void SelectItem(ItemBusqueda item)
     {
         if (item == null) return;
+
+        // Verificar restricción de medicamento por mes
+        if (IsMedicamento && _restrictedMedicineIds.Contains(item.Id))
+        {
+            await ShowErrorAsync(
+                $"El medicamento \"{item.Name}\" ya fue solicitado por este paciente este mes. " +
+                "Un mismo paciente no puede retirar el mismo medicamento en más de un turno por mes natural.");
+            return;
+        }
 
         var seleccionado = new ItemSeleccionado
         {

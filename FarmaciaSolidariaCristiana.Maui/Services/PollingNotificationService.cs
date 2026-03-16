@@ -289,7 +289,7 @@ public class PollingNotificationService : IPollingNotificationService, IDisposab
                 var snackbar = Snackbar.Make(
                     message: $"🔔 {notification.Title}: {notification.Message}",
                     actionButtonText: "Ver",
-                    duration: TimeSpan.FromSeconds(8),
+                    duration: TimeSpan.FromSeconds(10),
                     action: async () =>
                     {
                         // Marcar como leída cuando el usuario toca "Ver"
