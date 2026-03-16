@@ -304,21 +304,26 @@ public partial class TurnosViewModel : BaseViewModel
             .Select(d => $"{d.IconDisplay} {d.DocumentType}: {d.FileName}")
             .ToArray();
 
-        var selected = await Shell.Current.DisplayActionSheet(
-            "Seleccione un documento para ver",
-            "Cancelar",
-            null,
-            options);
-
-        if (string.IsNullOrEmpty(selected) || selected == "Cancelar")
-            return;
-
-        // Encontrar el documento seleccionado
-        var index = Array.IndexOf(options, selected);
-        if (index >= 0 && index < turno.Documentos.Count)
+        // Bucle: tras cerrar un documento se vuelve a mostrar el selector
+        while (true)
         {
-            var doc = turno.Documentos[index];
-            await AbrirDocumentoAsync(doc);
+            var selected = await Shell.Current.DisplayActionSheet(
+                "Seleccione un documento para ver",
+                "Cerrar",
+                null,
+                options);
+
+            if (string.IsNullOrEmpty(selected) || selected == "Cerrar")
+                return;
+
+            // Encontrar el documento seleccionado
+            var index = Array.IndexOf(options, selected);
+            if (index >= 0 && index < turno.Documentos.Count)
+            {
+                var doc = turno.Documentos[index];
+                await AbrirDocumentoAsync(doc);
+                // Al volver aquí, el bucle vuelve a mostrar el selector de documentos
+            }
         }
     }
 
@@ -364,22 +369,22 @@ public partial class TurnosViewModel : BaseViewModel
             return;
         }
 
+        // Pedir comentarios opcionales con editor multilínea
+        // Si el usuario cancela aquí, se cancela todo el flujo
+        var comentarios = await TextInputPopup.ShowAsync(
+            "Comentarios (opcional)",
+            "Puede agregar instrucciones o comentarios para el paciente:",
+            "Ej: Traer carnet de identidad, ayuno previo, etc.",
+            confirmText: "Continuar");
+
+        if (comentarios == null) return;
+
         // Confirmar aprobación
         var confirm = await ShowConfirmAsync(
             "Aprobar Turno",
             $"¿Desea aprobar el turno #{turno.Id}?\n\nLa fecha y hora se asignarán automáticamente al próximo slot disponible.");
 
         if (!confirm) return;
-
-        // Pedir comentarios opcionales con editor multilínea
-        var comentarios = await TextInputPopup.ShowAsync(
-            "Comentarios (opcional)",
-            "Puede agregar instrucciones o comentarios para el paciente:",
-            "Ej: Traer carnet de identidad, ayuno previo, etc.",
-            confirmText: "Aprobar turno");
-
-        // El usuario puede cancelar el prompt pero aún así aprobar
-        // Si presiona Cancel en comentarios, comentarios será null (lo cual está bien)
 
         bool success = false;
         string? fechaAsignada = null;

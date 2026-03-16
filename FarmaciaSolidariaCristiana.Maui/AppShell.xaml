@@ -16,8 +16,9 @@
     
     <!-- Flyout Header -->
     <Shell.FlyoutHeader>
-        <Grid HeightRequest="180" BackgroundColor="#0d6efd" Padding="20">
+        <Grid HeightRequest="200" BackgroundColor="#0d6efd" Padding="20">
             <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
@@ -52,6 +53,13 @@
                    Text="Rol"
                    TextColor="#B0D4FF"
                    FontSize="14"/>
+            
+            <Label Grid.Row="3"
+                   x:Name="LblAppVersion"
+                   Text="v1.0.0"
+                   TextColor="#80AADD"
+                   FontSize="11"
+                   Margin="0,4,0,0"/>
         </Grid>
     </Shell.FlyoutHeader>
     
