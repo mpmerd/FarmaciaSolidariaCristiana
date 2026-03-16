@@ -57,6 +57,16 @@ namespace FarmaciaSolidariaCristiana.Api.Models
     }
 
     /// <summary>
+    /// DTO para solicitar código de verificación de email
+    /// </summary>
+    public class SendVerificationCodeDto
+    {
+        [Required(ErrorMessage = "El email es requerido")]
+        [EmailAddress(ErrorMessage = "El formato de email no es válido")]
+        public string Email { get; set; } = string.Empty;
+    }
+
+    /// <summary>
     /// DTO para registro de nuevo usuario
     /// </summary>
     public class RegisterRequestDto
@@ -76,6 +86,10 @@ namespace FarmaciaSolidariaCristiana.Api.Models
         [Required(ErrorMessage = "La confirmación de contraseña es requerida")]
         [Compare("Password", ErrorMessage = "Las contraseñas no coinciden")]
         public string ConfirmPassword { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "El código de verificación es requerido")]
+        [StringLength(6, MinimumLength = 6, ErrorMessage = "El código debe ser de 6 dígitos")]
+        public string VerificationCode { get; set; } = string.Empty;
     }
 
     /// <summary>

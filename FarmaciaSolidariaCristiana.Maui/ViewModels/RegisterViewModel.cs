@@ -22,6 +22,9 @@ public partial class RegisterViewModel : BaseViewModel
     private string _confirmPassword = string.Empty;
 
     [ObservableProperty]
+    private string _verificationCode = string.Empty;
+
+    [ObservableProperty]
     private bool _isPasswordVisible;
 
     [ObservableProperty]
@@ -32,6 +35,24 @@ public partial class RegisterViewModel : BaseViewModel
 
     [ObservableProperty]
     private string _registrationMessage = string.Empty;
+
+    [ObservableProperty]
+    private bool _isCodeSent;
+
+    [ObservableProperty]
+    private bool _isSendingCode;
+
+    [ObservableProperty]
+    private string _codeStatusMessage = string.Empty;
+
+    [ObservableProperty]
+    private bool _isCodeStatusError;
+
+    [ObservableProperty]
+    private int _cooldownSeconds;
+
+    [ObservableProperty]
+    private bool _isCooldownActive;
 
     public RegisterViewModel(IAuthService authService, IApiService apiService) 
         : base(authService, apiService)
@@ -53,7 +74,6 @@ public partial class RegisterViewModel : BaseViewModel
         }
         else
         {
-            // Si no se puede verificar, asumimos habilitado
             RegistrationEnabled = true;
         }
     }
@@ -71,9 +91,66 @@ public partial class RegisterViewModel : BaseViewModel
     }
 
     [RelayCommand]
+    private async Task SendVerificationCodeAsync()
+    {
+        if (string.IsNullOrWhiteSpace(Email))
+        {
+            await ShowErrorAsync("Ingrese su correo electrónico primero.");
+            return;
+        }
+
+        if (!Email.Contains("@") || !Email.Contains("."))
+        {
+            await ShowErrorAsync("Ingrese un correo electrónico válido.");
+            return;
+        }
+
+        IsSendingCode = true;
+        CodeStatusMessage = string.Empty;
+
+        try
+        {
+            var result = await ApiService.SendVerificationCodeAsync(Email.Trim());
+
+            if (result.Success)
+            {
+                IsCodeSent = true;
+                IsCodeStatusError = false;
+                CodeStatusMessage = result.Message ?? "Código enviado a tu correo.";
+                await StartCooldownAsync();
+            }
+            else
+            {
+                IsCodeStatusError = true;
+                CodeStatusMessage = result.Message ?? "No se pudo enviar el código.";
+            }
+        }
+        catch (Exception ex)
+        {
+            IsCodeStatusError = true;
+            CodeStatusMessage = $"Error de conexión: {ex.Message}";
+        }
+        finally
+        {
+            IsSendingCode = false;
+        }
+    }
+
+    private async Task StartCooldownAsync()
+    {
+        IsCooldownActive = true;
+        CooldownSeconds = 60;
+        while (CooldownSeconds > 0)
+        {
+            await Task.Delay(1000);
+            CooldownSeconds--;
+        }
+        IsCooldownActive = false;
+    }
+
+    [RelayCommand]
     private async Task RegisterAsync()
     {
-        // Validaciones
         if (string.IsNullOrWhiteSpace(UserName))
         {
             await ShowErrorAsync("Por favor, ingrese un nombre de usuario.");
@@ -95,6 +172,12 @@ public partial class RegisterViewModel : BaseViewModel
         if (!Email.Contains("@") || !Email.Contains("."))
         {
             await ShowErrorAsync("Por favor, ingrese un correo electrónico válido.");
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(VerificationCode) || VerificationCode.Trim().Length != 6)
+        {
+            await ShowErrorAsync("Ingrese el código de verificación de 6 dígitos enviado a su correo.");
             return;
         }
 
@@ -123,7 +206,8 @@ public partial class RegisterViewModel : BaseViewModel
                 UserName = UserName.Trim(),
                 Email = Email.Trim(),
                 Password = Password,
-                ConfirmPassword = ConfirmPassword
+                ConfirmPassword = ConfirmPassword,
+                VerificationCode = VerificationCode.Trim()
             };
 
             var result = await ApiService.RegisterAsync(request);
@@ -135,7 +219,6 @@ public partial class RegisterViewModel : BaseViewModel
                     result.Message ?? "Su cuenta ha sido creada. Ya puede iniciar sesión.",
                     "OK");
 
-                // Navegar de regreso al login
                 await GoToLoginAsync();
             }
             else

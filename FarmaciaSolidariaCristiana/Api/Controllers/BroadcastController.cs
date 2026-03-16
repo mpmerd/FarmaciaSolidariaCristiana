@@ -2,7 +2,9 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations;
+using FarmaciaSolidariaCristiana.Data;
 using FarmaciaSolidariaCristiana.Models;
 using FarmaciaSolidariaCristiana.Services;
 
@@ -23,17 +25,20 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
         private readonly UserManager<IdentityUser> _userManager;
         private readonly IEmailService _emailService;
         private readonly IPendingNotificationService _pendingNotificationService;
+        private readonly ApplicationDbContext _context;
         private readonly ILogger<BroadcastController> _logger;
 
         public BroadcastController(
             UserManager<IdentityUser> userManager,
             IEmailService emailService,
             IPendingNotificationService pendingNotificationService,
+            ApplicationDbContext context,
             ILogger<BroadcastController> logger)
         {
             _userManager = userManager;
             _emailService = emailService;
             _pendingNotificationService = pendingNotificationService;
+            _context = context;
             _logger = logger;
         }
 
@@ -49,34 +54,55 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
 
             var users = _userManager.Users.ToList();
             
+            // Obtener IDs de usuarios que tienen la app móvil registrada (dispositivo activo)
+            var mobileUserIds = request.SendNotification
+                ? await _context.UserDeviceTokens
+                    .Where(d => d.IsActive)
+                    .Select(d => d.UserId)
+                    .Distinct()
+                    .ToListAsync()
+                : new List<string>();
+
             int emailsSent = 0;
             int emailsFailed = 0;
             int notificationsCreated = 0;
 
             _logger.LogInformation(
-                "[Broadcast] Admin iniciando broadcast: '{Title}' a {Count} usuarios. Email={SendEmail}, App={SendApp}",
-                request.Title, users.Count, request.SendEmail, request.SendNotification);
+                "[Broadcast] Admin iniciando broadcast: '{Title}' a {Count} usuarios ({MobileCount} con app). Email={SendEmail}, App={SendApp}",
+                request.Title, users.Count, mobileUserIds.Count, request.SendEmail, request.SendNotification);
 
             foreach (var user in users)
             {
-                // Canal 1: Email
+                // Canal 1: Email - se envía a TODOS los usuarios
                 if (request.SendEmail && !string.IsNullOrEmpty(user.Email))
                 {
                     try
                     {
+                        // Pausa entre envíos para evitar rate-limiting del servidor SMTP de Somee
+                        if (emailsSent > 0 || emailsFailed > 0)
+                            await Task.Delay(3000);
+
                         var emailBody = BuildEmailBody(request.Title, request.Message);
                         await _emailService.SendEmailAsync(user.Email, $"📢 {request.Title}", emailBody);
                         emailsSent++;
+
+                        if (emailsSent % 20 == 0)
+                            _logger.LogInformation("[Broadcast] Progreso emails: {Sent} enviados, {Failed} fallidos de {Total}",
+                                emailsSent, emailsFailed, users.Count);
                     }
                     catch (Exception ex)
                     {
                         emailsFailed++;
                         _logger.LogWarning(ex, "[Broadcast] Error enviando email a {Email}", user.Email);
+
+                        // Si hay muchos fallos consecutivos, aumentar pausa (probable rate-limit)
+                        if (emailsFailed > 3 && emailsFailed > emailsSent)
+                            await Task.Delay(8000);
                     }
                 }
 
-                // Canal 2: Notificación in-app (polling)
-                if (request.SendNotification)
+                // Canal 2: Notificación in-app (polling) - solo a usuarios con app móvil registrada
+                if (request.SendNotification && mobileUserIds.Contains(user.Id))
                 {
                     try
                     {

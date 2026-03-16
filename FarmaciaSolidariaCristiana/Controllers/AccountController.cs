@@ -12,6 +12,7 @@ namespace FarmaciaSolidariaCristiana.Controllers
         private readonly UserManager<IdentityUser> _userManager;
         private readonly RoleManager<IdentityRole> _roleManager;
         private readonly IEmailService _emailService;
+        private readonly IEmailVerificationService _emailVerificationService;
         private readonly IConfiguration _configuration;
         private readonly ILogger<AccountController> _logger;
 
@@ -20,6 +21,7 @@ namespace FarmaciaSolidariaCristiana.Controllers
             UserManager<IdentityUser> userManager,
             RoleManager<IdentityRole> roleManager,
             IEmailService emailService,
+            IEmailVerificationService emailVerificationService,
             IConfiguration configuration,
             ILogger<AccountController> logger)
         {
@@ -27,6 +29,7 @@ namespace FarmaciaSolidariaCristiana.Controllers
             _userManager = userManager;
             _roleManager = roleManager;
             _emailService = emailService;
+            _emailVerificationService = emailVerificationService;
             _configuration = configuration;
             _logger = logger;
         }
@@ -299,11 +302,18 @@ namespace FarmaciaSolidariaCristiana.Controllers
 
             if (ModelState.IsValid)
             {
+                // Verificar código de verificación de email
+                if (!_emailVerificationService.ValidateCode(model.Email, model.VerificationCode))
+                {
+                    ModelState.AddModelError(string.Empty, "Código de verificación inválido o expirado. Solicita un nuevo código.");
+                    return View(model);
+                }
+
                 var user = new IdentityUser
                 {
                     UserName = model.UserName,
                     Email = model.Email,
-                    EmailConfirmed = false
+                    EmailConfirmed = true // El email ya fue verificado con código
                 };
 
                 var result = await _userManager.CreateAsync(user, model.Password);
@@ -313,17 +323,7 @@ namespace FarmaciaSolidariaCristiana.Controllers
                     // Add user to ViewerPublic role (restricted public registration)
                     await _userManager.AddToRoleAsync(user, "ViewerPublic");
 
-                    _logger.LogInformation("New user registered: {Username} with ViewerPublic role", model.UserName);
-
-                    // Send welcome email
-                    try
-                    {
-                        await _emailService.SendWelcomeEmailAsync(model.Email, model.UserName);
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError(ex, "Error sending welcome email to {Email}", model.Email);
-                    }
+                    _logger.LogInformation("New user registered: {Username} with ViewerPublic role (email verified)", model.UserName);
 
                     TempData["SuccessMessage"] = "¡Registro exitoso! Ya puedes iniciar sesión.";
                     return RedirectToAction("Login");
@@ -336,6 +336,62 @@ namespace FarmaciaSolidariaCristiana.Controllers
             }
 
             return View(model);
+        }
+
+        /// <summary>
+        /// Envía código de verificación de email via AJAX
+        /// </summary>
+        [HttpPost]
+        [AllowAnonymous]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> SendVerificationCode([FromBody] SendVerificationCodeRequest request)
+        {
+            if (string.IsNullOrWhiteSpace(request?.Email))
+                return Json(new { success = false, message = "El email es requerido." });
+
+            // Verificar que no exista ya una cuenta con ese email
+            var existingUser = await _userManager.FindByEmailAsync(request.Email);
+            if (existingUser != null)
+                return Json(new { success = false, message = "Ya existe una cuenta con ese correo electrónico." });
+
+            if (_emailVerificationService.HasPendingCode(request.Email))
+                return Json(new { success = false, message = "Ya se envió un código. Espere 60 segundos." });
+
+            var code = _emailVerificationService.GenerateCode(request.Email);
+
+            try
+            {
+                var body = $@"
+<!DOCTYPE html>
+<html>
+<body style='font-family: Arial, sans-serif; background-color: #f5f5f5;'>
+    <div style='max-width: 500px; margin: 20px auto; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);'>
+        <div style='background: linear-gradient(135deg, #0d6efd, #0a58ca); padding: 25px; text-align: center;'>
+            <h1 style='color: white; margin: 0; font-size: 20px;'>🔐 Código de Verificación</h1>
+        </div>
+        <div style='padding: 30px; text-align: center;'>
+            <p style='color: #333; font-size: 16px;'>Tu código de verificación es:</p>
+            <div style='background: #f0f4f8; border-radius: 10px; padding: 20px; margin: 20px 0;'>
+                <span style='font-size: 36px; font-weight: bold; letter-spacing: 8px; color: #0d6efd;'>{code}</span>
+            </div>
+            <p style='color: #666; font-size: 14px;'>Este código expira en 10 minutos.</p>
+        </div>
+        <div style='background: #f8f9fa; padding: 15px; text-align: center;'>
+            <p style='color: #6c757d; font-size: 12px; margin: 0;'>Farmacia Solidaria Cristiana</p>
+        </div>
+    </div>
+</body>
+</html>";
+
+                await _emailService.SendEmailAsync(request.Email, "Código de Verificación - Farmacia Solidaria Cristiana", body);
+                _logger.LogInformation("Código de verificación enviado a {Email} (MVC)", request.Email);
+                return Json(new { success = true, message = "Código enviado a tu correo electrónico." });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error enviando código de verificación a {Email}", request.Email);
+                return Json(new { success = false, message = "No se pudo enviar el código. Verifica que el correo sea válido y real." });
+            }
         }
 
         // Forgot Password

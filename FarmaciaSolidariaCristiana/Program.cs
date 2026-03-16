@@ -135,6 +135,9 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 // Register Email Service
 builder.Services.AddScoped<IEmailService, EmailService>();
 
+// Register Email Verification Service (singleton - in-memory codes)
+builder.Services.AddSingleton<IEmailVerificationService, EmailVerificationService>();
+
 // Register Image Compression Service
 builder.Services.AddScoped<IImageCompressionService, ImageCompressionService>();
 

@@ -736,6 +736,22 @@ public class ApiService : IApiService
         }
     }
 
+    public async Task<ApiResponse<bool>> SendVerificationCodeAsync(string email)
+    {
+        try
+        {
+            var requestObj = new { Email = email };
+            var json = JsonSerializer.Serialize(requestObj, _jsonOptions);
+            var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
+            var response = await _httpClient.PostAsync("/api/auth/send-verification-code", content);
+            return await ProcessResponseAsync<bool>(response);
+        }
+        catch (Exception ex)
+        {
+            return ErrorResponse<bool>($"Error de conexión: {ex.Message}");
+        }
+    }
+
     public async Task<ApiResponse<bool>> RegisterAsync(RegisterRequest request)
     {
         try

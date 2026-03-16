@@ -25,6 +25,19 @@ namespace FarmaciaSolidariaCristiana.Models.ViewModels
         [Display(Name = "Confirmar contraseña")]
         [Compare("Password", ErrorMessage = "Las contraseñas no coinciden")]
         public string ConfirmPassword { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "El código de verificación es requerido")]
+        [StringLength(6, MinimumLength = 6, ErrorMessage = "El código debe ser de 6 dígitos")]
+        [Display(Name = "Código de verificación")]
+        public string VerificationCode { get; set; } = string.Empty;
+    }
+
+    /// <summary>
+    /// Request para envío de código de verificación vía AJAX
+    /// </summary>
+    public class SendVerificationCodeRequest
+    {
+        public string Email { get; set; } = string.Empty;
     }
 
     public class ForgotPasswordViewModel

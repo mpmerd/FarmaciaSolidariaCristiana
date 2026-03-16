@@ -100,6 +100,7 @@ public interface IApiService
     
     // Autenticación
     Task<ApiResponse<RegistrationStatusDto>> GetRegistrationStatusAsync();
+    Task<ApiResponse<bool>> SendVerificationCodeAsync(string email);
     Task<ApiResponse<bool>> RegisterAsync(RegisterRequest request);
     Task<ApiResponse<bool>> ForgotPasswordAsync(string emailOrUserName);
     Task<ApiResponse<bool>> ChangePasswordAsync(ChangePasswordRequest request);
@@ -137,6 +138,7 @@ public class RegisterRequest
     public string Email { get; set; } = string.Empty;
     public string Password { get; set; } = string.Empty;
     public string ConfirmPassword { get; set; } = string.Empty;
+    public string VerificationCode { get; set; } = string.Empty;
 }
 
 public class FechaBloqueadaDto

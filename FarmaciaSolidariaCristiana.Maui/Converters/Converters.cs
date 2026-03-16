@@ -391,3 +391,39 @@ public class RoleToColorConverter : IValueConverter
         throw new NotImplementedException();
     }
 }
+
+/// <summary>
+/// Convierte bool (IsCooldownActive) a texto del botón de enviar código
+/// </summary>
+public class BoolToSendCodeTextConverter : IValueConverter
+{
+    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        if (value is bool isCooldown && isCooldown)
+            return "Espere...";
+        return "📧 Verificar Email";
+    }
+
+    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        throw new NotImplementedException();
+    }
+}
+
+/// <summary>
+/// Convierte bool (IsCodeStatusError) a color de texto para el estado del código
+/// </summary>
+public class BoolToCodeStatusColorConverter : IValueConverter
+{
+    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        if (value is bool isError && isError)
+            return Color.FromArgb("#dc3545"); // Rojo
+        return Color.FromArgb("#198754"); // Verde
+    }
+
+    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        throw new NotImplementedException();
+    }
+}
