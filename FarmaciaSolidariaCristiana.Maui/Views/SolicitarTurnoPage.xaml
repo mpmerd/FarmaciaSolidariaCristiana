@@ -37,9 +37,9 @@
                 <!-- Documento de Identidad -->
                 <Frame BackgroundColor="{AppThemeBinding Light=White, Dark=#2a2a2a}" Padding="16" CornerRadius="10" HasShadow="True">
                     <VerticalStackLayout Spacing="8">
-                        <Label Text="📋 Identificación" Style="{StaticResource SectionTitle}"/>
+                        <Label Text="📋 Identificación del Paciente" Style="{StaticResource SectionTitle}"/>
                         
-                        <Label Text="Carnet de Identidad o Pasaporte *" Style="{StaticResource FieldLabel}"/>
+                        <Label Text="Carnet de Identidad o Pasaporte del Paciente *" Style="{StaticResource FieldLabel}"/>
                         <Entry Placeholder="Ej: 88012312345 o A1234567"
                                Text="{Binding DocumentoIdentidad}"
                                TextColor="{AppThemeBinding Light=#1a1a1a, Dark=#e0e0e0}"
@@ -47,6 +47,11 @@
                                Keyboard="Text"
                                MaxLength="20"
                                ReturnType="Next"/>
+                        
+                        <Label Text="⚠️ Debe coincidir con las recetas y documentos médicos adjuntos"
+                               TextColor="{AppThemeBinding Light=#856404, Dark=#FFC107}"
+                               FontSize="12"
+                               LineBreakMode="WordWrap"/>
                         
                         <Label Text="{Binding DocumentoError}"
                                TextColor="Red"
