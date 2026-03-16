@@ -915,6 +915,11 @@ public class ApiService : IApiService
         }
     }
 
+    // === BROADCAST (Admin) ===
+
+    public Task<ApiResponse<BroadcastResultDto>> SendBroadcastAsync(string title, string message, bool sendEmail, bool sendNotification)
+        => PostAsync<BroadcastResultDto>("/api/broadcast/send", new { Title = title, Message = message, SendEmail = sendEmail, SendNotification = sendNotification });
+
     // Clases auxiliares para deserializar respuesta de reportes
     private class ApiResponseReport
     {

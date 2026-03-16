@@ -104,8 +104,19 @@ public interface IApiService
     Task<ApiResponse<bool>> ForgotPasswordAsync(string emailOrUserName);
     Task<ApiResponse<bool>> ChangePasswordAsync(ChangePasswordRequest request);
     
+    // Notificación Masiva (Admin)
+    Task<ApiResponse<BroadcastResultDto>> SendBroadcastAsync(string title, string message, bool sendEmail, bool sendNotification);
+    
     // Diagnóstico
     Task<bool> CheckApiHealthAsync();
+}
+
+public class BroadcastResultDto
+{
+    public int TotalUsers { get; set; }
+    public int EmailsSent { get; set; }
+    public int EmailsFailed { get; set; }
+    public int NotificationsCreated { get; set; }
 }
 
 /// <summary>

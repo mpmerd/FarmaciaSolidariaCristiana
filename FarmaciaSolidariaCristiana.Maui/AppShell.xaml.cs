@@ -56,6 +56,7 @@ public partial class AppShell : Shell
         Routing.RegisterRoute("FechasBloqueadasPage", typeof(FechasBloqueadasPage));
         Routing.RegisterRoute("ReprogramarTurnosPage", typeof(ReprogramarTurnosPage));
         Routing.RegisterRoute("UsuariosPage", typeof(UsuariosPage));
+        Routing.RegisterRoute("BroadcastPage", typeof(BroadcastPage));
         Routing.RegisterRoute("AboutPage", typeof(AboutPage));
         Routing.RegisterRoute("ProfilePage", typeof(ProfilePage));
         Routing.RegisterRoute("ChangePasswordPage", typeof(ChangePasswordPage));
