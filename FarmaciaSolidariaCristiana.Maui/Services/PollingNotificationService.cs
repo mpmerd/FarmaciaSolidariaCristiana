@@ -197,36 +197,47 @@ public class PollingNotificationService : IPollingNotificationService, IDisposab
                 return 0;
             }
 
-            int newCount = 0;
+            // Recopilar notificaciones nuevas primero
+            var newNotifications = new List<PendingNotificationItem>();
             foreach (var notification in result.Data.Notifications)
             {
-                // Solo procesar notificaciones que no hemos mostrado ya
                 if (!_shownNotificationIds.Contains(notification.Id))
                 {
                     _shownNotificationIds.Add(notification.Id);
-                    newCount++;
+                    newNotifications.Add(notification);
+                }
+            }
 
-                    // Disparar evento
-                    var args = new NotificationReceivedEventArgs
-                    {
-                        NotificationId = notification.Id,
-                        Title = notification.Title,
-                        Message = notification.Message,
-                        NotificationType = notification.NotificationType,
-                        ReferenceId = notification.ReferenceId,
-                        ReferenceType = notification.ReferenceType,
-                        CreatedAt = notification.CreatedAt
-                    };
-                    NotificationReceived?.Invoke(this, args);
+            int newCount = newNotifications.Count;
 
-                    // Siempre mostrar notificación local desde polling
-                    // Push puede haber registrado PlayerId pero eso no garantiza que entregó la notificación
-                    // Es preferible una leve duplicidad a perder notificaciones
-                    await ShowLocalNotificationAsync(notification);
-                    System.Diagnostics.Debug.WriteLine($"[PollingService] Showing local notification: {notification.Title}");
+            // Mostrar cada notificación secuencialmente con espera entre ellas
+            foreach (var notification in newNotifications)
+            {
+                // Disparar evento
+                var args = new NotificationReceivedEventArgs
+                {
+                    NotificationId = notification.Id,
+                    Title = notification.Title,
+                    Message = notification.Message,
+                    NotificationType = notification.NotificationType,
+                    ReferenceId = notification.ReferenceId,
+                    ReferenceType = notification.ReferenceType,
+                    CreatedAt = notification.CreatedAt
+                };
+                NotificationReceived?.Invoke(this, args);
 
-                    // Marcar como leída en el servidor
-                    await MarkAsReadAsync(notification.Id);
+                // Mostrar notificación local y esperar a que sea visible el tiempo completo
+                await ShowLocalNotificationAsync(notification);
+                System.Diagnostics.Debug.WriteLine($"[PollingService] Showing local notification: {notification.Title}");
+
+                // Marcar como leída en el servidor
+                await MarkAsReadAsync(notification.Id);
+
+                // Si hay más notificaciones en cola, esperar antes de mostrar la siguiente
+                // para que el usuario tenga tiempo de leer cada una
+                if (newNotifications.Count > 1)
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(6));
                 }
             }
 
@@ -278,7 +289,7 @@ public class PollingNotificationService : IPollingNotificationService, IDisposab
                 var snackbar = Snackbar.Make(
                     message: $"🔔 {notification.Title}: {notification.Message}",
                     actionButtonText: "Ver",
-                    duration: TimeSpan.FromSeconds(5),
+                    duration: TimeSpan.FromSeconds(8),
                     action: async () =>
                     {
                         // Marcar como leída cuando el usuario toca "Ver"

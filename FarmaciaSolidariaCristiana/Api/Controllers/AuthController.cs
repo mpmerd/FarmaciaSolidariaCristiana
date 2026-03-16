@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 using FarmaciaSolidariaCristiana.Api.Models;
+using FarmaciaSolidariaCristiana.Services;
 
 namespace FarmaciaSolidariaCristiana.Api.Controllers
 {
@@ -18,17 +19,23 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
         private readonly UserManager<IdentityUser> _userManager;
         private readonly SignInManager<IdentityUser> _signInManager;
         private readonly IConfiguration _configuration;
+        private readonly IEmailVerificationService _emailVerificationService;
+        private readonly IEmailService _emailService;
         private readonly ILogger<AuthController> _logger;
 
         public AuthController(
             UserManager<IdentityUser> userManager,
             SignInManager<IdentityUser> signInManager,
             IConfiguration configuration,
+            IEmailVerificationService emailVerificationService,
+            IEmailService emailService,
             ILogger<AuthController> logger)
         {
             _userManager = userManager;
             _signInManager = signInManager;
             _configuration = configuration;
+            _emailVerificationService = emailVerificationService;
+            _emailService = emailService;
             _logger = logger;
         }
 
@@ -213,6 +220,65 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
         }
 
         /// <summary>
+        /// Envía un código de verificación al email proporcionado.
+        /// Necesario antes de registrarse para validar que el email existe.
+        /// </summary>
+        [HttpPost("send-verification-code")]
+        [AllowAnonymous]
+        [ProducesResponseType(typeof(ApiResponse<bool>), 200)]
+        [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+        public async Task<IActionResult> SendVerificationCode([FromBody] SendVerificationCodeDto model)
+        {
+            if (!ModelState.IsValid)
+                return ApiError("Email inválido");
+
+            // Verificar que no exista ya una cuenta con ese email
+            var existingUser = await _userManager.FindByEmailAsync(model.Email);
+            if (existingUser != null)
+                return ApiError("Ya existe una cuenta con ese correo electrónico.");
+
+            // Rate limiting
+            if (_emailVerificationService.HasPendingCode(model.Email))
+                return ApiError("Ya se envió un código. Espere al menos 60 segundos antes de solicitar otro.");
+
+            var code = _emailVerificationService.GenerateCode(model.Email);
+
+            try
+            {
+                var body = $@"
+<!DOCTYPE html>
+<html>
+<body style='font-family: Arial, sans-serif; margin: 0; padding: 0; background-color: #f5f5f5;'>
+    <div style='max-width: 500px; margin: 20px auto; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);'>
+        <div style='background: linear-gradient(135deg, #0d6efd, #0a58ca); padding: 25px; text-align: center;'>
+            <h1 style='color: white; margin: 0; font-size: 20px;'>🔐 Código de Verificación</h1>
+        </div>
+        <div style='padding: 30px; text-align: center;'>
+            <p style='color: #333; font-size: 16px;'>Tu código de verificación es:</p>
+            <div style='background: #f0f4f8; border-radius: 10px; padding: 20px; margin: 20px 0;'>
+                <span style='font-size: 36px; font-weight: bold; letter-spacing: 8px; color: #0d6efd;'>{code}</span>
+            </div>
+            <p style='color: #666; font-size: 14px;'>Este código expira en 10 minutos.</p>
+        </div>
+        <div style='background: #f8f9fa; padding: 15px; text-align: center; border-top: 1px solid #e9ecef;'>
+            <p style='color: #6c757d; font-size: 12px; margin: 0;'>Farmacia Solidaria Cristiana</p>
+        </div>
+    </div>
+</body>
+</html>";
+
+                await _emailService.SendEmailAsync(model.Email, "Código de Verificación - Farmacia Solidaria Cristiana", body);
+                _logger.LogInformation("Código de verificación enviado a {Email}", model.Email);
+                return ApiOk(true, "Código de verificación enviado a tu correo electrónico.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error enviando código de verificación a {Email}", model.Email);
+                return ApiError("No se pudo enviar el código. Verifica que el correo electrónico sea válido y real.");
+            }
+        }
+
+        /// <summary>
         /// Registra un nuevo usuario público (ViewerPublic)
         /// </summary>
         [HttpPost("register")]
@@ -247,11 +313,17 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
                 return ApiError("El nombre de usuario ya está en uso.");
             }
 
+            // Verificar código de verificación de email
+            if (!_emailVerificationService.ValidateCode(model.Email, model.VerificationCode))
+            {
+                return ApiError("Código de verificación inválido o expirado. Solicita un nuevo código.");
+            }
+
             var user = new IdentityUser
             {
                 UserName = model.UserName,
                 Email = model.Email,
-                EmailConfirmed = false
+                EmailConfirmed = true // El email ya fue verificado con código
             };
 
             var result = await _userManager.CreateAsync(user, model.Password);

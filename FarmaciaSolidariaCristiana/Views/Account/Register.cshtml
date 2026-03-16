@@ -34,8 +34,27 @@
                         <label asp-for="Email" class="form-label">
                             <i class="bi bi-envelope"></i> @Html.DisplayNameFor(m => m.Email)
                         </label>
-                        <input asp-for="Email" class="form-control" placeholder="correo@ejemplo.com" />
+                        <div class="input-group">
+                            <input asp-for="Email" class="form-control" placeholder="correo@ejemplo.com" id="emailInput" />
+                            <button type="button" class="btn btn-outline-primary" id="btnSendCode" onclick="sendVerificationCode()">
+                                <i class="bi bi-send"></i> Enviar código
+                            </button>
+                        </div>
                         <span asp-validation-for="Email" class="text-danger"></span>
+                        <div id="emailCodeMessage" class="mt-1" style="display:none;"></div>
+                    </div>
+
+                    <div class="mb-3" id="verificationCodeGroup" style="display:none;">
+                        <label asp-for="VerificationCode" class="form-label">
+                            <i class="bi bi-shield-check"></i> @Html.DisplayNameFor(m => m.VerificationCode)
+                        </label>
+                        <input asp-for="VerificationCode" class="form-control text-center" 
+                               placeholder="Ingrese el código de 6 dígitos" maxlength="6"
+                               style="font-size: 1.2rem; letter-spacing: 5px;" />
+                        <span asp-validation-for="VerificationCode" class="text-danger"></span>
+                        <small class="form-text text-muted">
+                            Revisa tu correo electrónico. El código expira en 10 minutos.
+                        </small>
                     </div>
 
                     <div class="mb-3">
@@ -79,4 +98,74 @@
 
 @section Scripts {
     @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    <script>
+        let codeSent = false;
+        let cooldownTimer = null;
+
+        async function sendVerificationCode() {
+            const email = document.getElementById('emailInput').value.trim();
+            const msgDiv = document.getElementById('emailCodeMessage');
+            const btn = document.getElementById('btnSendCode');
+
+            if (!email || !email.includes('@@') || !email.includes('.')) {
+                msgDiv.style.display = 'block';
+                msgDiv.className = 'mt-1 text-danger small';
+                msgDiv.textContent = 'Ingrese un correo electrónico válido.';
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Enviando...';
+
+            try {
+                const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+                const response = await fetch('@Url.Action("SendVerificationCode", "Account")', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'RequestVerificationToken': token
+                    },
+                    body: JSON.stringify({ email: email })
+                });
+                const data = await response.json();
+
+                msgDiv.style.display = 'block';
+                if (data.success) {
+                    msgDiv.className = 'mt-1 text-success small';
+                    msgDiv.textContent = data.message;
+                    document.getElementById('verificationCodeGroup').style.display = 'block';
+                    codeSent = true;
+                    startCooldown(60);
+                } else {
+                    msgDiv.className = 'mt-1 text-danger small';
+                    msgDiv.textContent = data.message;
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="bi bi-send"></i> Enviar código';
+                }
+            } catch (err) {
+                msgDiv.style.display = 'block';
+                msgDiv.className = 'mt-1 text-danger small';
+                msgDiv.textContent = 'Error de conexión. Inténtelo de nuevo.';
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-send"></i> Enviar código';
+            }
+        }
+
+        function startCooldown(seconds) {
+            const btn = document.getElementById('btnSendCode');
+            let remaining = seconds;
+            btn.disabled = true;
+            btn.textContent = `Reenviar (${remaining}s)`;
+            cooldownTimer = setInterval(() => {
+                remaining--;
+                if (remaining <= 0) {
+                    clearInterval(cooldownTimer);
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="bi bi-arrow-repeat"></i> Reenviar código';
+                } else {
+                    btn.textContent = `Reenviar (${remaining}s)`;
+                }
+            }, 1000);
+        }
+    </script>
 }

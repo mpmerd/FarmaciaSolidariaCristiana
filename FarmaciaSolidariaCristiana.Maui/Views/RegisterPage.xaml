@@ -68,6 +68,60 @@
                        Keyboard="Email"
                        ReturnType="Next"/>
             </Frame>
+
+            <!-- Botón Enviar Código de Verificación -->
+            <Button Text="{Binding IsCooldownActive, Converter={StaticResource BoolToSendCodeTextConverter}}"
+                    Command="{Binding SendVerificationCodeCommand}"
+                    IsEnabled="{Binding IsCooldownActive, Converter={toolkit:InvertedBoolConverter}}"
+                    IsVisible="{Binding RegistrationEnabled}"
+                    BackgroundColor="{StaticResource Primary}"
+                    TextColor="White"
+                    CornerRadius="10"
+                    HeightRequest="44"
+                    FontSize="14">
+                <Button.Triggers>
+                    <DataTrigger TargetType="Button" Binding="{Binding IsSendingCode}" Value="True">
+                        <Setter Property="Text" Value="Enviando código..."/>
+                        <Setter Property="IsEnabled" Value="False"/>
+                    </DataTrigger>
+                    <DataTrigger TargetType="Button" Binding="{Binding IsCooldownActive}" Value="True">
+                        <Setter Property="IsEnabled" Value="False"/>
+                        <Setter Property="BackgroundColor" Value="{StaticResource Gray400}"/>
+                    </DataTrigger>
+                </Button.Triggers>
+            </Button>
+
+            <!-- Mensaje estado del código -->
+            <Label Text="{Binding CodeStatusMessage}"
+                   IsVisible="{Binding CodeStatusMessage, Converter={StaticResource StringToBoolConverter}}"
+                   TextColor="{Binding IsCodeStatusError, Converter={StaticResource BoolToCodeStatusColorConverter}}"
+                   HorizontalTextAlignment="Center"
+                   FontSize="13"/>
+
+            <!-- Código de Verificación -->
+            <Frame BorderColor="{StaticResource Gray200}" 
+                   BackgroundColor="{AppThemeBinding Light=White, Dark=#2a2a2a}"
+                   Padding="10" 
+                   CornerRadius="10"
+                   HasShadow="False"
+                   IsVisible="{Binding IsCodeSent}"
+                   IsEnabled="{Binding RegistrationEnabled}">
+                <VerticalStackLayout Spacing="5">
+                    <Entry Placeholder="Código de 6 dígitos"
+                           Text="{Binding VerificationCode}"
+                           TextColor="{AppThemeBinding Light=#1a1a1a, Dark=#e0e0e0}"
+                           PlaceholderColor="{AppThemeBinding Light=#999999, Dark=#bbbbbb}"
+                           Keyboard="Numeric"
+                           MaxLength="6"
+                           HorizontalTextAlignment="Center"
+                           FontSize="20"
+                           ReturnType="Next"/>
+                    <Label Text="Revisa tu correo electrónico. El código expira en 10 minutos."
+                           FontSize="11"
+                           TextColor="{StaticResource Gray500}"
+                           HorizontalTextAlignment="Center"/>
+                </VerticalStackLayout>
+            </Frame>
             
             <!-- Password -->
             <Frame BorderColor="{StaticResource Gray200}" 
