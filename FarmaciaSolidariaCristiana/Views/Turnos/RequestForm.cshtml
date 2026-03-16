@@ -36,14 +36,19 @@
                             <div class="card-body">
                                 <div class="mb-3">
                                     <label asp-for="DocumentoIdentidad" class="form-label">
-                                        Carnet de Identidad o Pasaporte <span class="text-danger">*</span>
+                                        Carnet de Identidad o Pasaporte <strong>del Paciente</strong> <span class="text-danger">*</span>
                                     </label>
                                     <input asp-for="DocumentoIdentidad" class="form-control" placeholder="Ej: 88012312345 o A1234567" />
                                     <span asp-validation-for="DocumentoIdentidad" class="text-danger"></span>
                                     <small class="form-text text-muted">
                                         <i class="bi bi-info-circle"></i> 11 dígitos para CI o 1-3 letras + 6-7 dígitos para Pasaporte. 
-                                        <i class="bi bi-shield-lock"></i> Tu documento será encriptado por seguridad
+                                        <i class="bi bi-shield-lock"></i> El documento será encriptado por seguridad
                                     </small>
+                                    <div class="alert alert-warning mt-2 py-2" role="alert">
+                                        <i class="bi bi-exclamation-triangle"></i> <strong>Importante:</strong> 
+                                        Este documento debe coincidir con las recetas médicas y documentos adjuntos. 
+                                        Si solicita un turno para otra persona (hijo, familiar, etc.), use el documento de esa persona.
+                                    </div>
                                 </div>
 
                                 @* Información sobre asignación automática *@
