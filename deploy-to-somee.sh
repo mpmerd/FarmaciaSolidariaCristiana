@@ -65,19 +65,18 @@ FTP_HOST="farmaciasolidaria.somee.com"
 FTP_USER="maikelpelaez"
 FTP_REMOTE_PATH="/www.farmaciasolidaria.somee.com"
 
-# Detectar directorio de publish correcto
+# Directorio de publish fijo
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-if [ -d "$SCRIPT_DIR/FarmaciaSolidariaCristiana/publish" ]; then
-    PUBLISH_DIR="$SCRIPT_DIR/FarmaciaSolidariaCristiana/publish"
-    VIEWS_SOURCE="$SCRIPT_DIR/FarmaciaSolidariaCristiana/Views"
-elif [ -d "$SCRIPT_DIR/publish" ]; then
-    PUBLISH_DIR="$SCRIPT_DIR/publish"
-    VIEWS_SOURCE="$SCRIPT_DIR/FarmaciaSolidariaCristiana/Views"
-else
-    echo -e "${RED}❌ Error: No se encontró directorio publish${NC}"
-    echo "Ejecuta primero:"
-    echo "  cd FarmaciaSolidariaCristiana && dotnet publish -c Release -o publish"
-    exit 1
+PUBLISH_DIR="$SCRIPT_DIR/FarmaciaSolidariaCristiana/publish"
+VIEWS_SOURCE="$SCRIPT_DIR/FarmaciaSolidariaCristiana/Views"
+
+if [ ! -d "$PUBLISH_DIR" ]; then
+    echo -e "${YELLOW}📦 Compilando proyecto para producción...${NC}"
+    dotnet publish "$SCRIPT_DIR/FarmaciaSolidariaCristiana/FarmaciaSolidariaCristiana.csproj" -c Release -o "$PUBLISH_DIR"
+    if [ $? -ne 0 ]; then
+        echo -e "${RED}❌ Error al compilar el proyecto${NC}"
+        exit 1
+    fi
 fi
 
 echo -e "${BLUE}📁 Directorio publish: $PUBLISH_DIR${NC}"
