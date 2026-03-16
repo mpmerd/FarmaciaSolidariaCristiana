@@ -337,9 +337,12 @@ public partial class TurnosViewModel : BaseViewModel
                 return;
             }
 
-            // Navegar a la página de visualización de documento
+            // Esperar a que el visor se cierre antes de continuar (evita que el ActionSheet se muestre encima)
+            var tcs = new TaskCompletionSource<bool>();
             var viewerPage = new Views.DocumentoViewerPage(doc);
+            viewerPage.Disappearing += (s, e) => tcs.TrySetResult(true);
             await Shell.Current.Navigation.PushAsync(viewerPage);
+            await tcs.Task;
         }
         catch (Exception ex)
         {
