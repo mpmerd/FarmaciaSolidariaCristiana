@@ -138,6 +138,9 @@
         <ShellContent Route="UsuariosPage"
                       Title="👥 Usuarios"
                       ContentTemplate="{DataTemplate views:UsuariosPage}"/>
+        <ShellContent Route="BroadcastPage"
+                      Title="📢 Notificación Masiva"
+                      ContentTemplate="{DataTemplate views:BroadcastPage}"/>
     </FlyoutItem>
     
     <!-- Separator -->

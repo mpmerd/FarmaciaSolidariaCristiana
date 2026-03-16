@@ -98,6 +98,7 @@ public static class MauiProgram
         builder.Services.AddTransient<ChangePasswordPage>();
         builder.Services.AddTransient<UsuariosPage>();
         builder.Services.AddTransient<ReprogramarTurnosPage>();
+        builder.Services.AddTransient<BroadcastPage>();
         
         // Register AppShell
         builder.Services.AddTransient<AppShell>();

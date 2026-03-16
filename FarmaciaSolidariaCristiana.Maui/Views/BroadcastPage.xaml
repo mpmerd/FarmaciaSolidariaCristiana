@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="FarmaciaSolidariaCristiana.Maui.Views.BroadcastPage"
+             Title="Notificación Masiva"
+             BackgroundColor="{AppThemeBinding Light=#f8f9fa, Dark=#1a1a1a}">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="20" Spacing="15">
+
+            <!-- Header -->
+            <Frame BackgroundColor="#0d6efd" CornerRadius="12" Padding="20" BorderColor="Transparent">
+                <VerticalStackLayout Spacing="5">
+                    <Label Text="📢 Notificación Masiva"
+                           FontSize="22" FontAttributes="Bold" TextColor="White"/>
+                    <Label Text="Envíe un mensaje a todos los usuarios registrados."
+                           FontSize="14" TextColor="#B0D4FF"/>
+                </VerticalStackLayout>
+            </Frame>
+
+            <!-- Formulario -->
+            <Frame BackgroundColor="{AppThemeBinding Light=White, Dark=#2a2a2a}" 
+                   CornerRadius="12" Padding="20" BorderColor="Transparent">
+                <VerticalStackLayout Spacing="15">
+
+                    <!-- Título -->
+                    <VerticalStackLayout Spacing="5">
+                        <Label Text="Título *" FontAttributes="Bold" FontSize="15"
+                               TextColor="{AppThemeBinding Light=#333, Dark=#e0e0e0}"/>
+                        <Entry x:Name="EntryTitle" 
+                               Placeholder="Ej: Aviso importante"
+                               MaxLength="150"
+                               BackgroundColor="{AppThemeBinding Light=White, Dark=#3a3a3a}"
+                               TextColor="{AppThemeBinding Light=#333, Dark=#e0e0e0}"/>
+                        <Label Text="Máximo 150 caracteres" FontSize="11" TextColor="#999"/>
+                    </VerticalStackLayout>
+
+                    <!-- Mensaje -->
+                    <VerticalStackLayout Spacing="5">
+                        <Label Text="Mensaje *" FontAttributes="Bold" FontSize="15"
+                               TextColor="{AppThemeBinding Light=#333, Dark=#e0e0e0}"/>
+                        <Editor x:Name="EditorMessage" 
+                                Placeholder="Escriba el mensaje para todos los usuarios..."
+                                MaxLength="2000"
+                                HeightRequest="150"
+                                BackgroundColor="{AppThemeBinding Light=White, Dark=#3a3a3a}"
+                                TextColor="{AppThemeBinding Light=#333, Dark=#e0e0e0}"/>
+                        <Label x:Name="LblCharCount" Text="0/2000" FontSize="11" TextColor="#999"/>
+                    </VerticalStackLayout>
+
+                    <!-- Canales -->
+                    <Frame BackgroundColor="{AppThemeBinding Light=#f0f4f8, Dark=#333}" 
+                           CornerRadius="10" Padding="15" BorderColor="Transparent">
+                        <VerticalStackLayout Spacing="12">
+                            <Label Text="Canales de envío" FontAttributes="Bold" FontSize="15"
+                                   TextColor="{AppThemeBinding Light=#333, Dark=#e0e0e0}"/>
+
+                            <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto" ColumnSpacing="10" RowSpacing="10">
+                                <Switch x:Name="SwitchEmail" IsToggled="True" Grid.Row="0" Grid.Column="0"
+                                        OnColor="#0d6efd"/>
+                                <VerticalStackLayout Grid.Row="0" Grid.Column="1" VerticalOptions="Center">
+                                    <Label Text="✉️ Email" FontSize="14" FontAttributes="Bold"
+                                           TextColor="{AppThemeBinding Light=#333, Dark=#e0e0e0}"/>
+                                    <Label Text="Se enviará correo a cada usuario." FontSize="12" TextColor="#999"/>
+                                </VerticalStackLayout>
+
+                                <Switch x:Name="SwitchNotification" IsToggled="True" Grid.Row="1" Grid.Column="0"
+                                        OnColor="#ffc107"/>
+                                <VerticalStackLayout Grid.Row="1" Grid.Column="1" VerticalOptions="Center">
+                                    <Label Text="🔔 Notificación en la App" FontSize="14" FontAttributes="Bold"
+                                           TextColor="{AppThemeBinding Light=#333, Dark=#e0e0e0}"/>
+                                    <Label Text="Aparecerá en la app móvil." FontSize="12" TextColor="#999"/>
+                                </VerticalStackLayout>
+                            </Grid>
+                        </VerticalStackLayout>
+                    </Frame>
+                </VerticalStackLayout>
+            </Frame>
+
+            <!-- Botón de envío -->
+            <Button x:Name="BtnSend"
+                    Text="📢 Enviar Notificación Masiva"
+                    BackgroundColor="#0d6efd"
+                    TextColor="White"
+                    FontSize="16"
+                    FontAttributes="Bold"
+                    CornerRadius="10"
+                    HeightRequest="55"
+                    Clicked="OnSendClicked"/>
+
+            <!-- Indicador de carga -->
+            <ActivityIndicator x:Name="LoadingIndicator" 
+                               IsVisible="False" IsRunning="False"
+                               Color="#0d6efd"
+                               HorizontalOptions="Center"/>
+
+        </VerticalStackLayout>
+    </ScrollView>
+
+</ContentPage>
