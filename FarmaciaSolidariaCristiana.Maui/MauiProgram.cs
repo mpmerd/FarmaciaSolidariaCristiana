@@ -78,6 +78,7 @@ public static class MauiProgram
         builder.Services.AddTransient<ReprogramarTurnosViewModel>();
 
         // Register Pages
+        builder.Services.AddTransient<MaintenancePage>();
         builder.Services.AddTransient<LoginPage>();
         builder.Services.AddTransient<RegisterPage>();
         builder.Services.AddTransient<DashboardPage>();

@@ -1,6 +1,19 @@
 using System.Text.Json;
+using FarmaciaSolidariaCristiana.Maui.Helpers;
 
 namespace FarmaciaSolidariaCristiana.Maui.Services;
+
+public class MaintenanceStatus
+{
+    public bool isInMaintenance { get; set; }
+    public string reason { get; set; } = string.Empty;
+}
+
+public class MaintenanceApiResponse
+{
+    public bool success { get; set; }
+    public MaintenanceStatus? data { get; set; }
+}
 
 public class VersionInfo
 {
@@ -17,6 +30,7 @@ public class VersionInfo
 public class UpdateService
 {
     private const string VERSION_URL = "https://farmaciasolidaria.somee.com/android/version.json";
+    private static readonly string MAINTENANCE_URL = $"{Constants.ApiBaseUrl}/api/maintenanceapi/status";
     private readonly HttpClient _httpClient;
 
     public UpdateService()
@@ -25,6 +39,30 @@ public class UpdateService
         {
             Timeout = TimeSpan.FromSeconds(10)
         };
+    }
+
+    /// <summary>
+    /// Verifica si el servidor está en modo mantenimiento.
+    /// Retorna el motivo si está activo, o null si no lo está.
+    /// </summary>
+    public async Task<MaintenanceStatus?> CheckMaintenanceAsync()
+    {
+        try
+        {
+            var response = await _httpClient.GetStringAsync(MAINTENANCE_URL);
+            var result = JsonSerializer.Deserialize<MaintenanceApiResponse>(response);
+            
+            if (result?.success == true && result.data?.isInMaintenance == true)
+            {
+                return result.data;
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[Maintenance] Error checking maintenance status: {ex.Message}");
+        }
+
+        return null;
     }
 
     public async Task CheckForUpdatesAsync()
