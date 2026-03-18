@@ -115,7 +115,7 @@ public partial class EntregasViewModel : BaseViewModel
                      $"Entregado por: {entrega.DeliveredBy ?? "N/A"}\n" +
                      $"Observaciones: {entrega.Comments ?? "N/A"}";
                      
-        await Shell.Current.DisplayAlert("Detalle de Entrega", details, "OK");
+        await Shell.Current.DisplayAlertAsync("Detalle de Entrega", details, "OK");
     }
 
     [RelayCommand]
@@ -127,14 +127,14 @@ public partial class EntregasViewModel : BaseViewModel
         var horasTranscurridas = (DateTime.Now - entrega.DeliveryDate).TotalHours;
         if (horasTranscurridas > 2)
         {
-            await Shell.Current.DisplayAlert(
+            await Shell.Current.DisplayAlertAsync(
                 "No se puede eliminar",
                 $"Solo se pueden eliminar entregas realizadas en las últimas 2 horas.\n\nEsta entrega fue hace {horasTranscurridas:F1} horas.",
                 "Entendido");
             return;
         }
 
-        bool confirm = await Shell.Current.DisplayAlert(
+        bool confirm = await Shell.Current.DisplayAlertAsync(
             "Eliminar Entrega",
             $"¿Estás seguro de eliminar esta entrega?\n\n(Tiempo restante para eliminar: {(2 - horasTranscurridas):F0} hora(s))",
             "Sí, eliminar",
@@ -151,7 +151,7 @@ public partial class EntregasViewModel : BaseViewModel
                 {
                     _allEntregas.Remove(entrega);
                     ApplyFilter();
-                    await Shell.Current.DisplayAlert("Éxito", "Entrega eliminada correctamente", "OK");
+                    await Shell.Current.DisplayAlertAsync("Éxito", "Entrega eliminada correctamente", "OK");
                 }
                 else
                 {

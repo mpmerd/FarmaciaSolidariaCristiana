@@ -313,7 +313,7 @@ public class PollingNotificationService : IPollingNotificationService, IDisposab
                 {
                     if (Shell.Current?.CurrentPage != null)
                     {
-                        await Shell.Current.DisplayAlert(
+                        await Shell.Current.DisplayAlertAsync(
                             notification.Title,
                             notification.Message,
                             "OK");

@@ -10,9 +10,9 @@ public partial class ImageCompressionService
     public partial async Task<byte[]> CompressImageAsync(
         Stream inputStream,
         string? contentType,
-        int maxWidth = 1920,
-        int maxHeight = 1080,
-        int quality = 80)
+        int maxWidth,
+        int maxHeight,
+        int quality)
     {
         try
         {

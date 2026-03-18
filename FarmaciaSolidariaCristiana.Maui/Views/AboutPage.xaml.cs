@@ -17,7 +17,7 @@ public partial class AboutPage : ContentPage
         }
         catch (Exception ex)
         {
-            await DisplayAlert("Error", $"No se pudo abrir WhatsApp: {ex.Message}", "OK");
+            await DisplayAlertAsync("Error", $"No se pudo abrir WhatsApp: {ex.Message}", "OK");
         }
     }
 }

@@ -270,7 +270,7 @@ public partial class PdfViewerPage : ContentPage
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"[PdfViewer] Error sharing: {ex.Message}");
-            await DisplayAlert("Error", "No se pudo compartir el archivo", "OK");
+            await DisplayAlertAsync("Error", "No se pudo compartir el archivo", "OK");
         }
     }
 
@@ -290,7 +290,7 @@ public partial class PdfViewerPage : ContentPage
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"[PdfViewer] Error opening: {ex.Message}");
-            await DisplayAlert("Error", "No se pudo abrir el archivo", "OK");
+            await DisplayAlertAsync("Error", "No se pudo abrir el archivo", "OK");
         }
     }
 

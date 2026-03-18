@@ -69,7 +69,7 @@ public partial class PatrocinadoresViewModel : BaseViewModel
         if (sponsor == null) return;
         
         // Show sponsor details since we don't have a website field
-        await Shell.Current.DisplayAlert(
+        await Shell.Current.DisplayAlertAsync(
             sponsor.Name, 
             sponsor.Description ?? "Sin descripción disponible", 
             "OK");
