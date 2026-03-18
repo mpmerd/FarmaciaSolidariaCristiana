@@ -32,6 +32,9 @@
 		<!-- Deshabilitar Fast Deployment para evitar crashes -->
 		<EmbedAssembliesIntoApk>true</EmbedAssembliesIntoApk>
 		<AndroidUseSharedRuntime>false</AndroidUseSharedRuntime>
+
+		<!-- Suprimir XC0025: bindings con Source explícito (no compilados, comportamiento esperado) -->
+		<NoWarn>$(NoWarn);XC0025</NoWarn>
 	</PropertyGroup>
 
 	<ItemGroup>
