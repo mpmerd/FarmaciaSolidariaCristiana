@@ -826,13 +826,15 @@ namespace FarmaciaSolidariaCristiana.Controllers
             // 2. Por cada turno afectado, buscar próximo slot disponible
             var turnosReprogramados = new List<TurnoReprogramacion>();
             var turnosNoReprogramados = new List<Turno>();
+            // Rastrear slots ya asignados en memoria para no repetirlos
+            var slotsAsignados = new HashSet<DateTime>();
             
             foreach (var turno in turnosAfectados)
             {
                 try
                 {
                     // Buscar próxima fecha disponible (Martes o Jueves)
-                    var nuevaFecha = await BuscarProximaFechaDisponible(fechaAfectada.AddDays(1));
+                    var nuevaFecha = await BuscarProximaFechaDisponible(fechaAfectada.AddDays(1), slotsAsignados);
                     
                     if (nuevaFecha == null)
                     {
@@ -843,7 +845,7 @@ namespace FarmaciaSolidariaCristiana.Controllers
                     }
                     
                     // Buscar slot de hora disponible
-                    var nuevoSlot = await BuscarProximoSlotDisponible(nuevaFecha.Value);
+                    var nuevoSlot = await BuscarProximoSlotDisponible(nuevaFecha.Value, slotsAsignados);
                     
                     if (nuevoSlot == null)
                     {
@@ -863,6 +865,7 @@ namespace FarmaciaSolidariaCristiana.Controllers
                     // Actualizar turno
                     var fechaAnterior = turno.FechaPreferida;
                     turno.FechaPreferida = nuevoSlot.Value;
+                    slotsAsignados.Add(nuevoSlot.Value);
                     turno.ComentariosFarmaceutico += $"\n[REPROGRAMADO - {DateTime.Now:dd/MM/yyyy HH:mm}]";
                     turno.ComentariosFarmaceutico += $"\nFecha original: {fechaAnterior:dd/MM/yyyy HH:mm}";
                     turno.ComentariosFarmaceutico += $"\nMotivo: {motivo}";
@@ -903,7 +906,7 @@ namespace FarmaciaSolidariaCristiana.Controllers
         /// <summary>
         /// Busca la próxima fecha disponible (Martes o Jueves, no bloqueada, con espacio)
         /// </summary>
-        private async Task<DateTime?> BuscarProximaFechaDisponible(DateTime desde)
+        private async Task<DateTime?> BuscarProximaFechaDisponible(DateTime desde, HashSet<DateTime>? slotsAsignados = null)
         {
             var fechaBusqueda = desde.Date;
             var diasBuscados = 0;
@@ -921,13 +924,16 @@ namespace FarmaciaSolidariaCristiana.Controllers
                     if (!estaBloqueada)
                     {
                         // Verificar que haya slots disponibles (menos de 30 turnos)
-                        var turnosEnFecha = await _context.Turnos
+                        var turnosEnFechaDb = await _context.Turnos
                             .CountAsync(t => t.FechaPreferida.HasValue &&
                                              t.FechaPreferida.Value.Date == fechaBusqueda &&
                                              (t.Estado == EstadoTurno.Aprobado || 
                                               t.Estado == EstadoTurno.Completado));
                         
-                        if (turnosEnFecha < 30) // Hay espacio
+                        // Sumar también los slots ya asignados en memoria para esta fecha
+                        var slotsEnMemoria = slotsAsignados?.Count(s => s.Date == fechaBusqueda) ?? 0;
+                        
+                        if (turnosEnFechaDb + slotsEnMemoria < 30) // Hay espacio
                         {
                             return fechaBusqueda;
                         }
@@ -944,7 +950,7 @@ namespace FarmaciaSolidariaCristiana.Controllers
         /// <summary>
         /// Busca el próximo slot de hora disponible en una fecha específica
         /// </summary>
-        private async Task<DateTime?> BuscarProximoSlotDisponible(DateTime fecha)
+        private async Task<DateTime?> BuscarProximoSlotDisponible(DateTime fecha, HashSet<DateTime>? slotsAsignados = null)
         {
             // Horario: 1:00 PM a 4:00 PM, slots de 6 minutos
             var horaInicio = new TimeSpan(13, 0, 0); // 1 PM
@@ -957,7 +963,14 @@ namespace FarmaciaSolidariaCristiana.Controllers
             {
                 var fechaHora = fecha.Date.Add(horaActual);
                 
-                // Verificar si este slot está ocupado
+                // Verificar si este slot ya fue asignado en memoria
+                if (slotsAsignados != null && slotsAsignados.Contains(fechaHora))
+                {
+                    horaActual = horaActual.Add(duracionSlot);
+                    continue;
+                }
+                
+                // Verificar si este slot está ocupado en la BD
                 var ocupado = await _context.Turnos
                     .AnyAsync(t => t.FechaPreferida.HasValue &&
                                    t.FechaPreferida.Value == fechaHora &&

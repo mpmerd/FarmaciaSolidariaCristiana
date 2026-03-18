@@ -858,17 +858,25 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
                 return ApiError("La fecha seleccionada está bloqueada");
             }
 
+            // Buscar el próximo slot de hora disponible en la fecha solicitada
+            var nuevoSlot = await BuscarProximoSlotDisponibleAsync(model.NuevaFecha.Date);
+
+            if (nuevoSlot == null)
+            {
+                return ApiError("No hay slots de hora disponibles en la fecha seleccionada. Todos los turnos están ocupados.");
+            }
+
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             var fechaAnterior = turno.FechaPreferida;
 
-            turno.FechaPreferida = model.NuevaFecha.Date;
+            turno.FechaPreferida = nuevoSlot.Value;
             turno.ComentariosFarmaceutico = model.Motivo ?? $"Reprogramado desde {fechaAnterior:dd/MM/yyyy}";
             turno.FechaRevision = DateTime.Now;
 
             await _context.SaveChangesAsync();
 
             _logger.LogInformation("Turno {Id} reprogramado de {FechaAnterior} a {NuevaFecha} por usuario {UserId}", 
-                id, fechaAnterior, model.NuevaFecha, userId);
+                id, fechaAnterior, nuevoSlot.Value, userId);
 
             return ApiOk(MapToDto(turno), "Turno reprogramado exitosamente");
         }
@@ -1016,13 +1024,15 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
             // 2. Por cada turno afectado, buscar próximo slot disponible
             var turnosReprogramados = new List<TurnoReprogramadoDto>();
             var turnosNoReprogramados = new List<TurnoNoReprogramadoDto>();
+            // Rastrear slots ya asignados en memoria para no repetirlos
+            var slotsAsignados = new HashSet<DateTime>();
             
             foreach (var turno in turnosAfectados)
             {
                 try
                 {
                     // Buscar próxima fecha disponible (Martes o Jueves)
-                    var nuevaFecha = await BuscarProximaFechaDisponibleAsync(request.FechaAfectada.AddDays(1));
+                    var nuevaFecha = await BuscarProximaFechaDisponibleAsync(request.FechaAfectada.AddDays(1), slotsAsignados);
                     
                     if (nuevaFecha == null)
                     {
@@ -1036,7 +1046,7 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
                     }
                     
                     // Buscar slot de hora disponible
-                    var nuevoSlot = await BuscarProximoSlotDisponibleAsync(nuevaFecha.Value);
+                    var nuevoSlot = await BuscarProximoSlotDisponibleAsync(nuevaFecha.Value, slotsAsignados);
                     
                     if (nuevoSlot == null)
                     {
@@ -1053,6 +1063,7 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
                     
                     // Actualizar turno
                     turno.FechaPreferida = nuevoSlot.Value;
+                    slotsAsignados.Add(nuevoSlot.Value);
                     turno.ComentariosFarmaceutico += $"\n[REPROGRAMADO - {DateTime.Now:dd/MM/yyyy HH:mm}]";
                     turno.ComentariosFarmaceutico += $"\nFecha original: {fechaOriginal:dd/MM/yyyy HH:mm}";
                     turno.ComentariosFarmaceutico += $"\nMotivo: {request.Motivo}";
@@ -1104,7 +1115,7 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
         /// <summary>
         /// Busca la próxima fecha disponible (Martes o Jueves, no bloqueada, con espacio)
         /// </summary>
-        private async Task<DateTime?> BuscarProximaFechaDisponibleAsync(DateTime desde)
+        private async Task<DateTime?> BuscarProximaFechaDisponibleAsync(DateTime desde, HashSet<DateTime>? slotsAsignados = null)
         {
             var fechaBusqueda = desde.Date;
             var diasBuscados = 0;
@@ -1119,13 +1130,16 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
                     
                     if (!estaBloqueada)
                     {
-                        var turnosEnFecha = await _context.Turnos
+                        var turnosEnFechaDb = await _context.Turnos
                             .CountAsync(t => t.FechaPreferida.HasValue &&
                                              t.FechaPreferida.Value.Date == fechaBusqueda &&
                                              (t.Estado == EstadoTurno.Aprobado || 
                                               t.Estado == EstadoTurno.Completado));
                         
-                        if (turnosEnFecha < 30)
+                        // Sumar también los slots ya asignados en memoria para esta fecha
+                        var slotsEnMemoria = slotsAsignados?.Count(s => s.Date == fechaBusqueda) ?? 0;
+                        
+                        if (turnosEnFechaDb + slotsEnMemoria < 30)
                         {
                             return fechaBusqueda;
                         }
@@ -1142,7 +1156,7 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
         /// <summary>
         /// Busca el próximo slot de hora disponible en una fecha específica
         /// </summary>
-        private async Task<DateTime?> BuscarProximoSlotDisponibleAsync(DateTime fecha)
+        private async Task<DateTime?> BuscarProximoSlotDisponibleAsync(DateTime fecha, HashSet<DateTime>? slotsAsignados = null)
         {
             var horaInicio = new TimeSpan(13, 0, 0);
             var horaFin = new TimeSpan(16, 0, 0);
@@ -1154,6 +1168,14 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
             {
                 var fechaHora = fecha.Date.Add(horaActual);
                 
+                // Verificar si este slot ya fue asignado en memoria
+                if (slotsAsignados != null && slotsAsignados.Contains(fechaHora))
+                {
+                    horaActual = horaActual.Add(duracionSlot);
+                    continue;
+                }
+                
+                // Verificar si este slot está ocupado en la BD
                 var ocupado = await _context.Turnos
                     .AnyAsync(t => t.FechaPreferida.HasValue &&
                                    t.FechaPreferida.Value == fechaHora &&
