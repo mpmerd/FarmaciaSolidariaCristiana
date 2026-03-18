@@ -125,7 +125,7 @@ public class UpdateService
 
     private async Task ForceUpdateAsync(VersionInfo versionInfo)
     {
-        if (Application.Current?.MainPage == null)
+        if (Application.Current?.Windows.FirstOrDefault()?.Page == null)
             return;
 
         var message = $"Esta versión de la aplicación ya no es compatible y no puede ejecutarse.\n\n" +
@@ -134,7 +134,7 @@ public class UpdateService
                      $"Debes instalar la última versión para continuar.";
 
         // Diálogo de un solo botón — el usuario no puede descartar sin descargar
-        await Application.Current.MainPage.DisplayAlert(
+        await Application.Current!.Windows[0].Page!.DisplayAlertAsync(
             "⛔ Actualización Obligatoria",
             message,
             "Descargar Actualización"
@@ -154,10 +154,10 @@ public class UpdateService
                      $"Novedades:\n{versionInfo.releaseNotes}\n\n" +
                      $"¿Desea descargar la actualización?";
 
-        if (Application.Current?.MainPage == null)
+        if (Application.Current?.Windows.FirstOrDefault()?.Page == null)
             return;
 
-        bool answer = await Application.Current.MainPage.DisplayAlert(
+        bool answer = await Application.Current!.Windows[0].Page!.DisplayAlertAsync(
             "Actualización Disponible",
             message,
             "Descargar",

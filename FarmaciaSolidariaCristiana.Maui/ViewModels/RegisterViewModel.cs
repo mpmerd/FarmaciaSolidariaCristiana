@@ -214,7 +214,7 @@ public partial class RegisterViewModel : BaseViewModel
 
             if (result.Success)
             {
-                await Application.Current!.MainPage!.DisplayAlert(
+                await Application.Current!.Windows[0].Page!.DisplayAlertAsync(
                     "¡Registro Exitoso!",
                     result.Message ?? "Su cuenta ha sido creada. Ya puede iniciar sesión.",
                     "OK");

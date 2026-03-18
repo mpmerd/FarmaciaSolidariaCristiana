@@ -50,15 +50,18 @@
         </VerticalStackLayout>
         
         <!-- Toolbar de acciones -->
-        <Frame x:Name="ToolbarFrame"
-               BackgroundColor="{StaticResource Primary}"
-               Padding="10"
-               CornerRadius="25"
-               HasShadow="True"
-               VerticalOptions="End"
-               HorizontalOptions="Center"
-               Margin="20"
-               IsVisible="False">
+        <Border x:Name="ToolbarFrame"
+                BackgroundColor="{StaticResource Primary}"
+                Padding="10"
+                StrokeShape="RoundRectangle 25"
+                Stroke="Transparent"
+                VerticalOptions="End"
+                HorizontalOptions="Center"
+                Margin="20"
+                IsVisible="False">
+            <Border.Shadow>
+                <Shadow Brush="Black" Offset="2,2" Radius="4" Opacity="0.3"/>
+            </Border.Shadow>
             <HorizontalStackLayout Spacing="20">
                 <Button Text="📤" 
                         FontSize="24"
@@ -71,6 +74,6 @@
                         Clicked="OnOpenExternalClicked"
                         ToolTipProperties.Text="Abrir en otra app"/>
             </HorizontalStackLayout>
-        </Frame>
+        </Border>
     </Grid>
 </ContentPage>

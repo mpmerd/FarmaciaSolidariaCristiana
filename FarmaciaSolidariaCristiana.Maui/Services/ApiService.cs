@@ -53,7 +53,7 @@ public class ApiService : IApiService
                 // Mostrar mensaje al usuario
                 if (Shell.Current?.CurrentPage != null)
                 {
-                    await Shell.Current.DisplayAlert(
+                    await Shell.Current.DisplayAlertAsync(
                         "Sesión Expirada",
                         "Su sesión ha expirado. Por favor, inicie sesión nuevamente.",
                         "OK");
@@ -227,7 +227,7 @@ public class ApiService : IApiService
             Console.WriteLine($"[API] Content length: {content?.Length ?? 0}");
             
             // Detectar HTML (puede indicar sesión expirada - redirect a login)
-            if (content.TrimStart().StartsWith("<"))
+            if (content?.TrimStart().StartsWith("<") == true)
             {
                 Console.WriteLine($"[API] WARNING: Received HTML instead of JSON!");
                 await HandleSessionExpiredAsync();

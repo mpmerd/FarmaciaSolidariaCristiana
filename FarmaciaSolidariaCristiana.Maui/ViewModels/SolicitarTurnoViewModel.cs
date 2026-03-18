@@ -299,7 +299,7 @@ public partial class SolicitarTurnoViewModel : BaseViewModel
     }
 
     [RelayCommand]
-    private async void SelectItem(ItemBusqueda item)
+    private async Task SelectItem(ItemBusqueda item)
     {
         if (item == null) return;
 
@@ -344,7 +344,7 @@ public partial class SolicitarTurnoViewModel : BaseViewModel
     {
         try
         {
-            var action = await Shell.Current.DisplayActionSheet(
+            var action = await Shell.Current.DisplayActionSheetAsync(
                 "Agregar Documento",
                 "Cancelar",
                 null,
@@ -356,7 +356,7 @@ public partial class SolicitarTurnoViewModel : BaseViewModel
                 return;
 
             // Pedir tipo de documento
-            var tipoDoc = await Shell.Current.DisplayActionSheet(
+            var tipoDoc = await Shell.Current.DisplayActionSheetAsync(
                 "Tipo de Documento",
                 "Cancelar",
                 null,
@@ -410,10 +410,11 @@ public partial class SolicitarTurnoViewModel : BaseViewModel
             }
             else if (action == "🖼️ Seleccionar de Galería")
             {
-                result = await MediaPicker.PickPhotoAsync(new MediaPickerOptions
+                var photoResults = await MediaPicker.PickPhotosAsync(new MediaPickerOptions
                 {
                     Title = "Seleccionar foto del documento"
                 });
+                result = photoResults?.FirstOrDefault();
 
                 if (result != null)
                 {
@@ -598,7 +599,7 @@ public partial class SolicitarTurnoViewModel : BaseViewModel
             if (DocumentosAdjuntos.Count > 0 && docSubidos == 0)
             {
                 // Todos los documentos fallaron - ofrecer cancelar el turno
-                var cancelarTurno = await Shell.Current.DisplayAlert(
+                var cancelarTurno = await Shell.Current.DisplayAlertAsync(
                     "Error al Subir Documentos",
                     $"El turno fue creado pero NO se pudieron subir los documentos.\n\n" +
                     $"Errores:\n{string.Join("\n", erroresDocumentos.Take(3))}\n\n" +
@@ -614,7 +615,7 @@ public partial class SolicitarTurnoViewModel : BaseViewModel
                         var cancelResult = await ApiService.CancelarTurnoAsync(turnoId, "Cancelado por error al subir documentos");
                         if (cancelResult.Success)
                         {
-                            await Shell.Current.DisplayAlert(
+                            await Shell.Current.DisplayAlertAsync(
                                 "Turno Cancelado",
                                 "El turno fue cancelado. Por favor, intente crear la solicitud de nuevo.",
                                 "OK");
@@ -623,7 +624,7 @@ public partial class SolicitarTurnoViewModel : BaseViewModel
                         }
                         else
                         {
-                            await Shell.Current.DisplayAlert(
+                            await Shell.Current.DisplayAlertAsync(
                                 "Advertencia",
                                 $"No se pudo cancelar el turno automáticamente.\n\n" +
                                 "Por favor, contacte a la farmacia para cancelar manualmente.",
@@ -632,7 +633,7 @@ public partial class SolicitarTurnoViewModel : BaseViewModel
                     }
                     catch
                     {
-                        await Shell.Current.DisplayAlert(
+                        await Shell.Current.DisplayAlertAsync(
                             "Advertencia",
                             "No se pudo cancelar el turno automáticamente.\n\n" +
                             "Por favor, contacte a la farmacia.",
@@ -641,7 +642,7 @@ public partial class SolicitarTurnoViewModel : BaseViewModel
                 }
                 else
                 {
-                    await Shell.Current.DisplayAlert(
+                    await Shell.Current.DisplayAlertAsync(
                         "Turno Mantenido",
                         "El turno quedó creado sin documentos.\n\n" +
                         "Puede intentar subir los documentos desde la vista de turnos.",

@@ -68,7 +68,7 @@ public partial class ReprogramarTurnosViewModel : BaseViewModel
 
                 if (TurnosAfectados == 0)
                 {
-                    await Shell.Current.DisplayAlert(
+                    await Shell.Current.DisplayAlertAsync(
                         "Sin turnos",
                         $"No hay turnos pendientes o aprobados para el {FechaSeleccionada:dd/MM/yyyy}",
                         "OK");
@@ -106,7 +106,7 @@ public partial class ReprogramarTurnosViewModel : BaseViewModel
             return;
         }
 
-        bool confirm = await Shell.Current.DisplayAlert(
+        bool confirm = await Shell.Current.DisplayAlertAsync(
             "Confirmar Reprogramación",
             $"¿Está seguro de reprogramar {TurnosAfectados} turno(s) del {FechaSeleccionada:dd/MM/yyyy}?\n\n" +
             "Esta acción:\n" +
@@ -134,11 +134,11 @@ public partial class ReprogramarTurnosViewModel : BaseViewModel
                 
                 if (response.Data.NoReprogramados > 0)
                 {
-                    await Shell.Current.DisplayAlert("Reprogramación Parcial", message, "OK");
+                    await Shell.Current.DisplayAlertAsync("Reprogramación Parcial", message, "OK");
                 }
                 else
                 {
-                    await Shell.Current.DisplayAlert("Éxito", message, "OK");
+                    await Shell.Current.DisplayAlertAsync("Éxito", message, "OK");
                 }
 
                 // Limpiar y recargar preview

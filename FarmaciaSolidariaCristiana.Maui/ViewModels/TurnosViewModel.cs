@@ -143,7 +143,7 @@ public partial class TurnosViewModel : BaseViewModel
         // Si es admin/farmacéutico y el turno está pendiente, mostrar opciones
         if (CanManageTurnos && turno.Estado == "Pendiente")
         {
-            var action = await Shell.Current.DisplayActionSheet(
+            var action = await Shell.Current.DisplayActionSheetAsync(
                 $"Turno #{turno.Id}", "Cancelar", null,
                 "👁️ Ver detalles", "✅ Aprobar", "❌ Rechazar");
             switch (action)
@@ -156,7 +156,7 @@ public partial class TurnosViewModel : BaseViewModel
         // Si es admin y el turno está aprobado, mostrar opciones incluyendo reprogramar
         else if (IsAdmin && turno.Estado == "Aprobado")
         {
-            var action = await Shell.Current.DisplayActionSheet(
+            var action = await Shell.Current.DisplayActionSheetAsync(
                 $"Turno #{turno.Id}", "Cancelar", null,
                 "👁️ Ver detalles", "📅 Reprogramar", "📄 Descargar Turno");
             switch (action)
@@ -169,7 +169,7 @@ public partial class TurnosViewModel : BaseViewModel
         // Si es farmacéutico y el turno está aprobado (sin reprogramar)
         else if (CanManageTurnos && turno.Estado == "Aprobado")
         {
-            var action = await Shell.Current.DisplayActionSheet(
+            var action = await Shell.Current.DisplayActionSheetAsync(
                 $"Turno #{turno.Id}", "Cancelar", null,
                 "👁️ Ver detalles", "📄 Descargar Turno");
             switch (action)
@@ -186,7 +186,7 @@ public partial class TurnosViewModel : BaseViewModel
             
             if (canCancelResult.Success && canCancelResult.Data?.CanCancel == true)
             {
-                var action = await Shell.Current.DisplayActionSheet(
+                var action = await Shell.Current.DisplayActionSheetAsync(
                     $"Turno #{turno.Id}", "Cerrar", null,
                     "👁️ Ver detalles", "📄 Ver/Descargar Turno", "🚫 Cancelar turno");
                 switch (action)
@@ -198,7 +198,7 @@ public partial class TurnosViewModel : BaseViewModel
             }
             else
             {
-                var action = await Shell.Current.DisplayActionSheet(
+                var action = await Shell.Current.DisplayActionSheetAsync(
                     $"Turno #{turno.Id}", "Cerrar", null,
                     "👁️ Ver detalles", "📄 Ver/Descargar Turno");
                 switch (action)
@@ -269,7 +269,7 @@ public partial class TurnosViewModel : BaseViewModel
             // Mostrar alerta con opción de ver documentos si existen
             if (turno.Documentos?.Any() == true)
             {
-                var verDocs = await Shell.Current.DisplayAlert(
+                var verDocs = await Shell.Current.DisplayAlertAsync(
                     $"Turno #{turno.Id}", 
                     sb.ToString(), 
                     "Ver Documentos", 
@@ -282,7 +282,7 @@ public partial class TurnosViewModel : BaseViewModel
             }
             else
             {
-                await Shell.Current.DisplayAlert($"Turno #{turno.Id}", sb.ToString(), "Cerrar");
+                await Shell.Current.DisplayAlertAsync($"Turno #{turno.Id}", sb.ToString(), "Cerrar");
             }
         }
         catch (Exception ex)
@@ -295,7 +295,7 @@ public partial class TurnosViewModel : BaseViewModel
     {
         if (turno.Documentos == null || !turno.Documentos.Any())
         {
-            await Shell.Current.DisplayAlert("Información", "Este turno no tiene documentos adjuntos", "OK");
+            await Shell.Current.DisplayAlertAsync("Información", "Este turno no tiene documentos adjuntos", "OK");
             return;
         }
 
@@ -307,7 +307,7 @@ public partial class TurnosViewModel : BaseViewModel
         // Bucle: tras cerrar un documento se vuelve a mostrar el selector
         while (true)
         {
-            var selected = await Shell.Current.DisplayActionSheet(
+            var selected = await Shell.Current.DisplayActionSheetAsync(
                 "Seleccione un documento para ver",
                 "Cerrar",
                 null,
