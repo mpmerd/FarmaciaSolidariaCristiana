@@ -109,7 +109,7 @@ public partial class ChangePasswordViewModel : BaseViewModel
 
             if (result.Success)
             {
-                await Application.Current!.MainPage!.DisplayAlert(
+                await Application.Current!.Windows[0].Page!.DisplayAlertAsync(
                     "¡Éxito!",
                     result.Message ?? "Tu contraseña ha sido actualizada correctamente.",
                     "OK");

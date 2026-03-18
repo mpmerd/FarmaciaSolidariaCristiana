@@ -84,17 +84,17 @@ public partial class BaseViewModel : ObservableObject
 
     protected static async Task ShowErrorAsync(string message)
     {
-        await Shell.Current.DisplayAlert("Error", message, "OK");
+        await Shell.Current.DisplayAlertAsync("Error", message, "OK");
     }
 
     protected static async Task ShowSuccessAsync(string message)
     {
-        await Shell.Current.DisplayAlert("Éxito", message, "OK");
+        await Shell.Current.DisplayAlertAsync("Éxito", message, "OK");
     }
 
     protected static async Task<bool> ShowConfirmAsync(string title, string message)
     {
-        return await Shell.Current.DisplayAlert(title, message, "Sí", "No");
+        return await Shell.Current.DisplayAlertAsync(title, message, "Sí", "No");
     }
 
     protected static async Task NavigateToAsync(string route)
