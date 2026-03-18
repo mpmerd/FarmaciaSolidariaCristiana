@@ -114,7 +114,7 @@ public partial class PacientesViewModel : BaseViewModel
             ? new[] { "Ver detalles", "Editar ficha", "Ver documentos médicos", "Eliminar" } 
             : new[] { "Ver detalles", "Ver documentos médicos" };
         
-        var action = await Shell.Current.DisplayActionSheet(
+        var action = await Shell.Current.DisplayActionSheetAsync(
             paciente.FullName,
             "Cancelar",
             null,
@@ -176,7 +176,7 @@ public partial class PacientesViewModel : BaseViewModel
         nuevoPaciente.Age = edad;
 
         // Género
-        var sexo = await Shell.Current.DisplayActionSheet(
+        var sexo = await Shell.Current.DisplayActionSheetAsync(
             "Género del paciente",
             "Cancelar",
             null,
@@ -245,7 +245,7 @@ public partial class PacientesViewModel : BaseViewModel
         nuevoPaciente.CurrentTreatments = string.IsNullOrWhiteSpace(tratamientos) ? null : tratamientos;
 
         // 4. DATOS VITALES (opcional - preguntamos si quiere registrarlos)
-        var registrarVitales = await Shell.Current.DisplayAlert(
+        var registrarVitales = await Shell.Current.DisplayAlertAsync(
             "3. Datos Vitales",
             "¿Desea registrar datos vitales (peso, altura, presión arterial)?",
             "Sí", "No");
@@ -297,13 +297,13 @@ public partial class PacientesViewModel : BaseViewModel
 
             if (result.Success && result.Data != null)
             {
-                await Shell.Current.DisplayAlert("Éxito", "Paciente creado correctamente", "OK");
+                await Shell.Current.DisplayAlertAsync("Éxito", "Paciente creado correctamente", "OK");
                 
                 // Buscar documentos de turnos para este paciente
                 await OfrecerImportarDocumentosTurnoAsync(result.Data);
                 
                 // Preguntar si desea agregar documentos adicionales
-                var agregarDocs = await Shell.Current.DisplayAlert(
+                var agregarDocs = await Shell.Current.DisplayAlertAsync(
                     "Documentos Médicos",
                     "¿Desea agregar más documentos médicos?",
                     "Sí", "No");
@@ -364,7 +364,7 @@ public partial class PacientesViewModel : BaseViewModel
                      $"Entregas realizadas: {paciente.DeliveriesCount}\n" +
                      $"Estado: {(paciente.IsActive ? "Activo" : "Inactivo")}";
                      
-        await Shell.Current.DisplayAlert("Ficha del Paciente", details, "Cerrar");
+        await Shell.Current.DisplayAlertAsync("Ficha del Paciente", details, "Cerrar");
     }
 
     [RelayCommand]
@@ -377,7 +377,7 @@ public partial class PacientesViewModel : BaseViewModel
         }
 
         // Elegir qué sección editar
-        var seccion = await Shell.Current.DisplayActionSheet(
+        var seccion = await Shell.Current.DisplayActionSheetAsync(
             "¿Qué datos desea editar?",
             "Cancelar",
             null,
@@ -434,7 +434,7 @@ public partial class PacientesViewModel : BaseViewModel
 
                 if (result.Success)
                 {
-                    await Shell.Current.DisplayAlert("Éxito", "Paciente actualizado correctamente", "OK");
+                    await Shell.Current.DisplayAlertAsync("Éxito", "Paciente actualizado correctamente", "OK");
                     
                     // Recargar lista
                     var reloadResult = await ApiService.GetPacientesAsync();
@@ -614,7 +614,7 @@ public partial class PacientesViewModel : BaseViewModel
                 // Incluir fecha de subida para distinguir documentos con mismo nombre
                 var opciones = docs.Select((d, i) => $"📄 {d.DocumentType}: {d.FileName} ({d.UploadedAt:dd/MM HH:mm})").ToArray();
                 
-                var seleccion = await Shell.Current.DisplayActionSheet(
+                var seleccion = await Shell.Current.DisplayActionSheetAsync(
                     $"Documentos de {paciente.FullName} ({docs.Count})",
                     "Cerrar",
                     null,
@@ -632,7 +632,7 @@ public partial class PacientesViewModel : BaseViewModel
             }
             else
             {
-                var agregarDoc = await Shell.Current.DisplayAlert(
+                var agregarDoc = await Shell.Current.DisplayAlertAsync(
                     "Sin Documentos",
                     $"No hay documentos médicos para {paciente.FullName}.\n\n¿Desea agregar uno?",
                     "Agregar", "Cerrar");
@@ -657,14 +657,14 @@ public partial class PacientesViewModel : BaseViewModel
     {
         if (string.IsNullOrEmpty(doc.FilePath))
         {
-            await Shell.Current.DisplayAlert(
+            await Shell.Current.DisplayAlertAsync(
                 doc.DocumentType,
                 $"Archivo: {doc.FileName}\nSubido: {doc.UploadedAt:dd/MM/yyyy}\nNotas: {doc.Notes ?? "Sin notas"}\n\n⚠️ Ruta del documento no disponible",
                 "OK");
             return;
         }
 
-        var accion = await Shell.Current.DisplayActionSheet(
+        var accion = await Shell.Current.DisplayActionSheetAsync(
             doc.FileName,
             "Cerrar",
             null,
@@ -677,7 +677,7 @@ public partial class PacientesViewModel : BaseViewModel
                 await VerDocumentoEnAppAsync(doc);
                 break;
             case "ℹ️ Ver información":
-                await Shell.Current.DisplayAlert(
+                await Shell.Current.DisplayAlertAsync(
                     doc.DocumentType,
                     $"Archivo: {doc.FileName}\nSubido: {doc.UploadedAt:dd/MM/yyyy}\nNotas: {doc.Notes ?? "Sin notas"}",
                     "OK");
@@ -748,7 +748,7 @@ public partial class PacientesViewModel : BaseViewModel
             
             if (string.IsNullOrWhiteSpace(paciente.IdentificationDocument))
             {
-                await Shell.Current.DisplayAlert("Aviso", "El paciente no tiene número de identificación registrado.", "OK");
+                await Shell.Current.DisplayAlertAsync("Aviso", "El paciente no tiene número de identificación registrado.", "OK");
                 return;
             }
             
@@ -761,13 +761,13 @@ public partial class PacientesViewModel : BaseViewModel
             
             if (!searchResult.Success)
             {
-                await Shell.Current.DisplayAlert("Error", searchResult.Message ?? "Error al buscar documentos de turnos", "OK");
+                await Shell.Current.DisplayAlertAsync("Error", searchResult.Message ?? "Error al buscar documentos de turnos", "OK");
                 return;
             }
             
             if (searchResult.Data == null || !searchResult.Data.Found || searchResult.Data.Documents.Count == 0)
             {
-                await Shell.Current.DisplayAlert("Sin Documentos", 
+                await Shell.Current.DisplayAlertAsync("Sin Documentos", 
                     "No se encontraron documentos en turnos aprobados para este número de identificación.", "OK");
                 return;
             }
@@ -775,7 +775,7 @@ public partial class PacientesViewModel : BaseViewModel
             var docs = searchResult.Data.Documents;
             System.Diagnostics.Debug.WriteLine($"[Pacientes] Encontrados {docs.Count} documentos");
             
-            var importar = await Shell.Current.DisplayAlert(
+            var importar = await Shell.Current.DisplayAlertAsync(
                 "📋 Documentos de Turnos Encontrados",
                 $"Se encontraron {docs.Count} documento(s) en turnos aprobados para este paciente.\n\n¿Desea importarlos a la ficha del paciente?",
                 "Sí, importar",
@@ -787,7 +787,7 @@ public partial class PacientesViewModel : BaseViewModel
             var opciones = docs.Select(d => $"📄 {d.DocumentType} - Turno #{d.NumeroTurno} ({d.FechaSolicitud:dd/MM/yy})").ToArray();
             var todosSeleccionados = new List<TurnoDocumentItem>(docs);
             
-            var seleccionarTodos = await Shell.Current.DisplayAlert(
+            var seleccionarTodos = await Shell.Current.DisplayAlertAsync(
                 "Seleccionar Documentos",
                 $"¿Importar todos los {docs.Count} documentos?",
                 "Sí, todos",
@@ -799,7 +799,7 @@ public partial class PacientesViewModel : BaseViewModel
                 todosSeleccionados.Clear();
                 foreach (var doc in docs)
                 {
-                    var incluir = await Shell.Current.DisplayAlert(
+                    var incluir = await Shell.Current.DisplayAlertAsync(
                         "Importar Documento",
                         $"📄 {doc.DocumentType}\n📁 {doc.FileName}\n📅 Turno #{doc.NumeroTurno} ({doc.FechaSolicitud:dd/MM/yyyy})\n\n¿Incluir este documento?",
                         "Sí", "No");
@@ -812,7 +812,7 @@ public partial class PacientesViewModel : BaseViewModel
             
             if (todosSeleccionados.Count == 0)
             {
-                await Shell.Current.DisplayAlert("Info", "No se seleccionaron documentos para importar.", "OK");
+                await Shell.Current.DisplayAlertAsync("Info", "No se seleccionaron documentos para importar.", "OK");
                 return;
             }
             
@@ -842,7 +842,7 @@ public partial class PacientesViewModel : BaseViewModel
                     msg += $"\n\n⚠️ Errores:\n{string.Join("\n", importResult.Data.Errors)}";
                 }
                 
-                await Shell.Current.DisplayAlert("Importación Completada", msg, "OK");
+                await Shell.Current.DisplayAlertAsync("Importación Completada", msg, "OK");
             }
             else
             {
@@ -868,7 +868,7 @@ public partial class PacientesViewModel : BaseViewModel
             return;;
         }
 
-        var opcion = await Shell.Current.DisplayActionSheet(
+        var opcion = await Shell.Current.DisplayActionSheetAsync(
             "Agregar documento médico",
             "Cancelar",
             null,
@@ -897,10 +897,11 @@ public partial class PacientesViewModel : BaseViewModel
                     break;
 
                 case "🖼️ Seleccionar de galería":
-                    archivo = await MediaPicker.Default.PickPhotoAsync(new MediaPickerOptions
+                    var photoResults = await MediaPicker.Default.PickPhotosAsync(new MediaPickerOptions
                     {
                         Title = "Seleccionar imagen"
                     });
+                    archivo = photoResults?.FirstOrDefault();
                     break;
 
                 case "📁 Seleccionar archivo PDF":
@@ -950,7 +951,7 @@ public partial class PacientesViewModel : BaseViewModel
             }
 
             // Tipo de documento
-            var tipoDoc = await Shell.Current.DisplayActionSheet(
+            var tipoDoc = await Shell.Current.DisplayActionSheetAsync(
                 "Tipo de documento",
                 "Cancelar",
                 null,
@@ -1010,7 +1011,7 @@ public partial class PacientesViewModel : BaseViewModel
 
             if (result.Success)
             {
-                await Shell.Current.DisplayAlert("Éxito", "Documento subido correctamente", "OK");
+                await Shell.Current.DisplayAlertAsync("Éxito", "Documento subido correctamente", "OK");
             }
             else
             {
@@ -1074,7 +1075,7 @@ public partial class PacientesViewModel : BaseViewModel
     {
         if (!CanEdit || paciente == null) return;
 
-        bool confirm = await Shell.Current.DisplayAlert(
+        bool confirm = await Shell.Current.DisplayAlertAsync(
             "Eliminar Paciente",
             $"¿Estás seguro de eliminar a '{paciente.FullName}'?\n\nEsta acción no se puede deshacer.",
             "Sí, eliminar",
@@ -1091,7 +1092,7 @@ public partial class PacientesViewModel : BaseViewModel
                 {
                     _allPacientes.Remove(paciente);
                     ApplyFilter();
-                    await Shell.Current.DisplayAlert("Éxito", "Paciente eliminado correctamente", "OK");
+                    await Shell.Current.DisplayAlertAsync("Éxito", "Paciente eliminado correctamente", "OK");
                 }
                 else
                 {

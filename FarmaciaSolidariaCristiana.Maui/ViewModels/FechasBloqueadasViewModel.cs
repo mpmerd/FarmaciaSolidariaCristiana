@@ -95,7 +95,7 @@ public partial class FechasBloqueadasViewModel : BaseViewModel
                 Motivo = string.Empty;
                 NuevaFecha = DateTime.Today.AddDays(1);
                 await LoadFechasAsync();
-                await Shell.Current.DisplayAlert("Éxito", "Fecha bloqueada agregada correctamente", "OK");
+                await Shell.Current.DisplayAlertAsync("Éxito", "Fecha bloqueada agregada correctamente", "OK");
             }
             else
             {
@@ -117,7 +117,7 @@ public partial class FechasBloqueadasViewModel : BaseViewModel
     {
         if (fecha == null) return;
 
-        bool confirm = await Shell.Current.DisplayAlert(
+        bool confirm = await Shell.Current.DisplayAlertAsync(
             "Eliminar Fecha",
             $"¿Estás seguro de eliminar el bloqueo del {fecha.Fecha:dd/MM/yyyy}?",
             "Sí, eliminar",
@@ -133,7 +133,7 @@ public partial class FechasBloqueadasViewModel : BaseViewModel
                 if (response.Success)
                 {
                     FechasBloqueadas.Remove(fecha);
-                    await Shell.Current.DisplayAlert("Éxito", "Fecha desbloqueada correctamente", "OK");
+                    await Shell.Current.DisplayAlertAsync("Éxito", "Fecha desbloqueada correctamente", "OK");
                 }
                 else
                 {

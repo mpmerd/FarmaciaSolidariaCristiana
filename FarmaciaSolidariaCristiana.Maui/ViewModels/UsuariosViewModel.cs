@@ -209,7 +209,7 @@ public partial class UsuariosViewModel : BaseViewModel
             return;
         }
 
-        bool confirm = await Shell.Current.DisplayAlert(
+        bool confirm = await Shell.Current.DisplayAlertAsync(
             "Confirmar Eliminación",
             $"¿Estás seguro de eliminar al usuario {user.UserName}?\n\nEsta acción no se puede deshacer.",
             "Eliminar",
@@ -243,9 +243,9 @@ public partial class UsuariosViewModel : BaseViewModel
         }
     }
 
-    private async Task ShowSuccessAsync(string message)
+    private new async Task ShowSuccessAsync(string message)
     {
-        await Shell.Current.DisplayAlert("Éxito", message, "OK");
+        await Shell.Current.DisplayAlertAsync("Éxito", message, "OK");
     }
 
     public string GetRoleBadgeColor(string role)

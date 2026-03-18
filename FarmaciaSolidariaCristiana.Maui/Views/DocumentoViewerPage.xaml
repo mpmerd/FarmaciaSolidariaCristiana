@@ -56,15 +56,15 @@
         </VerticalStackLayout>
         
         <!-- Info del documento (overlay) -->
-        <Frame x:Name="InfoFrame"
-               BackgroundColor="#80000000"
-               Padding="15"
-               CornerRadius="10"
-               HasShadow="False"
-               VerticalOptions="End"
-               HorizontalOptions="Center"
-               Margin="20"
-               IsVisible="False">
+        <Border x:Name="InfoFrame"
+                BackgroundColor="#80000000"
+                Padding="15"
+                StrokeShape="RoundRectangle 10"
+                Stroke="Transparent"
+                VerticalOptions="End"
+                HorizontalOptions="Center"
+                Margin="20"
+                IsVisible="False">
             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="15">
                 <VerticalStackLayout Grid.Column="0" VerticalOptions="Center">
                     <Label x:Name="DocTypeLabel" TextColor="White" FontAttributes="Bold"/>
@@ -77,6 +77,6 @@
                         Clicked="OnDownloadClicked"
                         ToolTipProperties.Text="Abrir en app externa"/>
             </Grid>
-        </Frame>
+        </Border>
     </Grid>
 </ContentPage>

@@ -121,12 +121,12 @@ public partial class LoginViewModel : BaseViewModel
                 var appShell = App.Current?.Handler?.MauiContext?.Services.GetService<AppShell>();
                 if (appShell != null)
                 {
-                    Application.Current!.MainPage = appShell;
+                    Application.Current!.Windows[0].Page = appShell;
                 }
                 else
                 {
                     // Fallback: crear AppShell con el servicio de autenticación
-                    Application.Current!.MainPage = new AppShell(AuthService);
+                    Application.Current!.Windows[0].Page = new AppShell(AuthService);
                 }
             }
             else
@@ -146,7 +146,7 @@ public partial class LoginViewModel : BaseViewModel
     private async Task ForgotPasswordAsync()
     {
         // Solicitar el email/usuario
-        var emailOrUserName = await Application.Current!.MainPage!.DisplayPromptAsync(
+        var emailOrUserName = await Application.Current!.Windows[0].Page!.DisplayPromptAsync(
             "Recuperar Contraseña",
             "Ingrese su correo electrónico o nombre de usuario:",
             "Enviar",
@@ -163,7 +163,7 @@ public partial class LoginViewModel : BaseViewModel
             
             if (result.Success)
             {
-                await Application.Current!.MainPage!.DisplayAlert(
+                await Application.Current!.Windows[0].Page!.DisplayAlertAsync(
                     "Correo Enviado",
                     result.Message ?? "Si el usuario existe, recibirá un correo con instrucciones para restablecer su contraseña.",
                     "OK");

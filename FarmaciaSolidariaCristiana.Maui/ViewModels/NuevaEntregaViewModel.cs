@@ -153,7 +153,7 @@ public partial class NuevaEntregaViewModel : BaseViewModel
     {
         if (!IsDocumentoValid)
         {
-            await Shell.Current.DisplayAlert("Error", "Por favor ingrese un documento válido", "OK");
+            await Shell.Current.DisplayAlertAsync("Error", "Por favor ingrese un documento válido", "OK");
             return;
         }
 
@@ -200,7 +200,7 @@ public partial class NuevaEntregaViewModel : BaseViewModel
             else
             {
                 // Paciente no encontrado - Las entregas SOLO pueden hacerse a pacientes registrados
-                await Shell.Current.DisplayAlert(
+                await Shell.Current.DisplayAlertAsync(
                     "Paciente No Registrado",
                     "No se encontró un paciente con este documento de identidad.\n\n" +
                     "Para realizar una entrega, primero debe crear la ficha del paciente en la sección 'Pacientes'.\n\n" +
@@ -357,7 +357,7 @@ public partial class NuevaEntregaViewModel : BaseViewModel
         // Verificar si ya está agregado
         if (ItemsAEntregar.Any(i => i.Id == item.Id && i.Tipo == item.Tipo))
         {
-            Shell.Current.DisplayAlert("Aviso", "Este item ya está en la lista", "OK");
+            Shell.Current.DisplayAlertAsync("Aviso", "Este item ya está en la lista", "OK");
             return;
         }
 
@@ -397,7 +397,7 @@ public partial class NuevaEntregaViewModel : BaseViewModel
     {
         if (!PuedeRegistrar)
         {
-            await Shell.Current.DisplayAlert("Error", "Complete todos los campos requeridos", "OK");
+            await Shell.Current.DisplayAlertAsync("Error", "Complete todos los campos requeridos", "OK");
             return;
         }
 
@@ -406,26 +406,26 @@ public partial class NuevaEntregaViewModel : BaseViewModel
         {
             if (item.CantidadAEntregar <= 0)
             {
-                await Shell.Current.DisplayAlert("Error", $"La cantidad de {item.Nombre} debe ser mayor a 0", "OK");
+                await Shell.Current.DisplayAlertAsync("Error", $"La cantidad de {item.Nombre} debe ser mayor a 0", "OK");
                 return;
             }
 
             if (!EsEntregaSinTurno && item.CantidadAEntregar > item.CantidadAprobada)
             {
-                await Shell.Current.DisplayAlert("Error", 
+                await Shell.Current.DisplayAlertAsync("Error", 
                     $"No puede entregar más de lo aprobado para {item.Nombre} ({item.CantidadAprobada} unidades)", "OK");
                 return;
             }
 
             if (EsEntregaSinTurno && item.CantidadAEntregar > item.StockActual)
             {
-                await Shell.Current.DisplayAlert("Error", 
+                await Shell.Current.DisplayAlertAsync("Error", 
                     $"Stock insuficiente para {item.Nombre}. Disponible: {item.StockActual}", "OK");
                 return;
             }
         }
 
-        bool confirm = await Shell.Current.DisplayAlert(
+        bool confirm = await Shell.Current.DisplayAlertAsync(
             "Confirmar Entrega",
             $"¿Registrar {ItemsAEntregar.Count} item(s) para el paciente?",
             "Sí, registrar",
@@ -480,14 +480,14 @@ public partial class NuevaEntregaViewModel : BaseViewModel
                     mensaje += $"\n\nErrores:\n{string.Join("\n", errores)}";
                 }
                 
-                await Shell.Current.DisplayAlert("Éxito", mensaje, "OK");
+                await Shell.Current.DisplayAlertAsync("Éxito", mensaje, "OK");
                 
                 // Volver a la lista de entregas
                 await Shell.Current.GoToAsync("..");
             }
             else
             {
-                await Shell.Current.DisplayAlert("Error", 
+                await Shell.Current.DisplayAlertAsync("Error", 
                     $"No se pudo registrar ninguna entrega.\n\n{string.Join("\n", errores)}", "OK");
             }
         }

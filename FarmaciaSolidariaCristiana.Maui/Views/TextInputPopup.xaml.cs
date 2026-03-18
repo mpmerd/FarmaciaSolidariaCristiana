@@ -51,7 +51,7 @@ public partial class TextInputPopup : ContentPage
         
         if (_isRequired && string.IsNullOrEmpty(text))
         {
-            await DisplayAlert("Campo requerido", "Por favor ingrese un texto.", "OK");
+            await DisplayAlertAsync("Campo requerido", "Por favor ingrese un texto.", "OK");
             return;
         }
         
