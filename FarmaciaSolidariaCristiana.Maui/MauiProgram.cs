@@ -39,12 +39,14 @@ public static class MauiProgram
                 BaseAddress = new Uri(Constants.ApiBaseUrl),
                 Timeout = TimeSpan.FromSeconds(60)
             };
+            client.DefaultRequestHeaders.Add("X-App-Version", AppInfo.VersionString);
 #else
             var client = new HttpClient
             {
                 BaseAddress = new Uri(Constants.ApiBaseUrl),
                 Timeout = TimeSpan.FromSeconds(60)
             };
+            client.DefaultRequestHeaders.Add("X-App-Version", AppInfo.VersionString);
 #endif
             return client;
         });
