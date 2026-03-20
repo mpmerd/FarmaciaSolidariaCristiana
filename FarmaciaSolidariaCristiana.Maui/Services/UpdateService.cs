@@ -125,25 +125,34 @@ public class UpdateService
 
     private async Task ForceUpdateAsync(VersionInfo versionInfo)
     {
-        if (Application.Current?.MainPage == null)
-            return;
-
         var message = $"Esta versión de la aplicación ya no es compatible y no puede ejecutarse.\n\n" +
                      $"Versión mínima requerida: {versionInfo.minimumVersion}\n" +
                      $"Tu versión actual: {AppInfo.VersionString}\n\n" +
                      $"Debes instalar la última versión para continuar.";
 
-        // Diálogo de un solo botón — el usuario no puede descartar sin descargar
-        await Application.Current.MainPage.DisplayAlert(
-            "⛔ Actualización Obligatoria",
-            message,
-            "Descargar Actualización"
-        );
+        // Bucle infinito: si el usuario cierra el diálogo (botón atrás, etc.)
+        // se vuelve a mostrar inmediatamente. No hay forma de evadir la actualización.
+        while (true)
+        {
+            if (Application.Current?.Windows.FirstOrDefault()?.Page == null)
+            {
+                await Task.Delay(500);
+                continue;
+            }
 
-        await Launcher.OpenAsync(new Uri(versionInfo.downloadUrl));
+            await Application.Current!.Windows[0].Page!.DisplayAlertAsync(
+                "⛔ Actualización Obligatoria",
+                message,
+                "Descargar Actualización"
+            );
 
-        // Cerrar la app; al relanzarla se verificará otra vez
-        Application.Current.Quit();
+            // Abrir descarga y cerrar la app
+            await Launcher.OpenAsync(new Uri(versionInfo.downloadUrl));
+            Application.Current.Quit();
+
+            // Si Quit() no cerró inmediatamente, esperar y volver a mostrar
+            await Task.Delay(1000);
+        }
     }
 
     private async Task PromptUserToUpdateAsync(VersionInfo versionInfo)
@@ -154,10 +163,10 @@ public class UpdateService
                      $"Novedades:\n{versionInfo.releaseNotes}\n\n" +
                      $"¿Desea descargar la actualización?";
 
-        if (Application.Current?.MainPage == null)
+        if (Application.Current?.Windows.FirstOrDefault()?.Page == null)
             return;
 
-        bool answer = await Application.Current.MainPage.DisplayAlert(
+        bool answer = await Application.Current!.Windows[0].Page!.DisplayAlertAsync(
             "Actualización Disponible",
             message,
             "Descargar",

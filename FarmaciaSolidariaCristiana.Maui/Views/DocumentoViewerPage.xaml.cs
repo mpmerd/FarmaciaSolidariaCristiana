@@ -445,7 +445,7 @@ public partial class DocumentoViewerPage : ContentPage
         catch (Exception ex)
         {
             Console.WriteLine($"[DocumentoViewer] Error opening externally: {ex.Message}");
-            await DisplayAlert("Error", "No se pudo abrir el documento", "OK");
+            await DisplayAlertAsync("Error", "No se pudo abrir el documento", "OK");
         }
     }
 

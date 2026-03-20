@@ -286,6 +286,9 @@ app.Use(async (context, next) =>
 app.UseStaticFiles();
 app.UseRouting();
 
+// Verificar versión mínima de la app móvil en peticiones API
+app.UseMiddleware<FarmaciaSolidariaCristiana.Middleware.AppVersionCheckMiddleware>();
+
 app.UseAuthentication();
 app.UseAuthorization();
 
