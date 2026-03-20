@@ -1,7 +1,7 @@
 @model IEnumerable<FarmaciaSolidariaCristiana.Models.NavbarDecoration>
 @{
     ViewData["Title"] = "Decoraciones del Navbar";
-    var presets = ViewBag.Presets as Dictionary<string, FarmaciaSolidariaCristiana.Models.DecorationPreset>;
+    var presets = ViewBag.Presets as Dictionary<string, FarmaciaSolidariaCristiana.Models.DecorationPreset> ?? new();
 }
 
 <div class="container-fluid py-4">
