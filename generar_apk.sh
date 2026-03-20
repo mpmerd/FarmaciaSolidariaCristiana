@@ -11,7 +11,7 @@ echo ""
 
 # Rutas
 PROJECT_FILE="FarmaciaSolidariaCristiana.Maui/FarmaciaSolidariaCristiana.Maui.csproj"
-OUTPUT_DIR="FarmaciaSolidariaCristiana.Maui/bin/Release/net9.0-android"
+OUTPUT_DIR="FarmaciaSolidariaCristiana.Maui/bin/Release/net10.0-android"
 
 # Verificar que existe el archivo del proyecto
 if [ ! -f "$PROJECT_FILE" ]; then
@@ -53,7 +53,7 @@ fi
 
 echo ""
 echo "🧹 Limpiando compilaciones anteriores..."
-dotnet clean FarmaciaSolidariaCristiana.Maui -c Release -f net9.0-android
+dotnet clean FarmaciaSolidariaCristiana.Maui -c Release -f net10.0-android
 
 echo ""
 echo "🔨 Compilando APK en modo Release..."
@@ -61,7 +61,7 @@ echo "   Versión: $CURRENT_VERSION"
 echo "   Código: $CURRENT_CODE"
 echo ""
 
-dotnet publish FarmaciaSolidariaCristiana.Maui -c Release -f net9.0-android
+dotnet publish FarmaciaSolidariaCristiana.Maui -c Release -f net10.0-android
 
 if [ $? -eq 0 ]; then
     echo ""
