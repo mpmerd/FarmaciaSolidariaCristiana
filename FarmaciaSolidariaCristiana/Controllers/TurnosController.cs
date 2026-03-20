@@ -139,12 +139,12 @@ namespace FarmaciaSolidariaCristiana.Controllers
                     ModelState.AddModelError("", "Debe seleccionar al menos un medicamento o insumo");
                 }
 
-                if (hasMedicines && medicineIds.Count != quantities.Count)
+                if (hasMedicines && medicineIds!.Count != quantities.Count)
                 {
                     ModelState.AddModelError("", "Error en las cantidades de medicamentos");
                 }
 
-                if (hasSupplies && supplyIds.Count != supplyQuantities.Count)
+                if (hasSupplies && supplyIds!.Count != supplyQuantities.Count)
                 {
                     ModelState.AddModelError("", "Error en las cantidades de insumos");
                 }
