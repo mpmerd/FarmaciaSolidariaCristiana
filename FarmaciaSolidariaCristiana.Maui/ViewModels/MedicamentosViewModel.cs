@@ -107,7 +107,7 @@ public partial class MedicamentosViewModel : BaseViewModel
             ? new[] { "Ver detalles", "Editar nombre/descripción", "Ajustar stock" } 
             : new[] { "Ver detalles" };
         
-        var action = await Shell.Current.DisplayActionSheet(
+        var action = await Shell.Current.DisplayActionSheetAsync(
             medicamento.Name,
             "Cancelar",
             null,
@@ -135,7 +135,7 @@ public partial class MedicamentosViewModel : BaseViewModel
                       $"Estado: {m.StockStatus}\n" +
                       $"Código Nacional: {m.NationalCode ?? "N/A"}";
 
-        await Shell.Current.DisplayAlert("Detalles del Medicamento", details, "Cerrar");
+        await Shell.Current.DisplayAlertAsync("Detalles del Medicamento", details, "Cerrar");
     }
 
     private async Task EditMedicamentoAsync(Medicine medicamento)
@@ -238,7 +238,7 @@ public partial class MedicamentosViewModel : BaseViewModel
 
         // Seleccionar unidad de medida
         var unidades = new[] { "Unidades", "ml (Mililitros)", "Sobres", "Cápsulas", "Ampollas", "Comprimidos" };
-        var unidadSeleccionada = await Shell.Current.DisplayActionSheet(
+        var unidadSeleccionada = await Shell.Current.DisplayActionSheetAsync(
             "Unidad de medida",
             "Cancelar",
             null,

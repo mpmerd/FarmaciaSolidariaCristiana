@@ -53,14 +53,14 @@ public class ApiService : IApiService
                 // Mostrar mensaje al usuario
                 if (Shell.Current?.CurrentPage != null)
                 {
-                    await Shell.Current.DisplayAlert(
+                    await Shell.Current.DisplayAlertAsync(
                         "Sesión Expirada",
                         "Su sesión ha expirado. Por favor, inicie sesión nuevamente.",
                         "OK");
                 }
                 
                 // Navegar a login
-                await Shell.Current.GoToAsync("//LoginPage");
+                await Shell.Current!.GoToAsync("//LoginPage");
             });
         }
         catch (Exception ex)
@@ -227,7 +227,7 @@ public class ApiService : IApiService
             Console.WriteLine($"[API] Content length: {content?.Length ?? 0}");
             
             // Detectar HTML (puede indicar sesión expirada - redirect a login)
-            if (content.TrimStart().StartsWith("<"))
+            if (content?.TrimStart().StartsWith("<") == true)
             {
                 Console.WriteLine($"[API] WARNING: Received HTML instead of JSON!");
                 await HandleSessionExpiredAsync();
@@ -243,7 +243,7 @@ public class ApiService : IApiService
             // Intentar deserializar como PagedResult
             try
             {
-                var pagedResult = JsonSerializer.Deserialize<ApiResponse<PagedResult<T>>>(content, _jsonOptions);
+                var pagedResult = JsonSerializer.Deserialize<ApiResponse<PagedResult<T>>>(content!, _jsonOptions);
                 Console.WriteLine($"[API] PagedResult: Success={pagedResult?.Success}, Items={pagedResult?.Data?.Items?.Count ?? 0}");
                 
                 if (pagedResult?.Success == true && pagedResult.Data != null)
@@ -263,7 +263,7 @@ public class ApiService : IApiService
 
             // Si falla, intentar como lista directa
             Console.WriteLine($"[API] Trying list deserialization...");
-            var listResult = JsonSerializer.Deserialize<ApiResponse<List<T>>>(content, _jsonOptions);
+            var listResult = JsonSerializer.Deserialize<ApiResponse<List<T>>>(content!, _jsonOptions);
             Console.WriteLine($"[API] List result: Success={listResult?.Success}, Items={listResult?.Data?.Count ?? 0}");
             return listResult ?? ErrorResponse<List<T>>("Error al procesar respuesta");
         }

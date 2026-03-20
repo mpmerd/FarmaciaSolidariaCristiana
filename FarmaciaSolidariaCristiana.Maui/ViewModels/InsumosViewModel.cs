@@ -105,7 +105,7 @@ public partial class InsumosViewModel : BaseViewModel
             ? new[] { "Ver detalles", "Editar", "Ajustar stock", "Eliminar" } 
             : new[] { "Ver detalles" };
         
-        var action = await Shell.Current.DisplayActionSheet(
+        var action = await Shell.Current.DisplayActionSheetAsync(
             insumo.Name,
             "Cancelar",
             null,
@@ -135,7 +135,7 @@ public partial class InsumosViewModel : BaseViewModel
                       $"Stock: {insumo.StockQuantity} {insumo.Unit}\n" +
                       $"Estado: {insumo.StockStatus}";
 
-        await Shell.Current.DisplayAlert("Detalles del Insumo", details, "Cerrar");
+        await Shell.Current.DisplayAlertAsync("Detalles del Insumo", details, "Cerrar");
     }
 
     private async Task AjustarStockAsync(Supply insumo)
@@ -162,7 +162,7 @@ public partial class InsumosViewModel : BaseViewModel
 
             if (result.Success)
             {
-                await Shell.Current.DisplayAlert("Éxito", "Stock actualizado", "OK");
+                await Shell.Current.DisplayAlertAsync("Éxito", "Stock actualizado", "OK");
                 await LoadInsumosAsync();
             }
             else
@@ -230,7 +230,7 @@ public partial class InsumosViewModel : BaseViewModel
 
             if (result.Success)
             {
-                await Shell.Current.DisplayAlert("Éxito", "Insumo creado", "OK");
+                await Shell.Current.DisplayAlertAsync("Éxito", "Insumo creado", "OK");
                 await LoadInsumosAsync();
             }
             else
@@ -281,7 +281,7 @@ public partial class InsumosViewModel : BaseViewModel
 
             if (result.Success)
             {
-                await Shell.Current.DisplayAlert("Éxito", "Insumo actualizado", "OK");
+                await Shell.Current.DisplayAlertAsync("Éxito", "Insumo actualizado", "OK");
                 await LoadInsumosAsync();
             }
             else
@@ -300,7 +300,7 @@ public partial class InsumosViewModel : BaseViewModel
     {
         if (!CanEdit || insumo == null) return;
 
-        bool confirm = await Shell.Current.DisplayAlert(
+        bool confirm = await Shell.Current.DisplayAlertAsync(
             "Eliminar Insumo",
             $"¿Estás seguro de eliminar '{insumo.Name}'?",
             "Sí, eliminar",
@@ -317,7 +317,7 @@ public partial class InsumosViewModel : BaseViewModel
                 {
                     _allInsumos.Remove(insumo);
                     ApplyFilter();
-                    await Shell.Current.DisplayAlert("Éxito", "Insumo eliminado correctamente", "OK");
+                    await Shell.Current.DisplayAlertAsync("Éxito", "Insumo eliminado correctamente", "OK");
                 }
                 else
                 {

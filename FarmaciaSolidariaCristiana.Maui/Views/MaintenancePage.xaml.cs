@@ -36,13 +36,13 @@ public partial class MaintenancePage : ContentPage
             else
             {
                 SetReason(maintenance.reason);
-                await DisplayAlert("Mantenimiento", 
+                await DisplayAlertAsync("Mantenimiento", 
                     "El sistema sigue en mantenimiento. Intente más tarde.", "OK");
             }
         }
         catch
         {
-            await DisplayAlert("Error", 
+            await DisplayAlertAsync("Error", 
                 "No se pudo verificar el estado. Intente más tarde.", "OK");
         }
         finally

@@ -24,13 +24,13 @@ public partial class BroadcastPage : ContentPage
 
         if (string.IsNullOrWhiteSpace(title) || string.IsNullOrWhiteSpace(message))
         {
-            await DisplayAlert("Error", "El título y el mensaje son requeridos.", "OK");
+            await DisplayAlertAsync("Error", "El título y el mensaje son requeridos.", "OK");
             return;
         }
 
         if (!SwitchEmail.IsToggled && !SwitchNotification.IsToggled)
         {
-            await DisplayAlert("Error", "Debe seleccionar al menos un canal de envío.", "OK");
+            await DisplayAlertAsync("Error", "Debe seleccionar al menos un canal de envío.", "OK");
             return;
         }
 
@@ -38,7 +38,7 @@ public partial class BroadcastPage : ContentPage
         if (SwitchEmail.IsToggled) channels.Add("email");
         if (SwitchNotification.IsToggled) channels.Add("notificación en app");
 
-        var confirm = await DisplayAlert(
+        var confirm = await DisplayAlertAsync(
             "Confirmar envío",
             $"¿Enviar esta notificación a TODOS los usuarios por {string.Join(" y ", channels)}?\n\nEsta acción no se puede deshacer.",
             "Enviar", "Cancelar");
@@ -68,7 +68,7 @@ public partial class BroadcastPage : ContentPage
                 if (SwitchNotification.IsToggled)
                     summary.Add($"{result.Data.NotificationsCreated} notificaciones creadas");
 
-                await DisplayAlert("Éxito",
+                await DisplayAlertAsync("Éxito",
                     $"Notificación masiva enviada:\n{string.Join("\n", summary)}",
                     "OK");
 
@@ -78,12 +78,12 @@ public partial class BroadcastPage : ContentPage
             }
             else
             {
-                await DisplayAlert("Error", result.Message ?? "Error al enviar la notificación.", "OK");
+                await DisplayAlertAsync("Error", result.Message ?? "Error al enviar la notificación.", "OK");
             }
         }
         catch (Exception ex)
         {
-            await DisplayAlert("Error", $"Error de conexión: {ex.Message}", "OK");
+            await DisplayAlertAsync("Error", $"Error de conexión: {ex.Message}", "OK");
         }
         finally
         {

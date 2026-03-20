@@ -114,7 +114,7 @@ public partial class DonacionesViewModel : BaseViewModel
                      $"Fecha: {donacion.DonationDate:dd/MM/yyyy}\n" +
                      $"Comentarios: {donacion.Comments ?? "N/A"}";
                      
-        await Shell.Current.DisplayAlert("Detalle de Donación", details, "OK");
+        await Shell.Current.DisplayAlertAsync("Detalle de Donación", details, "OK");
     }
 
     [RelayCommand]
@@ -122,7 +122,7 @@ public partial class DonacionesViewModel : BaseViewModel
     {
         if (!CanEdit || donacion == null) return;
 
-        bool confirm = await Shell.Current.DisplayAlert(
+        bool confirm = await Shell.Current.DisplayAlertAsync(
             "Eliminar Donación",
             "¿Estás seguro de eliminar esta donación?",
             "Sí, eliminar",
@@ -139,7 +139,7 @@ public partial class DonacionesViewModel : BaseViewModel
                 {
                     _allDonaciones.Remove(donacion);
                     ApplyFilter();
-                    await Shell.Current.DisplayAlert("Éxito", "Donación eliminada correctamente", "OK");
+                    await Shell.Current.DisplayAlertAsync("Éxito", "Donación eliminada correctamente", "OK");
                 }
                 else
                 {

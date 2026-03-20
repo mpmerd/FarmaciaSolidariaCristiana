@@ -145,7 +145,7 @@ public partial class AppShell : Shell
     
     private async void OnLogoutClicked(object sender, EventArgs e)
     {
-        bool confirm = await DisplayAlert(
+        bool confirm = await DisplayAlertAsync(
             "Cerrar Sesión", 
             "¿Estás seguro que deseas cerrar sesión?", 
             "Sí", 

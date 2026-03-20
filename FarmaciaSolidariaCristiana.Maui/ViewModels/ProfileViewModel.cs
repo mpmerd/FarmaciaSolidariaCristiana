@@ -71,13 +71,13 @@ public partial class ProfileViewModel : BaseViewModel
                 {
                     await _notificationService.RegisterUserAsync(userInfo.Id, userInfo.Role);
                 }
-                await Shell.Current.DisplayAlert("Notificaciones", "Las notificaciones han sido habilitadas", "OK");
+                await Shell.Current.DisplayAlertAsync("Notificaciones", "Las notificaciones han sido habilitadas", "OK");
             }
             else
             {
                 // Disable notifications
                 await _notificationService.UnregisterUserAsync();
-                await Shell.Current.DisplayAlert("Notificaciones", "Las notificaciones han sido deshabilitadas", "OK");
+                await Shell.Current.DisplayAlertAsync("Notificaciones", "Las notificaciones han sido deshabilitadas", "OK");
             }
         }
         catch (Exception ex)
@@ -95,7 +95,7 @@ public partial class ProfileViewModel : BaseViewModel
     [RelayCommand]
     private async Task LogoutAsync()
     {
-        bool confirm = await Shell.Current.DisplayAlert(
+        bool confirm = await Shell.Current.DisplayAlertAsync(
             "Cerrar Sesión",
             "¿Estás seguro que deseas cerrar sesión?",
             "Sí",
