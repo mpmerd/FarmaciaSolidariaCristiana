@@ -142,10 +142,13 @@ public partial class App : Application
         // Manejar cuando la app vuelve a primer plano
         window.Resumed += async (s, e) =>
         {
-            System.Diagnostics.Debug.WriteLine("[App] App resumed - checking maintenance and notifications");
+            System.Diagnostics.Debug.WriteLine("[App] App resumed - checking maintenance, updates and notifications");
             
             // Verificar mantenimiento al volver a primer plano
             await CheckMaintenanceModeAsync();
+            
+            // Verificar actualizaciones obligatorias al volver a primer plano
+            await _updateService.CheckForUpdatesAsync();
             
             try
             {
