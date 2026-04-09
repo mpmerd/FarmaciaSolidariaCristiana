@@ -130,9 +130,11 @@ ORDER BY Anio, Mes;
 SELECT
     YEAR(t.FechaEntrega)  AS Anio,
     MONTH(t.FechaEntrega) AS Mes,
-    SUM(CASE WHEN EXISTS (SELECT 1 FROM TurnoMedicamentos tm WHERE tm.TurnoId = t.Id) THEN 1 ELSE 0 END) AS TurnosMedicamentos,
-    SUM(CASE WHEN EXISTS (SELECT 1 FROM TurnoInsumos ti WHERE ti.TurnoId = t.Id) THEN 1 ELSE 0 END) AS TurnosInsumos
+    COUNT(DISTINCT tm.TurnoId) AS TurnosMedicamentos,
+    COUNT(DISTINCT ti.TurnoId) AS TurnosInsumos
 FROM Turnos t
+LEFT JOIN TurnoMedicamentos tm ON tm.TurnoId = t.Id
+LEFT JOIN TurnoInsumos ti ON ti.TurnoId = t.Id
 WHERE t.Estado = 'Completado'
 GROUP BY YEAR(t.FechaEntrega), MONTH(t.FechaEntrega)
 ORDER BY Anio, Mes;
