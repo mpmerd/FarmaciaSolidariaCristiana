@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using FarmaciaSolidariaCristiana.Api.Models;
+using FarmaciaSolidariaCristiana.Data;
 
 namespace FarmaciaSolidariaCristiana.Api.Controllers
 {
@@ -16,13 +17,16 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
     {
         private readonly UserManager<IdentityUser> _userManager;
         private readonly ILogger<UsersApiController> _logger;
+        private readonly ApplicationDbContext _context;
 
         public UsersApiController(
             UserManager<IdentityUser> userManager,
-            ILogger<UsersApiController> logger)
+            ILogger<UsersApiController> logger,
+            ApplicationDbContext context)
         {
             _userManager = userManager;
             _logger = logger;
+            _context = context;
         }
 
         /// <summary>
@@ -33,23 +37,27 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
         public async Task<IActionResult> GetAll()
         {
             var users = await _userManager.Users.ToListAsync();
-            var userDtos = new List<UserManagementDto>();
 
-            foreach (var user in users)
-            {
-                var roles = await _userManager.GetRolesAsync(user);
-                userDtos.Add(new UserManagementDto
+            // Una sola query JOIN en lugar de N+1 llamadas a GetRolesAsync
+            var roleMap = await _context.UserRoles
+                .Join(_context.Roles,
+                    ur => ur.RoleId,
+                    r => r.Id,
+                    (ur, r) => new { ur.UserId, r.Name })
+                .GroupBy(x => x.UserId)
+                .ToDictionaryAsync(
+                    g => g.Key,
+                    g => g.Select(x => x.Name).FirstOrDefault() ?? "Sin rol");
+
+            var userDtos = users
+                .Select(user => new UserManagementDto
                 {
                     Id = user.Id,
                     UserName = user.UserName ?? "",
                     Email = user.Email ?? "",
-                    Role = roles.FirstOrDefault() ?? "Sin rol",
+                    Role = roleMap.TryGetValue(user.Id, out var role) ? role : "Sin rol",
                     EmailConfirmed = user.EmailConfirmed
-                });
-            }
-
-            // Ordenar por prioridad de rol
-            userDtos = userDtos
+                })
                 .OrderBy(u => GetRolePriority(u.Role))
                 .ThenBy(u => u.UserName)
                 .ToList();

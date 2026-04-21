@@ -123,7 +123,7 @@
                            FontSize="16" 
                            FontAttributes="Bold"
                            TextColor="{AppThemeBinding Light=#1a1a1a, Dark=#e0e0e0}"/>
-                    <Label Text="Versión 1.0.0" 
+                    <Label Text="{Binding AppVersion}" 
                            FontSize="14" 
                            TextColor="{StaticResource Gray600}"/>
                     <Label Text="Aplicación para la gestión de turnos, medicamentos e insumos de la farmacia solidaria." 

@@ -67,40 +67,38 @@ public partial class DashboardViewModel : BaseViewModel
 
     private async Task LoadStatisticsAsync()
     {
-        // Obtener turnos pendientes
-        var turnosResult = CanManageTurnos 
-            ? await ApiService.GetTurnosAsync()
-            : await ApiService.GetMisTurnosAsync();
-            
-        if (turnosResult.Success && turnosResult.Data != null)
-        {
-            TurnosPendientes = turnosResult.Data.Count(t => t.Estado == "Pendiente");
-        }
+        // Iniciar todas las llamadas en paralelo
+        var turnosTask = CanManageTurnos
+            ? ApiService.GetTurnosAsync()
+            : ApiService.GetMisTurnosAsync();
+        var medsTask = ApiService.GetMedicamentosAsync();
+        var suppliesTask = ApiService.GetInsumosAsync();
 
-        // Obtener medicamentos disponibles
-        var medsResult = await ApiService.GetMedicamentosAsync();
-        if (medsResult.Success && medsResult.Data != null)
+        if (CanManageTurnos)
         {
-            MedicamentosDisponibles = medsResult.Data.Count(m => m.StockQuantity > 0);
-        }
+            var deliveriesTask = ApiService.GetEntregasAsync();
+            await Task.WhenAll(turnosTask, medsTask, suppliesTask, deliveriesTask);
 
-        // Obtener insumos disponibles
-        var suppliesResult = await ApiService.GetInsumosAsync();
-        if (suppliesResult.Success && suppliesResult.Data != null)
-        {
-            InsumosDisponibles = suppliesResult.Data.Count(s => s.StockQuantity > 0);
-        }
-
-        // Entregas de hoy (solo para roles con acceso)
-        if (await AuthService.IsInAnyRoleAsync(Constants.RoleAdmin, Constants.RoleFarmaceutico))
-        {
-            var deliveriesResult = await ApiService.GetEntregasAsync();
+            var deliveriesResult = await deliveriesTask;
             if (deliveriesResult.Success && deliveriesResult.Data != null)
-            {
-                EntregasHoy = deliveriesResult.Data.Count(d => 
-                    d.DeliveryDate.Date == DateTime.Today);
-            }
+                EntregasHoy = deliveriesResult.Data.Count(d => d.DeliveryDate.Date == DateTime.Today);
         }
+        else
+        {
+            await Task.WhenAll(turnosTask, medsTask, suppliesTask);
+        }
+
+        var turnosResult = await turnosTask;
+        if (turnosResult.Success && turnosResult.Data != null)
+            TurnosPendientes = turnosResult.Data.Count(t => t.Estado == "Pendiente");
+
+        var medsResult = await medsTask;
+        if (medsResult.Success && medsResult.Data != null)
+            MedicamentosDisponibles = medsResult.Data.Count(m => m.StockQuantity > 0);
+
+        var suppliesResult = await suppliesTask;
+        if (suppliesResult.Success && suppliesResult.Data != null)
+            InsumosDisponibles = suppliesResult.Data.Count(s => s.StockQuantity > 0);
     }
 
     private static string GetRoleDisplayName(string role)
