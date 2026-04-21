@@ -20,6 +20,33 @@ public partial class UsuariosViewModel : BaseViewModel
     private bool isRefreshing;
 
     [ObservableProperty]
+    private string searchText = string.Empty;
+
+    [ObservableProperty]
+    private string usuariosCountText = "📋 Usuarios (0)";
+
+    private List<UserDto> _allUsuarios = new();
+
+    partial void OnSearchTextChanged(string value) => AplicarFiltro();
+
+    private void AplicarFiltro()
+    {
+        var filtered = string.IsNullOrWhiteSpace(SearchText)
+            ? _allUsuarios
+            : _allUsuarios.Where(u =>
+                u.UserName.Contains(SearchText, StringComparison.OrdinalIgnoreCase) ||
+                u.Email.Contains(SearchText, StringComparison.OrdinalIgnoreCase) ||
+                u.Role.Contains(SearchText, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+        Usuarios.Clear();
+        foreach (var u in filtered)
+            Usuarios.Add(u);
+        UsuariosCountText = string.IsNullOrWhiteSpace(SearchText)
+            ? $"📋 Usuarios ({_allUsuarios.Count})"
+            : $"📋 Usuarios ({filtered.Count} de {_allUsuarios.Count})";
+    }
+
+    [ObservableProperty]
     private bool isEditing;
 
     [ObservableProperty]
@@ -61,11 +88,8 @@ public partial class UsuariosViewModel : BaseViewModel
 
             if (response.Success && response.Data != null)
             {
-                Usuarios.Clear();
-                foreach (var user in response.Data)
-                {
-                    Usuarios.Add(user);
-                }
+                _allUsuarios = response.Data;
+                AplicarFiltro();
             }
             else
             {
