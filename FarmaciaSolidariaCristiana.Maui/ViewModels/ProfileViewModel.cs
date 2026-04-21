@@ -22,6 +22,8 @@ public partial class ProfileViewModel : BaseViewModel
     [ObservableProperty]
     private bool notificationsEnabled = true;
 
+    public string AppVersion => $"Versión {AppInfo.VersionString}";
+
     public ProfileViewModel(
         IAuthService authService, 
         IApiService apiService, 
