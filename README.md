@@ -1,6 +1,6 @@
 # Farmacia Solidaria Cristiana - Sistema de Gestión
 
-## 🏥 Proyecto ASP.NET Core 8 MVC
+## 🏥 Proyecto ASP.NET Core 10 MVC
 
 Sistema web para la gestión de medicamentos, entregas y donaciones de la Farmacia Solidaria Cristiana de la **Iglesia Metodista de Cárdenas y Adriano Solidario**.
 
@@ -110,13 +110,14 @@ bash update-app.sh
 
 ## 🔧 Tecnologías
 
-- **Framework:** ASP.NET Core 8 MVC
-- **ORM:** Entity Framework Core 8.0.11
+- **Framework:** ASP.NET Core 10 MVC (net10.0)
+- **ORM:** Entity Framework Core 10.0.7
 - **Base de Datos:** SQL Server (compatible con Linux)
-- **Autenticación:** ASP.NET Core Identity 8.0.11
+- **Autenticación:** ASP.NET Core Identity 10.0.7
 - **PDF:** iText7 9.3.0 + BouncyCastle adapter
 - **UI:** Bootstrap 5 + Bootstrap Icons
 - **API Externa:** CIMA (Agencia Española de Medicamentos)
+- **App Móvil:** .NET MAUI net10.0-android (workload .NET 10)
 
 ## 🌐 Acceso en Red Local
 
