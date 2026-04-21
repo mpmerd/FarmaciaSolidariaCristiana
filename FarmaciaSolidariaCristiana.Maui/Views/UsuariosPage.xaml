@@ -12,144 +12,152 @@
         <!-- Contenido Principal -->
         <RefreshView IsRefreshing="{Binding IsRefreshing}"
                      Command="{Binding LoadUsuariosCommand}">
-            <ScrollView>
-                <StackLayout Padding="15" Spacing="15">
-                    
-                    <!-- Header -->
-                    <Frame BackgroundColor="{StaticResource Primary}" 
-                           CornerRadius="15" 
-                           Padding="20"
-                           HasShadow="True">
-                        <Grid ColumnDefinitions="*,Auto">
-                            <StackLayout Grid.Column="0">
-                                <Label Text="👥 Gestión de Usuarios" 
-                                       FontSize="22" 
-                                       FontAttributes="Bold"
-                                       TextColor="White"/>
-                                <Label Text="Administrar usuarios del sistema" 
-                                       FontSize="14" 
-                                       TextColor="#B0D4FF"/>
+            <CollectionView ItemsSource="{Binding Usuarios}"
+                            SelectionMode="None">
+
+                <CollectionView.Header>
+                    <StackLayout Padding="15,15,15,10" Spacing="15">
+
+                        <!-- Header -->
+                        <Frame BackgroundColor="{StaticResource Primary}" 
+                               CornerRadius="15" 
+                               Padding="20"
+                               HasShadow="True">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <StackLayout Grid.Column="0">
+                                    <Label Text="👥 Gestión de Usuarios" 
+                                           FontSize="22" 
+                                           FontAttributes="Bold"
+                                           TextColor="White"/>
+                                    <Label Text="Administrar usuarios del sistema" 
+                                           FontSize="14" 
+                                           TextColor="#B0D4FF"/>
+                                </StackLayout>
+                                <Button Grid.Column="1"
+                                        Text="➕"
+                                        FontSize="20"
+                                        BackgroundColor="{AppThemeBinding Light=White, Dark=#2a2a2a}"
+                                        TextColor="{StaticResource Primary}"
+                                        CornerRadius="25"
+                                        WidthRequest="50"
+                                        HeightRequest="50"
+                                        Command="{Binding StartCreatingCommand}"
+                                        IsVisible="{Binding IsEditing, Converter={StaticResource InverseBoolConverter}}"/>
+                            </Grid>
+                        </Frame>
+
+                        <!-- Información de roles -->
+                        <Frame BackgroundColor="#E3F2FD" CornerRadius="12" Padding="15" HasShadow="False">
+                            <StackLayout Spacing="8">
+                                <Label Text="ℹ️ Roles Disponibles:" FontSize="16" FontAttributes="Bold" TextColor="{AppThemeBinding Light=#1a1a1a, Dark=#e0e0e0}"/>
+                                <Label Text="• Admin: Acceso completo al sistema" FontSize="13" TextColor="{StaticResource Gray600}"/>
+                                <Label Text="• Farmacéutico: Gestiona medicamentos, entregas, turnos" FontSize="13" TextColor="{StaticResource Gray600}"/>
+                                <Label Text="• Viewer: Solo visualiza información y reportes" FontSize="13" TextColor="{StaticResource Gray600}"/>
+                                <Label Text="• Paciente: Solicita turnos y ve su información" FontSize="13" TextColor="{StaticResource Gray600}"/>
                             </StackLayout>
-                            <Button Grid.Column="1"
-                                    Text="➕"
-                                    FontSize="20"
-                                    BackgroundColor="{AppThemeBinding Light=White, Dark=#2a2a2a}"
-                                    TextColor="{StaticResource Primary}"
-                                    CornerRadius="25"
-                                    WidthRequest="50"
-                                    HeightRequest="50"
-                                    Command="{Binding StartCreatingCommand}"
-                                    IsVisible="{Binding IsEditing, Converter={StaticResource InverseBoolConverter}}"/>
-                        </Grid>
-                    </Frame>
+                        </Frame>
 
-                    <!-- Información de roles -->
-                    <Frame BackgroundColor="#E3F2FD" CornerRadius="12" Padding="15" HasShadow="False">
-                        <StackLayout Spacing="8">
-                            <Label Text="ℹ️ Roles Disponibles:" FontSize="16" FontAttributes="Bold" TextColor="{AppThemeBinding Light=#1a1a1a, Dark=#e0e0e0}"/>
-                            <Label Text="• Admin: Acceso completo al sistema" FontSize="13" TextColor="{StaticResource Gray600}"/>
-                            <Label Text="• Farmacéutico: Gestiona medicamentos, entregas, turnos" FontSize="13" TextColor="{StaticResource Gray600}"/>
-                            <Label Text="• Viewer: Solo visualiza información y reportes" FontSize="13" TextColor="{StaticResource Gray600}"/>
-                            <Label Text="• Paciente: Solicita turnos y ve su información" FontSize="13" TextColor="{StaticResource Gray600}"/>
-                        </StackLayout>
-                    </Frame>
+                        <!-- Búsqueda -->
+                        <SearchBar Placeholder="Buscar por nombre, email o rol..."
+                                   Text="{Binding SearchText}"
+                                   BackgroundColor="{AppThemeBinding Light=White, Dark=#2a2a2a}"/>
 
-                    <!-- Lista de Usuarios -->
-                    <Label Text="📋 Usuarios del Sistema" 
-                           FontSize="18" 
-                           FontAttributes="Bold"
-                           TextColor="{AppThemeBinding Light=#1a1a1a, Dark=#e0e0e0}"
-                           Margin="0,10,0,5"/>
+                        <!-- Conteo -->
+                        <Label Text="{Binding UsuariosCountText}" 
+                               FontSize="18" 
+                               FontAttributes="Bold"
+                               TextColor="{AppThemeBinding Light=#1a1a1a, Dark=#e0e0e0}"
+                               Margin="0,5,0,0"/>
 
-                    <StackLayout BindableLayout.ItemsSource="{Binding Usuarios}" Spacing="0">
-                        <BindableLayout.EmptyView>
-                            <Label Text="No hay usuarios registrados" 
-                                   TextColor="{StaticResource Gray600}"
-                                   HorizontalOptions="Center"
-                                   Margin="0,20"/>
-                        </BindableLayout.EmptyView>
-                        <BindableLayout.ItemTemplate>
-                            <DataTemplate x:DataType="services:UserDto">
-                                <Grid Padding="0,5" ColumnDefinitions="50,*,Auto" RowDefinitions="Auto,Auto"
-                                      BackgroundColor="{AppThemeBinding Light=White, Dark=#2a2a2a}">
-                                    <!-- Avatar Circle-->
-                                    <Border Grid.Row="0" Grid.RowSpan="2" Grid.Column="0"
-                                            WidthRequest="50" HeightRequest="50"
-                                            StrokeThickness="0"
-                                            BackgroundColor="{StaticResource Gray100}"
-                                            Margin="0,0,12,0">
-                                        <Border.StrokeShape>
-                                            <RoundRectangle CornerRadius="25"/>
-                                        </Border.StrokeShape>
-                                        <Label Text="👤" 
-                                               FontSize="24" 
-                                               HorizontalOptions="Center" 
-                                               VerticalOptions="Center"/>
-                                    </Border>
-
-                                    <!-- Info -->
-                                    <VerticalStackLayout Grid.Row="0" Grid.Column="1" Spacing="2">
-                                        <Label Text="{Binding UserName}" 
-                                               FontSize="16" 
-                                               FontAttributes="Bold"
-                                               TextColor="{AppThemeBinding Light=#1a1a1a, Dark=#e0e0e0}"/>
-                                        <Label Text="{Binding Email}" 
-                                               FontSize="13" 
-                                               TextColor="{StaticResource Gray600}"/>
-                                    </VerticalStackLayout>
-
-                                    <!-- Rol Badge -->
-                                    <Border Grid.Row="0" Grid.Column="2"
-                                            BackgroundColor="{Binding Role, Converter={StaticResource RoleToColorConverter}}"
-                                            StrokeThickness="0"
-                                            Padding="8,4"
-                                            VerticalOptions="Start">
-                                        <Border.StrokeShape>
-                                            <RoundRectangle CornerRadius="10"/>
-                                        </Border.StrokeShape>
-                                        <Label Text="{Binding Role}" 
-                                               FontSize="11" 
-                                               TextColor="White"
-                                               FontAttributes="Bold"/>
-                                    </Border>
-
-                                    <!-- Acciones -->
-                                    <HorizontalStackLayout Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2"
-                                                           Spacing="10"
-                                                           Margin="0,10,0,0">
-                                        <Button Text="✏️ Editar"
-                                                FontSize="12"
-                                                HeightRequest="35"
-                                                Padding="10,0"
-                                                BackgroundColor="{StaticResource Primary}"
-                                                TextColor="White"
-                                                CornerRadius="8"
-                                                Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:UsuariosViewModel}}, Path=StartEditingCommand}"
-                                                CommandParameter="{Binding .}"/>
-                                        <Button Text="🗑️ Eliminar"
-                                                FontSize="12"
-                                                HeightRequest="35"
-                                                Padding="10,0"
-                                                BackgroundColor="#dc3545"
-                                                TextColor="White"
-                                                CornerRadius="8"
-                                                Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:UsuariosViewModel}}, Path=DeleteUserCommand}"
-                                                CommandParameter="{Binding .}"/>
-                                    </HorizontalStackLayout>
-
-                                    <!-- Separator line -->
-                                    <BoxView Grid.Row="1" Grid.ColumnSpan="3" 
-                                             HeightRequest="1" 
-                                             Color="{AppThemeBinding Light=#e5e7eb, Dark=#404040}"
-                                             VerticalOptions="End"
-                                             Margin="0,10,0,0"/>
-                                </Grid>
-                            </DataTemplate>
-                        </BindableLayout.ItemTemplate>
                     </StackLayout>
+                </CollectionView.Header>
 
-            </StackLayout>
-            </ScrollView>
+                <CollectionView.EmptyView>
+                    <Label Text="No hay usuarios registrados" 
+                           TextColor="{StaticResource Gray600}"
+                           HorizontalOptions="Center"
+                           Margin="0,20"/>
+                </CollectionView.EmptyView>
+
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="services:UserDto">
+                        <Grid Padding="15,5" ColumnDefinitions="50,*,Auto" RowDefinitions="Auto,Auto"
+                              BackgroundColor="{AppThemeBinding Light=White, Dark=#2a2a2a}">
+                            <!-- Avatar Circle-->
+                            <Border Grid.Row="0" Grid.RowSpan="2" Grid.Column="0"
+                                    WidthRequest="50" HeightRequest="50"
+                                    StrokeThickness="0"
+                                    BackgroundColor="{StaticResource Gray100}"
+                                    Margin="0,0,12,0">
+                                <Border.StrokeShape>
+                                    <RoundRectangle CornerRadius="25"/>
+                                </Border.StrokeShape>
+                                <Label Text="👤" 
+                                       FontSize="24" 
+                                       HorizontalOptions="Center" 
+                                       VerticalOptions="Center"/>
+                            </Border>
+
+                            <!-- Info -->
+                            <VerticalStackLayout Grid.Row="0" Grid.Column="1" Spacing="2">
+                                <Label Text="{Binding UserName}" 
+                                       FontSize="16" 
+                                       FontAttributes="Bold"
+                                       TextColor="{AppThemeBinding Light=#1a1a1a, Dark=#e0e0e0}"/>
+                                <Label Text="{Binding Email}" 
+                                       FontSize="13" 
+                                       TextColor="{StaticResource Gray600}"/>
+                            </VerticalStackLayout>
+
+                            <!-- Rol Badge -->
+                            <Border Grid.Row="0" Grid.Column="2"
+                                    BackgroundColor="{Binding Role, Converter={StaticResource RoleToColorConverter}}"
+                                    StrokeThickness="0"
+                                    Padding="8,4"
+                                    VerticalOptions="Start">
+                                <Border.StrokeShape>
+                                    <RoundRectangle CornerRadius="10"/>
+                                </Border.StrokeShape>
+                                <Label Text="{Binding Role}" 
+                                       FontSize="11" 
+                                       TextColor="White"
+                                       FontAttributes="Bold"/>
+                            </Border>
+
+                            <!-- Acciones -->
+                            <HorizontalStackLayout Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2"
+                                                   Spacing="10"
+                                                   Margin="0,10,0,0">
+                                <Button Text="✏️ Editar"
+                                        FontSize="12"
+                                        HeightRequest="35"
+                                        Padding="10,0"
+                                        BackgroundColor="{StaticResource Primary}"
+                                        TextColor="White"
+                                        CornerRadius="8"
+                                        Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:UsuariosViewModel}}, Path=StartEditingCommand}"
+                                        CommandParameter="{Binding .}"/>
+                                <Button Text="🗑️ Eliminar"
+                                        FontSize="12"
+                                        HeightRequest="35"
+                                        Padding="10,0"
+                                        BackgroundColor="#dc3545"
+                                        TextColor="White"
+                                        CornerRadius="8"
+                                        Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:UsuariosViewModel}}, Path=DeleteUserCommand}"
+                                        CommandParameter="{Binding .}"/>
+                            </HorizontalStackLayout>
+
+                            <!-- Separator line -->
+                            <BoxView Grid.Row="1" Grid.ColumnSpan="3" 
+                                     HeightRequest="1" 
+                                     Color="{AppThemeBinding Light=#e5e7eb, Dark=#404040}"
+                                     VerticalOptions="End"
+                                     Margin="0,10,0,0"/>
+                        </Grid>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
         </RefreshView>
 
         <!-- MODAL: Crear Usuario -->
