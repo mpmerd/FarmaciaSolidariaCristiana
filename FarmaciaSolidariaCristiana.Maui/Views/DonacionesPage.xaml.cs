@@ -5,6 +5,7 @@ namespace FarmaciaSolidariaCristiana.Maui.Views;
 public partial class DonacionesPage : ContentPage
 {
     private readonly DonacionesViewModel _viewModel;
+    private bool _initialized;
 
     public DonacionesPage(DonacionesViewModel viewModel)
     {
@@ -15,6 +16,14 @@ public partial class DonacionesPage : ContentPage
     protected override async void OnAppearing()
     {
         base.OnAppearing();
-        await _viewModel.InitializeAsync();
+        if (!_initialized)
+        {
+            _initialized = true;
+            await _viewModel.InitializeAsync();
+        }
+        else
+        {
+            await _viewModel.LoadDonacionesCommand.ExecuteAsync(null);
+        }
     }
 }
