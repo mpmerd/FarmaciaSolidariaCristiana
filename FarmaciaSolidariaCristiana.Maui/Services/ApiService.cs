@@ -18,6 +18,12 @@ public class ApiService : IApiService
 
     private const string CacheKeyMedicamentos = "/api/medicines";
     private const string CacheKeyInsumos = "/api/supplies";
+    private const string CacheKeyTurnos = "/api/turnos";
+    private const string CacheKeyMisTurnos = "/api/turnos/my";
+    private const string CacheKeyDonaciones = "/api/donations";
+    private const string CacheKeyEntregas = "/api/deliveries";
+    private const string CacheKeyPacientes = "/api/patients";
+    private const string CacheKeyUsuarios = "/api/users";
 
     public ApiService(HttpClient httpClient, IAuthService authService, ICacheService cache)
     {
@@ -290,22 +296,39 @@ public class ApiService : IApiService
     }
 
     // === TURNOS ===
-    
-    public Task<ApiResponse<List<Turno>>> GetTurnosAsync()
-        => GetPagedAsync<Turno>("/api/turnos?pageSize=100");
 
-    public Task<ApiResponse<List<Turno>>> GetMisTurnosAsync()
-        => GetAsync<List<Turno>>("/api/turnos/my");
+    public async Task<ApiResponse<List<Turno>>> GetTurnosAsync()
+    {
+        if (_cache.TryGet<List<Turno>>(CacheKeyTurnos, out var cached) && cached != null)
+            return new ApiResponse<List<Turno>> { Success = true, Data = cached };
+        var result = await GetPagedAsync<Turno>("/api/turnos?pageSize=100");
+        if (result.Success && result.Data != null)
+            _cache.Set(CacheKeyTurnos, result.Data, TimeSpan.FromMinutes(2));
+        return result;
+    }
+
+    public async Task<ApiResponse<List<Turno>>> GetMisTurnosAsync()
+    {
+        if (_cache.TryGet<List<Turno>>(CacheKeyMisTurnos, out var cached) && cached != null)
+            return new ApiResponse<List<Turno>> { Success = true, Data = cached };
+        var result = await GetAsync<List<Turno>>("/api/turnos/my");
+        if (result.Success && result.Data != null)
+            _cache.Set(CacheKeyMisTurnos, result.Data, TimeSpan.FromMinutes(2));
+        return result;
+    }
 
     public Task<ApiResponse<Turno>> GetTurnoAsync(int id)
         => GetAsync<Turno>($"/api/turnos/{id}");
 
-    public Task<ApiResponse<Turno>> CrearTurnoAsync(CrearTurnoRequest request)
-        => PostAsync<Turno>("/api/turnos", request);
+    public async Task<ApiResponse<Turno>> CrearTurnoAsync(CrearTurnoRequest request)
+    {
+        var result = await PostAsync<Turno>("/api/turnos", request);
+        if (result.Success) { _cache.Invalidate(CacheKeyTurnos); _cache.Invalidate(CacheKeyMisTurnos); }
+        return result;
+    }
 
     public async Task<ApiResponse<Turno>> CrearTurnoMobileAsync(ViewModels.CrearTurnoMobileRequest request)
     {
-        // Convertir al formato que espera la API
         var apiRequest = new
         {
             DocumentoIdentidad = request.DocumentoIdentidad,
@@ -313,7 +336,9 @@ public class ApiService : IApiService
             Notas = request.Notas,
             Items = request.Items.Select(i => new { Id = i.Id, Cantidad = i.Cantidad }).ToList()
         };
-        return await PostAsync<Turno>("/api/turnos", apiRequest);
+        var result = await PostAsync<Turno>("/api/turnos", apiRequest);
+        if (result.Success) { _cache.Invalidate(CacheKeyTurnos); _cache.Invalidate(CacheKeyMisTurnos); }
+        return result;
     }
 
     public Task<ApiResponse<List<int>>> GetRestrictedMedicinesAsync(string documentoIdentidad)
@@ -362,17 +387,33 @@ public class ApiService : IApiService
         }
     }
 
-    public Task<ApiResponse<Turno>> AprobarTurnoAsync(int id, string? comentarios = null)
-        => PostAsync<Turno>($"/api/turnos/{id}/approve", new { Comentarios = comentarios });
+    public async Task<ApiResponse<Turno>> AprobarTurnoAsync(int id, string? comentarios = null)
+    {
+        var result = await PostAsync<Turno>($"/api/turnos/{id}/approve", new { Comentarios = comentarios });
+        if (result.Success) { _cache.Invalidate(CacheKeyTurnos); _cache.Invalidate(CacheKeyMisTurnos); }
+        return result;
+    }
 
-    public Task<ApiResponse<Turno>> RechazarTurnoAsync(int id, string motivo)
-        => PostAsync<Turno>($"/api/turnos/{id}/reject", new { motivo });
+    public async Task<ApiResponse<Turno>> RechazarTurnoAsync(int id, string motivo)
+    {
+        var result = await PostAsync<Turno>($"/api/turnos/{id}/reject", new { motivo });
+        if (result.Success) { _cache.Invalidate(CacheKeyTurnos); _cache.Invalidate(CacheKeyMisTurnos); }
+        return result;
+    }
 
-    public Task<ApiResponse<Turno>> ReprogramarTurnoAsync(int id, DateTime nuevaFecha, string? motivo)
-        => PostAsync<Turno>($"/api/turnos/{id}/reschedule", new { nuevaFecha, motivo });
+    public async Task<ApiResponse<Turno>> ReprogramarTurnoAsync(int id, DateTime nuevaFecha, string? motivo)
+    {
+        var result = await PostAsync<Turno>($"/api/turnos/{id}/reschedule", new { nuevaFecha, motivo });
+        if (result.Success) { _cache.Invalidate(CacheKeyTurnos); _cache.Invalidate(CacheKeyMisTurnos); }
+        return result;
+    }
 
-    public Task<ApiResponse<Turno>> CancelarTurnoAsync(int id, string motivo)
-        => PostAsync<Turno>($"/api/turnos/{id}/cancel", new { motivo });
+    public async Task<ApiResponse<Turno>> CancelarTurnoAsync(int id, string motivo)
+    {
+        var result = await PostAsync<Turno>($"/api/turnos/{id}/cancel", new { motivo });
+        if (result.Success) { _cache.Invalidate(CacheKeyTurnos); _cache.Invalidate(CacheKeyMisTurnos); }
+        return result;
+    }
 
     public Task<ApiResponse<CanCancelTurnoResponse>> PuedeCancelarTurnoAsync(int id)
         => GetAsync<CanCancelTurnoResponse>($"/api/turnos/{id}/can-cancel");
@@ -482,34 +523,68 @@ public class ApiService : IApiService
 
     // === DONACIONES ===
 
-    public Task<ApiResponse<List<Donation>>> GetDonacionesAsync()
-        => GetPagedAsync<Donation>("/api/donations?pageSize=500");
+    public async Task<ApiResponse<List<Donation>>> GetDonacionesAsync()
+    {
+        if (_cache.TryGet<List<Donation>>(CacheKeyDonaciones, out var cached) && cached != null)
+            return new ApiResponse<List<Donation>> { Success = true, Data = cached };
+        var result = await GetPagedAsync<Donation>("/api/donations?pageSize=500");
+        if (result.Success && result.Data != null)
+            _cache.Set(CacheKeyDonaciones, result.Data);
+        return result;
+    }
 
     public Task<ApiResponse<Donation>> GetDonacionAsync(int id)
         => GetAsync<Donation>($"/api/donations/{id}");
 
-    public Task<ApiResponse<Donation>> CrearDonacionAsync(Donation donacion)
-        => PostAsync<Donation>("/api/donations", donacion);
+    public async Task<ApiResponse<Donation>> CrearDonacionAsync(Donation donacion)
+    {
+        var result = await PostAsync<Donation>("/api/donations", donacion);
+        if (result.Success) _cache.Invalidate(CacheKeyDonaciones);
+        return result;
+    }
 
-    public Task<ApiResponse<Donation>> ActualizarDonacionAsync(Donation donacion)
-        => PutAsync<Donation>($"/api/donations/{donacion.Id}", donacion);
+    public async Task<ApiResponse<Donation>> ActualizarDonacionAsync(Donation donacion)
+    {
+        var result = await PutAsync<Donation>($"/api/donations/{donacion.Id}", donacion);
+        if (result.Success) _cache.Invalidate(CacheKeyDonaciones);
+        return result;
+    }
 
-    public Task<ApiResponse<bool>> EliminarDonacionAsync(int id)
-        => DeleteAsync($"/api/donations/{id}");
+    public async Task<ApiResponse<bool>> EliminarDonacionAsync(int id)
+    {
+        var result = await DeleteAsync($"/api/donations/{id}");
+        if (result.Success) _cache.Invalidate(CacheKeyDonaciones);
+        return result;
+    }
 
     // === ENTREGAS ===
 
-    public Task<ApiResponse<List<Delivery>>> GetEntregasAsync()
-        => GetPagedAsync<Delivery>("/api/deliveries?pageSize=500");
+    public async Task<ApiResponse<List<Delivery>>> GetEntregasAsync()
+    {
+        if (_cache.TryGet<List<Delivery>>(CacheKeyEntregas, out var cached) && cached != null)
+            return new ApiResponse<List<Delivery>> { Success = true, Data = cached };
+        var result = await GetPagedAsync<Delivery>("/api/deliveries?pageSize=500");
+        if (result.Success && result.Data != null)
+            _cache.Set(CacheKeyEntregas, result.Data, TimeSpan.FromMinutes(3));
+        return result;
+    }
 
     public Task<ApiResponse<Delivery>> GetEntregaAsync(int id)
         => GetAsync<Delivery>($"/api/deliveries/{id}");
 
-    public Task<ApiResponse<Delivery>> CrearEntregaAsync(Delivery entrega)
-        => PostAsync<Delivery>("/api/deliveries", entrega);
+    public async Task<ApiResponse<Delivery>> CrearEntregaAsync(Delivery entrega)
+    {
+        var result = await PostAsync<Delivery>("/api/deliveries", entrega);
+        if (result.Success) _cache.Invalidate(CacheKeyEntregas);
+        return result;
+    }
 
-    public Task<ApiResponse<bool>> EliminarEntregaAsync(int id)
-        => DeleteAsync($"/api/deliveries/{id}");
+    public async Task<ApiResponse<bool>> EliminarEntregaAsync(int id)
+    {
+        var result = await DeleteAsync($"/api/deliveries/{id}");
+        if (result.Success) _cache.Invalidate(CacheKeyEntregas);
+        return result;
+    }
 
     public Task<ApiResponse<List<TurnoForDelivery>>> GetTurnosAprobadosByIdentificationAsync(string identification)
         => GetAsync<List<TurnoForDelivery>>($"/api/turnos/by-identification/{Uri.EscapeDataString(identification)}");
@@ -537,25 +612,48 @@ public class ApiService : IApiService
         }
     }
 
-    public Task<ApiResponse<Delivery>> CreateDeliveryAsync(CreateDeliveryRequest request)
-        => PostAsync<Delivery>("/api/deliveries", request);
+    public async Task<ApiResponse<Delivery>> CreateDeliveryAsync(CreateDeliveryRequest request)
+    {
+        var result = await PostAsync<Delivery>("/api/deliveries", request);
+        if (result.Success) _cache.Invalidate(CacheKeyEntregas);
+        return result;
+    }
 
     // === PACIENTES ===
 
-    public Task<ApiResponse<List<Patient>>> GetPacientesAsync()
-        => GetPagedAsync<Patient>("/api/patients?pageSize=500");
+    public async Task<ApiResponse<List<Patient>>> GetPacientesAsync()
+    {
+        if (_cache.TryGet<List<Patient>>(CacheKeyPacientes, out var cached) && cached != null)
+            return new ApiResponse<List<Patient>> { Success = true, Data = cached };
+        var result = await GetPagedAsync<Patient>("/api/patients?pageSize=500");
+        if (result.Success && result.Data != null)
+            _cache.Set(CacheKeyPacientes, result.Data);
+        return result;
+    }
 
     public Task<ApiResponse<Patient>> GetPacienteAsync(int id)
         => GetAsync<Patient>($"/api/patients/{id}");
 
-    public Task<ApiResponse<Patient>> CrearPacienteAsync(Patient paciente)
-        => PostAsync<Patient>("/api/patients", paciente);
+    public async Task<ApiResponse<Patient>> CrearPacienteAsync(Patient paciente)
+    {
+        var result = await PostAsync<Patient>("/api/patients", paciente);
+        if (result.Success) _cache.Invalidate(CacheKeyPacientes);
+        return result;
+    }
 
-    public Task<ApiResponse<Patient>> ActualizarPacienteAsync(Patient paciente)
-        => PutAsync<Patient>($"/api/patients/{paciente.Id}", paciente);
+    public async Task<ApiResponse<Patient>> ActualizarPacienteAsync(Patient paciente)
+    {
+        var result = await PutAsync<Patient>($"/api/patients/{paciente.Id}", paciente);
+        if (result.Success) _cache.Invalidate(CacheKeyPacientes);
+        return result;
+    }
 
-    public Task<ApiResponse<bool>> DeletePacienteAsync(int id)
-        => DeleteAsync($"/api/patients/{id}");
+    public async Task<ApiResponse<bool>> DeletePacienteAsync(int id)
+    {
+        var result = await DeleteAsync($"/api/patients/{id}");
+        if (result.Success) _cache.Invalidate(CacheKeyPacientes);
+        return result;
+    }
 
     public Task<ApiResponse<List<PatientDocument>>> GetDocumentosPacienteAsync(int patientId)
         => GetAsync<List<PatientDocument>>($"/api/patients/{patientId}/documents");
@@ -866,11 +964,16 @@ public class ApiService : IApiService
 
     public async Task<ApiResponse<List<UserDto>>> GetUsuariosAsync()
     {
+        if (_cache.TryGet<List<UserDto>>(CacheKeyUsuarios, out var cached) && cached != null)
+            return new ApiResponse<List<UserDto>> { Success = true, Data = cached };
         try
         {
             await SetAuthHeaderAsync();
             var response = await _httpClient.GetAsync("/api/users");
-            return await ProcessResponseAsync<List<UserDto>>(response);
+            var result = await ProcessResponseAsync<List<UserDto>>(response);
+            if (result.Success && result.Data != null)
+                _cache.Set(CacheKeyUsuarios, result.Data);
+            return result;
         }
         catch (Exception ex)
         {
@@ -898,7 +1001,9 @@ public class ApiService : IApiService
         {
             await SetAuthHeaderAsync();
             var response = await _httpClient.PostAsJsonAsync("/api/users", request);
-            return await ProcessResponseAsync<UserDto>(response);
+            var result = await ProcessResponseAsync<UserDto>(response);
+            if (result.Success) _cache.Invalidate(CacheKeyUsuarios);
+            return result;
         }
         catch (Exception ex)
         {
@@ -912,7 +1017,9 @@ public class ApiService : IApiService
         {
             await SetAuthHeaderAsync();
             var response = await _httpClient.PutAsJsonAsync($"/api/users/{id}", request);
-            return await ProcessResponseAsync<UserDto>(response);
+            var result = await ProcessResponseAsync<UserDto>(response);
+            if (result.Success) _cache.Invalidate(CacheKeyUsuarios);
+            return result;
         }
         catch (Exception ex)
         {
@@ -926,7 +1033,9 @@ public class ApiService : IApiService
         {
             await SetAuthHeaderAsync();
             var response = await _httpClient.DeleteAsync($"/api/users/{id}");
-            return await ProcessResponseAsync<bool>(response);
+            var result = await ProcessResponseAsync<bool>(response);
+            if (result.Success) _cache.Invalidate(CacheKeyUsuarios);
+            return result;
         }
         catch (Exception ex)
         {

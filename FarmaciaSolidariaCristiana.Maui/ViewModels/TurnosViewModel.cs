@@ -48,10 +48,22 @@ public partial class TurnosViewModel : BaseViewModel
 
     private List<Turno> _allTurnos = new();
 
-    public TurnosViewModel(IAuthService authService, IApiService apiService) 
+    private readonly ICacheService _cache;
+    private const string CacheKeyTurnos = "/api/turnos";
+    private const string CacheKeyMisTurnos = "/api/turnos/my";
+
+    public TurnosViewModel(IAuthService authService, IApiService apiService, ICacheService cache) 
         : base(authService, apiService)
     {
         Title = "Turnos";
+        _cache = cache;
+    }
+
+    public async Task ForceRefreshAsync()
+    {
+        _cache.Invalidate(CacheKeyTurnos);
+        _cache.Invalidate(CacheKeyMisTurnos);
+        await LoadTurnosAsync();
     }
 
     [RelayCommand]
