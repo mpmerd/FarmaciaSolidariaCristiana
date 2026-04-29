@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using FarmaciaSolidariaCristiana.Data;
@@ -13,17 +14,20 @@ namespace FarmaciaSolidariaCristiana.Controllers
         private readonly ApplicationDbContext _context;
         private readonly IWebHostEnvironment _environment;
         private readonly IImageCompressionService _imageCompressionService;
+        private readonly UserManager<IdentityUser> _userManager;
         private readonly ILogger<PatientsController> _logger;
 
         public PatientsController(
             ApplicationDbContext context, 
             IWebHostEnvironment environment,
             IImageCompressionService imageCompressionService,
+            UserManager<IdentityUser> userManager,
             ILogger<PatientsController> logger)
         {
             _context = context;
             _environment = environment;
             _imageCompressionService = imageCompressionService;
+            _userManager = userManager;
             _logger = logger;
         }
 
@@ -765,6 +769,136 @@ namespace FarmaciaSolidariaCristiana.Controllers
             }
 
             await _context.SaveChangesAsync();
+        }
+
+        // ========================================
+        // Bloqueo de pacientes por préstamo de insumo
+        // Solo Admin y Farmacéutico
+        // ========================================
+
+        /// <summary>
+        /// Página de gestión de bloqueos por préstamo de insumo
+        /// </summary>
+        [Authorize(Roles = "Admin,Farmaceutico")]
+        [HttpGet]
+        public IActionResult Bloqueo()
+        {
+            return View();
+        }
+
+        /// <summary>
+        /// Autocompletado de pacientes por nombre o documento de identidad
+        /// </summary>
+        [Authorize(Roles = "Admin,Farmaceutico")]
+        [HttpGet]
+        public async Task<IActionResult> AutocompleteSearch(string q)
+        {
+            if (string.IsNullOrWhiteSpace(q) || q.Length < 2)
+            {
+                return Json(new List<object>());
+            }
+
+            var results = await _context.Patients
+                .Where(p => p.IsActive &&
+                    (p.FullName.Contains(q) || p.IdentificationDocument.Contains(q)))
+                .OrderBy(p => p.FullName)
+                .Take(10)
+                .Select(p => new
+                {
+                    id = p.Id,
+                    identificationDocument = p.IdentificationDocument,
+                    fullName = p.FullName,
+                    age = p.Age,
+                    isBlockedByLoan = p.IsBlockedByLoan,
+                    loanBlockDate = p.LoanBlockDate,
+                    loanBlockDescription = p.LoanBlockDescription,
+                    loanUnblockDate = p.LoanUnblockDate
+                })
+                .ToListAsync();
+
+            return Json(results);
+        }
+
+        /// <summary>
+        /// Bloquea un paciente por préstamo de insumo
+        /// </summary>
+        [Authorize(Roles = "Admin,Farmaceutico")]
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> BlockLoan(int id, string description)
+        {
+            if (string.IsNullOrWhiteSpace(description))
+            {
+                return Json(new { success = false, message = "La descripción del insumo en préstamo es requerida." });
+            }
+
+            var patient = await _context.Patients.FindAsync(id);
+            if (patient == null)
+            {
+                return Json(new { success = false, message = "Paciente no encontrado." });
+            }
+
+            if (patient.IsBlockedByLoan)
+            {
+                return Json(new { success = false, message = "El paciente ya está bloqueado por un préstamo de insumo." });
+            }
+
+            patient.IsBlockedByLoan = true;
+            patient.LoanBlockDate = DateTime.Now;
+            patient.LoanBlockDescription = description;
+            patient.LoanUnblockDate = null;
+            patient.LoanUnblockedByUserId = null;
+
+            await _context.SaveChangesAsync();
+
+            _logger.LogInformation("Paciente {PatientId} ({Name}) bloqueado por préstamo de insumo: {Description}",
+                id, patient.FullName, description);
+
+            return Json(new
+            {
+                success = true,
+                message = $"El paciente {patient.FullName} ha sido bloqueado por préstamo de insumo.",
+                blockDate = patient.LoanBlockDate?.ToString("dd/MM/yyyy HH:mm")
+            });
+        }
+
+        /// <summary>
+        /// Desbloquea un paciente cuando devuelve el insumo prestado
+        /// </summary>
+        [Authorize(Roles = "Admin,Farmaceutico")]
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> UnblockLoan(int id)
+        {
+            var patient = await _context.Patients.FindAsync(id);
+            if (patient == null)
+            {
+                return Json(new { success = false, message = "Paciente no encontrado." });
+            }
+
+            if (!patient.IsBlockedByLoan)
+            {
+                return Json(new { success = false, message = "El paciente no está bloqueado por préstamo." });
+            }
+
+            var currentUser = await _userManager.GetUserAsync(User);
+
+            patient.IsBlockedByLoan = false;
+            patient.LoanUnblockDate = DateTime.Now;
+            patient.LoanUnblockedByUserId = currentUser?.Id;
+
+            await _context.SaveChangesAsync();
+
+            _logger.LogInformation("Paciente {PatientId} ({Name}) desbloqueado por {User}",
+                id, patient.FullName, currentUser?.UserName);
+
+            return Json(new
+            {
+                success = true,
+                message = $"El paciente {patient.FullName} ha sido desbloqueado.",
+                unblockDate = patient.LoanUnblockDate?.ToString("dd/MM/yyyy HH:mm"),
+                unblockedBy = currentUser?.UserName
+            });
         }
     }
 

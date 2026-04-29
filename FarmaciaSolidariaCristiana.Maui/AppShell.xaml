@@ -114,6 +114,12 @@
         <ShellContent Route="PacientesPage"
                       ContentTemplate="{DataTemplate views:PacientesPage}"/>
     </FlyoutItem>
+
+    <!-- Bloqueos - Farmaceutico, Admin -->
+    <FlyoutItem x:Name="FlyoutBloqueos" Title="🔒 Bloqueos" Icon="lock.png">
+        <ShellContent Route="BloqueoPacientePage"
+                      ContentTemplate="{DataTemplate views:BloqueoPacientePage}"/>
+    </FlyoutItem>
     
     <!-- Patrocinadores - All roles -->
     <FlyoutItem Title="Patrocinadores" Icon="star.png">

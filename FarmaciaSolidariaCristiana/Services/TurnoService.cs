@@ -88,6 +88,18 @@ namespace FarmaciaSolidariaCristiana.Services
             // Hash del documento para buscar
             var documentHash = HashDocument(documentoIdentidad);
 
+            // Verificar si el paciente está bloqueado por préstamo de insumo
+            var patient = await _context.Patients
+                .FirstOrDefaultAsync(p => p.IdentificationDocument == documentoIdentidad && p.IsActive);
+
+            if (patient != null && patient.IsBlockedByLoan)
+            {
+                var motivo = string.IsNullOrWhiteSpace(patient.LoanBlockDescription)
+                    ? "préstamo de insumo pendiente de devolución"
+                    : patient.LoanBlockDescription;
+                return (false, $"Paciente bloqueado: debe un insumo a la farmacia ({motivo}). Debe devolver el insumo antes de solicitar un nuevo turno.", 0);
+            }
+
             var turnosEsteMes = await _context.Turnos
                 .Where(t => t.DocumentoIdentidadHash == documentHash && 
                            t.FechaSolicitud >= startOfMonth && 

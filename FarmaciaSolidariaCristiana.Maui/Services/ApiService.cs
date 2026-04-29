@@ -697,6 +697,27 @@ public class ApiService : IApiService
         }
     }
 
+    public async Task<ApiResponse<List<PatientAutoCompleteItem>>> SearchPacientesAutocompleteAsync(string q)
+    {
+        if (string.IsNullOrWhiteSpace(q) || q.Length < 2)
+            return new ApiResponse<List<PatientAutoCompleteItem>> { Success = true, Data = new List<PatientAutoCompleteItem>() };
+        return await GetAsync<List<PatientAutoCompleteItem>>($"/api/patients/search-autocomplete?q={Uri.EscapeDataString(q)}");
+    }
+
+    public async Task<ApiResponse<Patient>> BloquearPacientePrestamoAsync(int id, string description)
+    {
+        var result = await PostAsync<Patient>($"/api/patients/{id}/block-loan", new BlockPatientLoanRequest { Description = description });
+        if (result.Success) _cache.Invalidate(CacheKeyPacientes);
+        return result;
+    }
+
+    public async Task<ApiResponse<Patient>> DesbloquearPacientePrestamoAsync(int id)
+    {
+        var result = await PostAsync<Patient>($"/api/patients/{id}/unblock-loan", new { });
+        if (result.Success) _cache.Invalidate(CacheKeyPacientes);
+        return result;
+    }
+
     public async Task<ApiResponse<PatientDocument>> SubirDocumentoPacienteAsync(
         int patientId, string fileName, string documentType, byte[] fileBytes, string? notes)
     {

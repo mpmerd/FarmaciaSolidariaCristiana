@@ -90,6 +90,12 @@
                                         <small>Gestión</small>
                                     </a>
                                 </li>
+                                <li class="nav-item">
+                                    <a class="nav-link text-white text-center" asp-controller="Patients" asp-action="Bloqueo">
+                                        <i class="bi bi-lock-fill d-block"></i>
+                                        <small>Bloqueos</small>
+                                    </a>
+                                </li>
                             }
                             @if (User.IsInRole("Admin"))
                             {

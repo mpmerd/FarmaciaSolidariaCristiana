@@ -79,6 +79,7 @@ public static class MauiProgram
         builder.Services.AddTransient<NuevaDonacionViewModel>();
         builder.Services.AddTransient<UsuariosViewModel>();
         builder.Services.AddTransient<ReprogramarTurnosViewModel>();
+        builder.Services.AddTransient<BloqueoPacienteViewModel>();
 
         // Register Pages
         builder.Services.AddTransient<MaintenancePage>();
@@ -102,6 +103,7 @@ public static class MauiProgram
         builder.Services.AddTransient<UsuariosPage>();
         builder.Services.AddTransient<ReprogramarTurnosPage>();
         builder.Services.AddTransient<BroadcastPage>();
+        builder.Services.AddTransient<BloqueoPacientePage>();
         
         // Register AppShell
         builder.Services.AddTransient<AppShell>();

@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using FarmaciaSolidariaCristiana.Data;
@@ -14,13 +15,16 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
     public class PatientsApiController : ApiBaseController
     {
         private readonly ApplicationDbContext _context;
+        private readonly UserManager<IdentityUser> _userManager;
         private readonly ILogger<PatientsApiController> _logger;
 
         public PatientsApiController(
             ApplicationDbContext context,
+            UserManager<IdentityUser> userManager,
             ILogger<PatientsApiController> logger)
         {
             _context = context;
+            _userManager = userManager;
             _logger = logger;
         }
 
@@ -73,7 +77,11 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
                     KnownAllergies = p.KnownAllergies,
                     IsActive = p.IsActive,
                     RegistrationDate = p.RegistrationDate,
-                    DeliveriesCount = p.Deliveries != null ? p.Deliveries.Count : 0
+                    DeliveriesCount = p.Deliveries != null ? p.Deliveries.Count : 0,
+                    IsBlockedByLoan = p.IsBlockedByLoan,
+                    LoanBlockDate = p.LoanBlockDate,
+                    LoanBlockDescription = p.LoanBlockDescription,
+                    LoanUnblockDate = p.LoanUnblockDate
                 })
                 .ToListAsync();
 
@@ -100,6 +108,7 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
                 .Include(p => p.Deliveries)
                     .ThenInclude(d => d.Medicine)
                 .Include(p => p.Documents)
+                .Include(p => p.LoanUnblockedByUser)
                 .Where(p => p.Id == id)
                 .FirstOrDefaultAsync();
 
@@ -130,6 +139,11 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
                 Observations = patient.Observations,
                 IsActive = patient.IsActive,
                 RegistrationDate = patient.RegistrationDate,
+                IsBlockedByLoan = patient.IsBlockedByLoan,
+                LoanBlockDate = patient.LoanBlockDate,
+                LoanBlockDescription = patient.LoanBlockDescription,
+                LoanUnblockDate = patient.LoanUnblockDate,
+                LoanUnblockedByUserName = patient.LoanUnblockedByUser != null ? patient.LoanUnblockedByUser.UserName : null,
                 RecentDeliveries = patient.Deliveries
                     .OrderByDescending(d => d.DeliveryDate)
                     .Take(10)
@@ -174,7 +188,11 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
                     KnownAllergies = p.KnownAllergies,
                     IsActive = p.IsActive,
                     RegistrationDate = p.RegistrationDate,
-                    DeliveriesCount = p.Deliveries != null ? p.Deliveries.Count : 0
+                    DeliveriesCount = p.Deliveries != null ? p.Deliveries.Count : 0,
+                    IsBlockedByLoan = p.IsBlockedByLoan,
+                    LoanBlockDate = p.LoanBlockDate,
+                    LoanBlockDescription = p.LoanBlockDescription,
+                    LoanUnblockDate = p.LoanUnblockDate
                 })
                 .FirstOrDefaultAsync();
 
@@ -767,6 +785,146 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
                 ".webp" => "image/webp",
                 _ => "application/octet-stream"
             };
+        }
+
+        // ========================================
+        // Bloqueo de pacientes por préstamo de insumo
+        // ========================================
+
+        /// <summary>
+        /// Búsqueda rápida de pacientes con autocompletado por nombre o documento de identidad
+        /// </summary>
+        [HttpGet("search-autocomplete")]
+        [Authorize(Roles = "Admin,Farmaceutico")]
+        [ProducesResponseType(typeof(ApiResponse<List<PatientAutoCompleteDto>>), 200)]
+        public async Task<IActionResult> SearchAutocomplete([FromQuery] string q)
+        {
+            if (string.IsNullOrWhiteSpace(q) || q.Length < 2)
+            {
+                return ApiOk(new List<PatientAutoCompleteDto>());
+            }
+
+            var results = await _context.Patients
+                .Where(p => p.IsActive &&
+                    (p.FullName.Contains(q) || p.IdentificationDocument.Contains(q)))
+                .OrderBy(p => p.FullName)
+                .Take(10)
+                .Select(p => new PatientAutoCompleteDto
+                {
+                    Id = p.Id,
+                    IdentificationDocument = p.IdentificationDocument,
+                    FullName = p.FullName,
+                    Age = p.Age,
+                    IsBlockedByLoan = p.IsBlockedByLoan,
+                    LoanBlockDescription = p.LoanBlockDescription
+                })
+                .ToListAsync();
+
+            return ApiOk(results);
+        }
+
+        /// <summary>
+        /// Bloquea a un paciente por préstamo de insumo de la farmacia
+        /// </summary>
+        [HttpPost("{id}/block-loan")]
+        [Authorize(Roles = "Admin,Farmaceutico")]
+        [ProducesResponseType(typeof(ApiResponse<PatientDto>), 200)]
+        [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+        [ProducesResponseType(typeof(ApiResponse<object>), 404)]
+        public async Task<IActionResult> BlockLoan(int id, [FromBody] BlockPatientLoanRequest request)
+        {
+            if (!ModelState.IsValid)
+            {
+                return ApiError("Datos inválidos: " + string.Join(", ", ModelState.Values
+                    .SelectMany(v => v.Errors).Select(e => e.ErrorMessage)));
+            }
+
+            var patient = await _context.Patients.FindAsync(id);
+            if (patient == null)
+            {
+                return ApiError("Paciente no encontrado", 404);
+            }
+
+            if (patient.IsBlockedByLoan)
+            {
+                return ApiError("El paciente ya está bloqueado por un préstamo de insumo.");
+            }
+
+            patient.IsBlockedByLoan = true;
+            patient.LoanBlockDate = DateTime.Now;
+            patient.LoanBlockDescription = request.Description;
+            patient.LoanUnblockDate = null;
+            patient.LoanUnblockedByUserId = null;
+
+            await _context.SaveChangesAsync();
+
+            _logger.LogInformation("Paciente {PatientId} bloqueado por préstamo de insumo: {Description}",
+                id, request.Description);
+
+            return ApiOk(new PatientDto
+            {
+                Id = patient.Id,
+                IdentificationDocument = patient.IdentificationDocument,
+                FullName = patient.FullName,
+                Age = patient.Age,
+                Gender = patient.Gender,
+                IsActive = patient.IsActive,
+                RegistrationDate = patient.RegistrationDate,
+                IsBlockedByLoan = patient.IsBlockedByLoan,
+                LoanBlockDate = patient.LoanBlockDate,
+                LoanBlockDescription = patient.LoanBlockDescription
+            });
+        }
+
+        /// <summary>
+        /// Desbloquea a un paciente cuando devuelve el insumo prestado
+        /// </summary>
+        [HttpPost("{id}/unblock-loan")]
+        [Authorize(Roles = "Admin,Farmaceutico")]
+        [ProducesResponseType(typeof(ApiResponse<PatientDto>), 200)]
+        [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+        [ProducesResponseType(typeof(ApiResponse<object>), 404)]
+        public async Task<IActionResult> UnblockLoan(int id)
+        {
+            var patient = await _context.Patients.FindAsync(id);
+            if (patient == null)
+            {
+                return ApiError("Paciente no encontrado", 404);
+            }
+
+            if (!patient.IsBlockedByLoan)
+            {
+                return ApiError("El paciente no está bloqueado por préstamo.");
+            }
+
+            var currentUserId = _userManager.GetUserId(User);
+
+            patient.IsBlockedByLoan = false;
+            patient.LoanUnblockDate = DateTime.Now;
+            patient.LoanUnblockedByUserId = currentUserId;
+
+            await _context.SaveChangesAsync();
+
+            var unblockUserName = (await _userManager.FindByIdAsync(currentUserId ?? ""))?.UserName;
+
+            _logger.LogInformation("Paciente {PatientId} desbloqueado por préstamo por el usuario {UserId}",
+                id, currentUserId);
+
+            return ApiOk(new PatientDto
+            {
+                Id = patient.Id,
+                IdentificationDocument = patient.IdentificationDocument,
+                FullName = patient.FullName,
+                Age = patient.Age,
+                Gender = patient.Gender,
+                IsActive = patient.IsActive,
+                RegistrationDate = patient.RegistrationDate,
+                IsBlockedByLoan = patient.IsBlockedByLoan,
+                LoanBlockDate = patient.LoanBlockDate,
+                LoanBlockDescription = patient.LoanBlockDescription,
+                LoanUnblockDate = patient.LoanUnblockDate,
+                LoanUnblockedByUserName = unblockUserName
+            });
         }
     }
 

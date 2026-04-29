@@ -295,6 +295,23 @@ namespace FarmaciaSolidariaCristiana.Migrations
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
+                    b.Property<bool>("IsBlockedByLoan")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("LoanBlockDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("LoanBlockDescription")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime?>("LoanUnblockDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("LoanUnblockedByUserId")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
                     b.Property<string>("KnownAllergies")
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
@@ -327,6 +344,8 @@ namespace FarmaciaSolidariaCristiana.Migrations
                         .HasColumnType("decimal(5,2)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("LoanUnblockedByUserId");
 
                     b.ToTable("Patients");
                 });
@@ -895,6 +914,16 @@ namespace FarmaciaSolidariaCristiana.Migrations
                         .IsRequired();
 
                     b.Navigation("Patient");
+                });
+
+            modelBuilder.Entity("FarmaciaSolidariaCristiana.Models.Patient", b =>
+                {
+                    b.HasOne("Microsoft.AspNetCore.Identity.IdentityUser", "LoanUnblockedByUser")
+                        .WithMany()
+                        .HasForeignKey("LoanUnblockedByUserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("LoanUnblockedByUser");
                 });
 
             modelBuilder.Entity("FarmaciaSolidariaCristiana.Models.Turno", b =>

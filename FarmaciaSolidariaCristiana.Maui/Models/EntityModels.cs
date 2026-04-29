@@ -154,6 +154,13 @@ public class Patient
     public bool IsActive { get; set; }
     public DateTime RegistrationDate { get; set; }
     public int DeliveriesCount { get; set; }
+
+    // Bloqueo por préstamo de insumo
+    public bool IsBlockedByLoan { get; set; }
+    public DateTime? LoanBlockDate { get; set; }
+    public string? LoanBlockDescription { get; set; }
+    public DateTime? LoanUnblockDate { get; set; }
+    public string? LoanUnblockedByUserName { get; set; }
     
     // Propiedad calculada para mostrar presión arterial
     public string BloodPressureDisplay => 
@@ -328,4 +335,29 @@ public class PatientInfo
     public string IdentificationDocument { get; set; } = string.Empty;
     public int? Age { get; set; }
     public DateTime RegistrationDate { get; set; }
+}
+
+/// <summary>
+/// Resultado de búsqueda de autocompletado de paciente
+/// </summary>
+public class PatientAutoCompleteItem
+{
+    public int Id { get; set; }
+    public string IdentificationDocument { get; set; } = string.Empty;
+    public string FullName { get; set; } = string.Empty;
+    public int Age { get; set; }
+    public bool IsBlockedByLoan { get; set; }
+    public string? LoanBlockDescription { get; set; }
+
+    public string DisplayLabel => $"{FullName} – {IdentificationDocument}";
+    public string BlockStatus => IsBlockedByLoan ? "🔒 Bloqueado" : "✅ Activo";
+    public Color BlockColor => IsBlockedByLoan ? Colors.Red : Colors.Green;
+}
+
+/// <summary>
+/// Request para bloquear un paciente por préstamo de insumo
+/// </summary>
+public class BlockPatientLoanRequest
+{
+    public string Description { get; set; } = string.Empty;
 }
