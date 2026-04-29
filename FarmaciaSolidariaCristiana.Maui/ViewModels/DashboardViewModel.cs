@@ -35,6 +35,11 @@ public partial class DashboardViewModel : BaseViewModel
     [ObservableProperty]
     private bool _canViewReports;
 
+    [ObservableProperty]
+    private bool _isRefreshingInBackground;
+
+    public bool IsDataLoaded { get; private set; }
+
     public DashboardViewModel(IAuthService authService, IApiService apiService) 
         : base(authService, apiService)
     {
@@ -62,7 +67,26 @@ public partial class DashboardViewModel : BaseViewModel
 
             // Cargar estadísticas
             await LoadStatisticsAsync();
+            IsDataLoaded = true;
         });
+    }
+
+    public async Task RefreshInBackgroundAsync()
+    {
+        if (IsRefreshingInBackground) return;
+        try
+        {
+            IsRefreshingInBackground = true;
+            await LoadStatisticsAsync();
+        }
+        catch
+        {
+            // Actualización silenciosa — no interrumpir al usuario
+        }
+        finally
+        {
+            IsRefreshingInBackground = false;
+        }
     }
 
     private async Task LoadStatisticsAsync()

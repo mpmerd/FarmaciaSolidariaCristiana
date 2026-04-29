@@ -53,6 +53,7 @@ public static class MauiProgram
 
         // Register Services
         builder.Services.AddSingleton<IAuthService, AuthService>();
+        builder.Services.AddSingleton<ICacheService, CacheService>();
         builder.Services.AddSingleton<IApiService, ApiService>();
         builder.Services.AddSingleton<INotificationService, NotificationService>();
         builder.Services.AddSingleton<IPollingNotificationService, PollingNotificationService>();

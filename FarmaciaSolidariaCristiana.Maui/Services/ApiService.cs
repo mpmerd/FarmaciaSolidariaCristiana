@@ -13,12 +13,17 @@ public class ApiService : IApiService
 {
     private readonly HttpClient _httpClient;
     private readonly IAuthService _authService;
+    private readonly ICacheService _cache;
     private readonly JsonSerializerOptions _jsonOptions;
 
-    public ApiService(HttpClient httpClient, IAuthService authService)
+    private const string CacheKeyMedicamentos = "/api/medicines";
+    private const string CacheKeyInsumos = "/api/supplies";
+
+    public ApiService(HttpClient httpClient, IAuthService authService, ICacheService cache)
     {
         _httpClient = httpClient;
         _authService = authService;
+        _cache = cache;
         _jsonOptions = new JsonSerializerOptions
         {
             PropertyNameCaseInsensitive = true
@@ -403,37 +408,77 @@ public class ApiService : IApiService
 
     // === MEDICAMENTOS ===
 
-    public Task<ApiResponse<List<Medicine>>> GetMedicamentosAsync()
-        => GetPagedAsync<Medicine>("/api/medicines?pageSize=2000");
+    public async Task<ApiResponse<List<Medicine>>> GetMedicamentosAsync()
+    {
+        if (_cache.TryGet<List<Medicine>>(CacheKeyMedicamentos, out var cached) && cached != null)
+            return new ApiResponse<List<Medicine>> { Success = true, Data = cached };
+
+        var result = await GetPagedAsync<Medicine>("/api/medicines?pageSize=2000");
+        if (result.Success && result.Data != null)
+            _cache.Set(CacheKeyMedicamentos, result.Data);
+        return result;
+    }
 
     public Task<ApiResponse<Medicine>> GetMedicamentoAsync(int id)
         => GetAsync<Medicine>($"/api/medicines/{id}");
 
-    public Task<ApiResponse<Medicine>> CrearMedicamentoAsync(Medicine medicamento)
-        => PostAsync<Medicine>("/api/medicines", medicamento);
+    public async Task<ApiResponse<Medicine>> CrearMedicamentoAsync(Medicine medicamento)
+    {
+        var result = await PostAsync<Medicine>("/api/medicines", medicamento);
+        if (result.Success) _cache.Invalidate(CacheKeyMedicamentos);
+        return result;
+    }
 
-    public Task<ApiResponse<Medicine>> ActualizarMedicamentoAsync(Medicine medicamento)
-        => PutAsync<Medicine>($"/api/medicines/{medicamento.Id}", medicamento);
+    public async Task<ApiResponse<Medicine>> ActualizarMedicamentoAsync(Medicine medicamento)
+    {
+        var result = await PutAsync<Medicine>($"/api/medicines/{medicamento.Id}", medicamento);
+        if (result.Success) _cache.Invalidate(CacheKeyMedicamentos);
+        return result;
+    }
 
-    public Task<ApiResponse<bool>> EliminarMedicamentoAsync(int id)
-        => DeleteAsync($"/api/medicines/{id}");
+    public async Task<ApiResponse<bool>> EliminarMedicamentoAsync(int id)
+    {
+        var result = await DeleteAsync($"/api/medicines/{id}");
+        if (result.Success) _cache.Invalidate(CacheKeyMedicamentos);
+        return result;
+    }
 
     // === INSUMOS ===
 
-    public Task<ApiResponse<List<Supply>>> GetInsumosAsync()
-        => GetPagedAsync<Supply>("/api/supplies?pageSize=2000");
+    public async Task<ApiResponse<List<Supply>>> GetInsumosAsync()
+    {
+        if (_cache.TryGet<List<Supply>>(CacheKeyInsumos, out var cached) && cached != null)
+            return new ApiResponse<List<Supply>> { Success = true, Data = cached };
+
+        var result = await GetPagedAsync<Supply>("/api/supplies?pageSize=2000");
+        if (result.Success && result.Data != null)
+            _cache.Set(CacheKeyInsumos, result.Data);
+        return result;
+    }
 
     public Task<ApiResponse<Supply>> GetInsumoAsync(int id)
         => GetAsync<Supply>($"/api/supplies/{id}");
 
-    public Task<ApiResponse<Supply>> CrearInsumoAsync(Supply insumo)
-        => PostAsync<Supply>("/api/supplies", insumo);
+    public async Task<ApiResponse<Supply>> CrearInsumoAsync(Supply insumo)
+    {
+        var result = await PostAsync<Supply>("/api/supplies", insumo);
+        if (result.Success) _cache.Invalidate(CacheKeyInsumos);
+        return result;
+    }
 
-    public Task<ApiResponse<Supply>> ActualizarInsumoAsync(Supply insumo)
-        => PutAsync<Supply>($"/api/supplies/{insumo.Id}", insumo);
+    public async Task<ApiResponse<Supply>> ActualizarInsumoAsync(Supply insumo)
+    {
+        var result = await PutAsync<Supply>($"/api/supplies/{insumo.Id}", insumo);
+        if (result.Success) _cache.Invalidate(CacheKeyInsumos);
+        return result;
+    }
 
-    public Task<ApiResponse<bool>> EliminarInsumoAsync(int id)
-        => DeleteAsync($"/api/supplies/{id}");
+    public async Task<ApiResponse<bool>> EliminarInsumoAsync(int id)
+    {
+        var result = await DeleteAsync($"/api/supplies/{id}");
+        if (result.Success) _cache.Invalidate(CacheKeyInsumos);
+        return result;
+    }
 
     // === DONACIONES ===
 
