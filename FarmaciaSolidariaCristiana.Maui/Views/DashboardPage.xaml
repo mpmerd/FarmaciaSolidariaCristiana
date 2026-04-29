@@ -29,10 +29,18 @@
                 </Frame>
 
                 <!-- Stats Grid -->
-                <Label Text="Resumen"
-                       FontSize="18"
-                       FontAttributes="Bold"
-                       Margin="0,10,0,5"/>
+                <HorizontalStackLayout Spacing="8" Margin="0,10,0,5" VerticalOptions="Center">
+                    <Label Text="Resumen"
+                           FontSize="18"
+                           FontAttributes="Bold"
+                           VerticalOptions="Center"/>
+                    <ActivityIndicator IsRunning="{Binding IsRefreshingInBackground}"
+                                       IsVisible="{Binding IsRefreshingInBackground}"
+                                       Color="{StaticResource Primary}"
+                                       WidthRequest="18"
+                                       HeightRequest="18"
+                                       VerticalOptions="Center"/>
+                </HorizontalStackLayout>
                 
                 <Grid ColumnDefinitions="*,*" 
                       RowDefinitions="Auto,Auto"
