@@ -1,0 +1,294 @@
+@{
+    ViewData["Title"] = "Bloqueo por Préstamo de Insumo";
+}
+
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h2>
+                <i class="bi bi-lock-fill text-danger"></i> Bloqueo por Préstamo de Insumo
+            </h2>
+            <p class="text-muted">Bloquee a un paciente cuando deba un insumo de la farmacia. El bloqueo impide que el paciente solicite nuevos turnos hasta que devuelva el insumo.</p>
+        </div>
+    </div>
+
+    <!-- Búsqueda con autocompletado -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <h5 class="card-title"><i class="bi bi-search"></i> Buscar Paciente</h5>
+            <div class="position-relative">
+                <input type="text" id="searchInput" class="form-control form-control-lg"
+                       placeholder="Buscar por nombre o número de carnet/pasaporte..."
+                       autocomplete="off" />
+                <div id="autocompleteResults" class="position-absolute w-100 bg-white border rounded shadow-sm"
+                     style="z-index: 1000; display: none; max-height: 300px; overflow-y: auto; top: 100%;"></div>
+            </div>
+            <small class="text-muted mt-1 d-block">Escriba al menos 2 caracteres para buscar.</small>
+        </div>
+    </div>
+
+    <!-- Panel del paciente seleccionado -->
+    <div id="patientPanel" style="display: none;">
+        <div class="card shadow-sm mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="bi bi-person-fill"></i> Paciente Seleccionado</h5>
+                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="clearPatient()">
+                    <i class="bi bi-x"></i> Limpiar
+                </button>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>Nombre:</strong> <span id="patientName"></span></p>
+                        <p><strong>Carnet/Pasaporte:</strong> <span id="patientDoc"></span></p>
+                        <p><strong>Edad:</strong> <span id="patientAge"></span> años</p>
+                    </div>
+                    <div class="col-md-6" id="blockInfoPanel" style="display: none;">
+                        <div class="alert alert-danger mb-0">
+                            <strong><i class="bi bi-lock-fill"></i> Bloqueado por préstamo</strong>
+                            <p class="mb-1 mt-1"><strong>Insumo:</strong> <span id="blockDescription"></span></p>
+                            <p class="mb-1"><strong>Fecha bloqueo:</strong> <span id="blockDate"></span></p>
+                            <p class="mb-0" id="unblockInfoRow" style="display:none;">
+                                <strong>Desbloqueado:</strong> <span id="unblockDate"></span>
+                            </p>
+                        </div>
+                    </div>
+                    <div class="col-md-6" id="noBlockInfoPanel">
+                        <div class="alert alert-success mb-0">
+                            <i class="bi bi-unlock-fill"></i> <strong>Paciente sin bloqueo activo</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Formulario de bloqueo (visible si no está bloqueado) -->
+        <div id="blockFormPanel" class="card shadow-sm mb-4 border-danger" style="display: none;">
+            <div class="card-header bg-danger text-white">
+                <h5 class="mb-0"><i class="bi bi-lock-fill"></i> Bloquear Paciente por Préstamo</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label for="blockDescriptionInput" class="form-label">
+                        <strong>Descripción del insumo en préstamo <span class="text-danger">*</span></strong>
+                    </label>
+                    <textarea id="blockDescriptionInput" class="form-control" rows="3"
+                              placeholder="Ej: Silla de ruedas (prestada el 15/04/2026), Muletas, Andador, etc."
+                              maxlength="500"></textarea>
+                    <small class="text-muted">Describe el insumo que debe la farmacia (máx. 500 caracteres).</small>
+                </div>
+                <button type="button" class="btn btn-danger" onclick="blockPatient()">
+                    <i class="bi bi-lock-fill"></i> Bloquear Paciente
+                </button>
+            </div>
+        </div>
+
+        <!-- Botón de desbloqueo (visible si está bloqueado) -->
+        <div id="unblockPanel" class="card shadow-sm mb-4 border-success" style="display: none;">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0"><i class="bi bi-unlock-fill"></i> Desbloquear Paciente</h5>
+            </div>
+            <div class="card-body">
+                <p>El paciente <strong id="unblockPatientName"></strong> será desbloqueado al confirmar que devolvió el insumo a la farmacia.</p>
+                <button type="button" class="btn btn-success" onclick="unblockPatient()">
+                    <i class="bi bi-unlock-fill"></i> Confirmar Devolución y Desbloquear
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mensaje de resultado -->
+    <div id="resultMessage" style="display: none;"></div>
+</div>
+
+@section Scripts {
+    <script>
+        let selectedPatientId = null;
+        let selectedPatientBlocked = false;
+        let searchTimeout = null;
+        const antiForgeryToken = document.querySelector('input[name="__RequestVerificationToken"]')?.value
+            || '@Html.AntiForgeryToken()'.match(/value="([^"]+)"/)?.[1] || '';
+
+        document.getElementById('searchInput').addEventListener('input', function () {
+            clearTimeout(searchTimeout);
+            const q = this.value.trim();
+            if (q.length < 2) {
+                hideAutocomplete();
+                return;
+            }
+            searchTimeout = setTimeout(() => searchPatients(q), 300);
+        });
+
+        document.addEventListener('click', function (e) {
+            if (!document.getElementById('searchInput').contains(e.target) &&
+                !document.getElementById('autocompleteResults').contains(e.target)) {
+                hideAutocomplete();
+            }
+        });
+
+        function searchPatients(q) {
+            fetch('@Url.Action("AutocompleteSearch", "Patients")?q=' + encodeURIComponent(q))
+                .then(r => r.json())
+                .then(data => {
+                    const container = document.getElementById('autocompleteResults');
+                    if (!data || data.length === 0) {
+                        container.innerHTML = '<div class="p-3 text-muted">No se encontraron pacientes.</div>';
+                        container.style.display = 'block';
+                        return;
+                    }
+                    container.innerHTML = data.map(p => `
+                        <div class="p-2 border-bottom d-flex align-items-center justify-content-between autocomplete-item"
+                             style="cursor:pointer;" onclick="selectPatient(${p.id})">
+                            <div>
+                                <strong>${escapeHtml(p.fullName)}</strong>
+                                <small class="text-muted d-block">${escapeHtml(p.identificationDocument)}</small>
+                            </div>
+                            ${p.isBlockedByLoan
+                                ? '<span class="badge bg-danger"><i class="bi bi-lock-fill"></i> Bloqueado</span>'
+                                : '<span class="badge bg-success"><i class="bi bi-unlock-fill"></i> Activo</span>'}
+                        </div>`).join('');
+                    container.style.display = 'block';
+                })
+                .catch(() => hideAutocomplete());
+        }
+
+        function selectPatient(id) {
+            hideAutocomplete();
+            fetch('@Url.Action("AutocompleteSearch", "Patients")?q=id_' + id)
+                .then(() => {
+                    // Re-fetch by searching to get the selected patient's info
+                    return fetch('@Url.Action("AutocompleteSearch", "Patients")?q=' +
+                        encodeURIComponent(document.getElementById('searchInput').value));
+                })
+                .then(r => r.json())
+                .then(data => {
+                    const patient = data.find(p => p.id === id);
+                    if (patient) showPatientPanel(patient);
+                });
+        }
+
+        function showPatientPanel(patient) {
+            selectedPatientId = patient.id;
+            selectedPatientBlocked = patient.isBlockedByLoan;
+
+            document.getElementById('patientName').textContent = patient.fullName;
+            document.getElementById('patientDoc').textContent = patient.identificationDocument;
+            document.getElementById('patientAge').textContent = patient.age;
+
+            if (patient.isBlockedByLoan) {
+                document.getElementById('blockInfoPanel').style.display = 'block';
+                document.getElementById('noBlockInfoPanel').style.display = 'none';
+                document.getElementById('blockDescription').textContent = patient.loanBlockDescription || '-';
+                document.getElementById('blockDate').textContent = patient.loanBlockDate
+                    ? new Date(patient.loanBlockDate).toLocaleDateString('es-ES') : '-';
+                document.getElementById('blockFormPanel').style.display = 'none';
+                document.getElementById('unblockPanel').style.display = 'block';
+                document.getElementById('unblockPatientName').textContent = patient.fullName;
+            } else {
+                document.getElementById('blockInfoPanel').style.display = 'none';
+                document.getElementById('noBlockInfoPanel').style.display = 'block';
+                document.getElementById('blockFormPanel').style.display = 'block';
+                document.getElementById('unblockPanel').style.display = 'none';
+                document.getElementById('blockDescriptionInput').value = '';
+            }
+
+            document.getElementById('patientPanel').style.display = 'block';
+            hideResult();
+        }
+
+        function clearPatient() {
+            selectedPatientId = null;
+            selectedPatientBlocked = false;
+            document.getElementById('patientPanel').style.display = 'none';
+            document.getElementById('searchInput').value = '';
+            hideResult();
+        }
+
+        function blockPatient() {
+            if (!selectedPatientId) return;
+            const description = document.getElementById('blockDescriptionInput').value.trim();
+            if (!description) {
+                showResult('error', 'Debe ingresar la descripción del insumo en préstamo.');
+                return;
+            }
+
+            if (!confirm(`¿Confirma el bloqueo del paciente por préstamo del insumo:\n"${description}"?`)) return;
+
+            const formData = new FormData();
+            formData.append('id', selectedPatientId);
+            formData.append('description', description);
+            formData.append('__RequestVerificationToken', getAntiForgeryToken());
+
+            fetch('@Url.Action("BlockLoan", "Patients")', { method: 'POST', body: formData })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        showResult('success', data.message);
+                        clearPatient();
+                    } else {
+                        showResult('error', data.message || 'Error al bloquear el paciente.');
+                    }
+                })
+                .catch(() => showResult('error', 'Error de conexión.'));
+        }
+
+        function unblockPatient() {
+            if (!selectedPatientId) return;
+            if (!confirm('¿Confirma que el paciente devolvió el insumo y desea desbloquearlo?')) return;
+
+            const formData = new FormData();
+            formData.append('id', selectedPatientId);
+            formData.append('__RequestVerificationToken', getAntiForgeryToken());
+
+            fetch('@Url.Action("UnblockLoan", "Patients")', { method: 'POST', body: formData })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        showResult('success', data.message);
+                        clearPatient();
+                    } else {
+                        showResult('error', data.message || 'Error al desbloquear el paciente.');
+                    }
+                })
+                .catch(() => showResult('error', 'Error de conexión.'));
+        }
+
+        function getAntiForgeryToken() {
+            return document.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
+        }
+
+        function showResult(type, message) {
+            const el = document.getElementById('resultMessage');
+            el.className = type === 'success' ? 'alert alert-success' : 'alert alert-danger';
+            el.innerHTML = `<i class="bi bi-${type === 'success' ? 'check-circle' : 'exclamation-triangle'}-fill"></i> ${escapeHtml(message)}`;
+            el.style.display = 'block';
+            window.scrollTo(0, el.offsetTop - 20);
+        }
+
+        function hideResult() {
+            document.getElementById('resultMessage').style.display = 'none';
+        }
+
+        function hideAutocomplete() {
+            document.getElementById('autocompleteResults').style.display = 'none';
+        }
+
+        function escapeHtml(str) {
+            const d = document.createElement('div');
+            d.appendChild(document.createTextNode(str));
+            return d.innerHTML;
+        }
+
+        // Hover effect on autocomplete items
+        document.getElementById('autocompleteResults').addEventListener('mouseover', function (e) {
+            const item = e.target.closest('.autocomplete-item');
+            if (item) item.style.backgroundColor = '#f0f4ff';
+        });
+        document.getElementById('autocompleteResults').addEventListener('mouseout', function (e) {
+            const item = e.target.closest('.autocomplete-item');
+            if (item) item.style.backgroundColor = '';
+        });
+    </script>
+}
+
+@Html.AntiForgeryToken()

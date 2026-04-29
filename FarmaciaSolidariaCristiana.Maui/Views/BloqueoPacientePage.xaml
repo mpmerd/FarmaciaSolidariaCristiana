@@ -1,0 +1,215 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:viewmodels="clr-namespace:FarmaciaSolidariaCristiana.Maui.ViewModels"
+             xmlns:models="clr-namespace:FarmaciaSolidariaCristiana.Maui.Models"
+             x:Class="FarmaciaSolidariaCristiana.Maui.Views.BloqueoPacientePage"
+             x:DataType="viewmodels:BloqueoPacienteViewModel"
+             Title="{Binding Title}"
+             BackgroundColor="{StaticResource BackgroundColor}">
+
+    <ScrollView>
+        <StackLayout Padding="15" Spacing="15">
+
+            <!-- Header -->
+            <Frame BackgroundColor="#FFEBEE" BorderColor="Transparent" CornerRadius="10" Padding="15">
+                <StackLayout Spacing="5">
+                    <Label Text="🔒 Bloqueo por Préstamo de Insumo"
+                           FontSize="20" FontAttributes="Bold"
+                           TextColor="#C62828"/>
+                    <Label Text="Bloquee a un paciente que deba un insumo de la farmacia. No podrá solicitar turnos hasta devolverlo."
+                           FontSize="13"
+                           TextColor="{AppThemeBinding Light=#555555, Dark=#bbbbbb}"
+                           LineBreakMode="WordWrap"/>
+                </StackLayout>
+            </Frame>
+
+            <!-- Búsqueda -->
+            <Frame BackgroundColor="{AppThemeBinding Light=White, Dark=#2a2a2a}"
+                   BorderColor="Transparent" CornerRadius="10" Padding="15">
+                <StackLayout Spacing="10">
+                    <Label Text="Buscar Paciente"
+                           FontSize="16" FontAttributes="Bold"
+                           TextColor="{AppThemeBinding Light=#1a1a1a, Dark=#e0e0e0}"/>
+                    <Entry Placeholder="Nombre o carnet/pasaporte..."
+                           Text="{Binding SearchText}"
+                           Keyboard="Text"
+                           ClearButtonVisibility="WhileEditing"
+                           BackgroundColor="{AppThemeBinding Light=#f5f5f5, Dark=#333333}"
+                           TextColor="{AppThemeBinding Light=#1a1a1a, Dark=#e0e0e0}"/>
+
+                    <!-- Resultados de búsqueda (overlay) -->
+                    <CollectionView ItemsSource="{Binding SearchResults}"
+                                    IsVisible="{Binding IsSearchResultsVisible}"
+                                    MaximumHeightRequest="250"
+                                    SelectionMode="None">
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate x:DataType="models:PatientAutoCompleteItem">
+                                <Frame Margin="0,2" Padding="10"
+                                       BackgroundColor="{AppThemeBinding Light=#f0f4ff, Dark=#1e2a40}"
+                                       BorderColor="Transparent" CornerRadius="8">
+                                    <Frame.GestureRecognizers>
+                                        <TapGestureRecognizer
+                                            Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:BloqueoPacienteViewModel}}, Path=SelectPatientCommand}"
+                                            CommandParameter="{Binding}"/>
+                                    </Frame.GestureRecognizers>
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <StackLayout Grid.Column="0" Spacing="2">
+                                            <Label Text="{Binding FullName}"
+                                                   FontAttributes="Bold" FontSize="15"
+                                                   TextColor="{AppThemeBinding Light=#1a1a1a, Dark=#e0e0e0}"/>
+                                            <Label Text="{Binding IdentificationDocument}"
+                                                   FontSize="13"
+                                                   TextColor="{StaticResource Gray600}"/>
+                                        </StackLayout>
+                                        <Label Grid.Column="1"
+                                               Text="{Binding BlockStatus}"
+                                               TextColor="{Binding BlockColor}"
+                                               FontSize="12" FontAttributes="Bold"
+                                               VerticalOptions="Center"/>
+                                    </Grid>
+                                </Frame>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+
+                    <ActivityIndicator IsRunning="{Binding IsBusy}"
+                                       IsVisible="{Binding IsBusy}"
+                                       Color="{StaticResource Primary}"
+                                       HorizontalOptions="Center"/>
+                </StackLayout>
+            </Frame>
+
+            <!-- Panel del paciente seleccionado -->
+            <StackLayout IsVisible="{Binding HasSelectedPatient}" Spacing="15">
+
+                <!-- Info del paciente -->
+                <Frame BackgroundColor="{AppThemeBinding Light=White, Dark=#2a2a2a}"
+                       BorderColor="Transparent" CornerRadius="10" Padding="15">
+                    <StackLayout Spacing="8">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <Label Grid.Column="0" Text="Paciente Seleccionado"
+                                   FontSize="16" FontAttributes="Bold"
+                                   TextColor="{AppThemeBinding Light=#1a1a1a, Dark=#e0e0e0}"/>
+                            <Button Grid.Column="1" Text="✕ Limpiar"
+                                    Command="{Binding ClearPatientCommand}"
+                                    BackgroundColor="Transparent"
+                                    TextColor="{StaticResource Gray600}"
+                                    FontSize="12" Padding="5,2"/>
+                        </Grid>
+
+                        <Label FontSize="15" TextColor="{AppThemeBinding Light=#1a1a1a, Dark=#e0e0e0}">
+                            <Label.FormattedText>
+                                <FormattedString>
+                                    <Span Text="Nombre: " FontAttributes="Bold"/>
+                                    <Span Text="{Binding SelectedPatient.FullName}"/>
+                                </FormattedString>
+                            </Label.FormattedText>
+                        </Label>
+                        <Label FontSize="14" TextColor="{StaticResource Gray600}">
+                            <Label.FormattedText>
+                                <FormattedString>
+                                    <Span Text="Carnet/Pasaporte: " FontAttributes="Bold"/>
+                                    <Span Text="{Binding SelectedPatient.IdentificationDocument}"/>
+                                </FormattedString>
+                            </Label.FormattedText>
+                        </Label>
+                        <Label FontSize="14" TextColor="{StaticResource Gray600}">
+                            <Label.FormattedText>
+                                <FormattedString>
+                                    <Span Text="Edad: " FontAttributes="Bold"/>
+                                    <Span Text="{Binding SelectedPatient.Age}"/>
+                                    <Span Text=" años"/>
+                                </FormattedString>
+                            </Label.FormattedText>
+                        </Label>
+
+                        <!-- Estado de bloqueo -->
+                        <Frame IsVisible="{Binding IsPatientBlocked}"
+                               BackgroundColor="#FFEBEE" BorderColor="#EF9A9A"
+                               CornerRadius="8" Padding="10">
+                            <StackLayout Spacing="4">
+                                <Label Text="🔒 Bloqueado por préstamo de insumo"
+                                       FontAttributes="Bold" TextColor="#C62828" FontSize="14"/>
+                                <Label FontSize="13" TextColor="#C62828">
+                                    <Label.FormattedText>
+                                        <FormattedString>
+                                            <Span Text="Insumo: " FontAttributes="Bold"/>
+                                            <Span Text="{Binding SelectedPatient.LoanBlockDescription}"/>
+                                        </FormattedString>
+                                    </Label.FormattedText>
+                                </Label>
+                                <Label FontSize="12" TextColor="#C62828">
+                                    <Label.FormattedText>
+                                        <FormattedString>
+                                            <Span Text="Bloqueado desde: " FontAttributes="Bold"/>
+                                            <Span Text="{Binding SelectedPatient.LoanBlockDate, StringFormat='{0:dd/MM/yyyy}'}"/>
+                                        </FormattedString>
+                                    </Label.FormattedText>
+                                </Label>
+                            </StackLayout>
+                        </Frame>
+
+                        <Frame IsVisible="{Binding IsPatientBlocked, Converter={StaticResource InverseBoolConverter}}"
+                               BackgroundColor="#E8F5E9" BorderColor="#A5D6A7"
+                               CornerRadius="8" Padding="10">
+                            <Label Text="✅ Sin bloqueo activo" FontAttributes="Bold"
+                                   TextColor="#2E7D32" FontSize="14"/>
+                        </Frame>
+                    </StackLayout>
+                </Frame>
+
+                <!-- Formulario de bloqueo (solo si NO está bloqueado) -->
+                <Frame IsVisible="{Binding IsPatientBlocked, Converter={StaticResource InverseBoolConverter}}"
+                       BackgroundColor="{AppThemeBinding Light=White, Dark=#2a2a2a}"
+                       BorderColor="#EF9A9A" CornerRadius="10" Padding="15">
+                    <StackLayout Spacing="12">
+                        <Label Text="🔒 Bloquear por Préstamo de Insumo"
+                               FontSize="16" FontAttributes="Bold"
+                               TextColor="#C62828"/>
+                        <Label Text="Insumo en préstamo *"
+                               FontSize="14" FontAttributes="Bold"
+                               TextColor="{AppThemeBinding Light=#333333, Dark=#cccccc}"/>
+                        <Editor Placeholder="Describa el insumo prestado (ej: Silla de ruedas, muletas, andador...)"
+                                Text="{Binding BlockDescription}"
+                                HeightRequest="90"
+                                BackgroundColor="{AppThemeBinding Light=#f5f5f5, Dark=#333333}"
+                                TextColor="{AppThemeBinding Light=#1a1a1a, Dark=#e0e0e0}"
+                                MaxLength="500"/>
+                        <Button Text="🔒 Bloquear Paciente"
+                                Command="{Binding BlockPatientCommand}"
+                                BackgroundColor="#D32F2F"
+                                TextColor="White"
+                                CornerRadius="8"
+                                FontAttributes="Bold"
+                                HeightRequest="50"/>
+                    </StackLayout>
+                </Frame>
+
+                <!-- Panel de desbloqueo (solo si ESTÁ bloqueado) -->
+                <Frame IsVisible="{Binding IsPatientBlocked}"
+                       BackgroundColor="{AppThemeBinding Light=White, Dark=#2a2a2a}"
+                       BorderColor="#A5D6A7" CornerRadius="10" Padding="15">
+                    <StackLayout Spacing="12">
+                        <Label Text="🔓 Desbloquear Paciente"
+                               FontSize="16" FontAttributes="Bold"
+                               TextColor="#2E7D32"/>
+                        <Label Text="Confirme que el paciente devolvió el insumo a la farmacia para proceder con el desbloqueo."
+                               FontSize="13"
+                               TextColor="{AppThemeBinding Light=#555555, Dark=#aaaaaa}"
+                               LineBreakMode="WordWrap"/>
+                        <Button Text="🔓 Confirmar Devolución y Desbloquear"
+                                Command="{Binding UnblockPatientCommand}"
+                                BackgroundColor="#388E3C"
+                                TextColor="White"
+                                CornerRadius="8"
+                                FontAttributes="Bold"
+                                HeightRequest="50"/>
+                    </StackLayout>
+                </Frame>
+
+            </StackLayout>
+
+        </StackLayout>
+    </ScrollView>
+</ContentPage>

@@ -57,6 +57,7 @@ public partial class AppShell : Shell
         Routing.RegisterRoute("ReprogramarTurnosPage", typeof(ReprogramarTurnosPage));
         Routing.RegisterRoute("UsuariosPage", typeof(UsuariosPage));
         Routing.RegisterRoute("BroadcastPage", typeof(BroadcastPage));
+        Routing.RegisterRoute("BloqueoPacientePage", typeof(BloqueoPacientePage));
         Routing.RegisterRoute("AboutPage", typeof(AboutPage));
         Routing.RegisterRoute("ProfilePage", typeof(ProfilePage));
         Routing.RegisterRoute("ChangePasswordPage", typeof(ChangePasswordPage));
@@ -106,6 +107,9 @@ public partial class AppShell : Shell
         
         // Pacientes - Viewer, Farmaceutico, Admin
         FlyoutPacientes.IsVisible = isViewerOrHigher;
+
+        // Bloqueos - Farmaceutico, Admin only
+        FlyoutBloqueos.IsVisible = isFarmaceutico || isAdmin;
         
         // Reportes - Viewer, Farmaceutico, Admin  
         FlyoutReportes.IsVisible = isViewerOrHigher;
@@ -129,6 +133,7 @@ public partial class AppShell : Shell
         FlyoutPacientes.IsVisible = false;
         FlyoutReportes.IsVisible = false;
         FlyoutAvanzado.IsVisible = false;
+        FlyoutBloqueos.IsVisible = false;
     }
     
     private string GetRoleDisplayName(string role)
