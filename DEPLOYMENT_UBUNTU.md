@@ -2,9 +2,95 @@
 
 Esta guía explica paso a paso cómo desplegar la aplicación **Farmacia Solidaria Cristiana** en tu servidor Ubuntu de la red local.
 
-## 📋 Requisitos Previos
+> **Rama actual:** `devIntrepido` — Usar esta rama para pruebas locales.
+> **Fecha de revisión:** 2026-04-29
 
-### En el Servidor Ubuntu (192.168.x.x3):
+---
+
+## 🧪 PRUEBAS LOCALES — Setup Actual (devIntrepido)
+
+### Estado actual de la máquina (MPMEscritorio — 192.168.2.105)
+
+| Componente | Estado | Detalle |
+|---|---|---|
+| **.NET** | ✅ 10.0.107 | `dotnet --version` |
+| **nginx** | ✅ Corriendo en puerto 80 | Proxy reverso configurado |
+| **SQL Server** | ✅ En Docker | Localhost:1433 |
+| **Acceso red local** | ✅ Solo puertos <1024 | 22(SSH), 80(HTTP), 445(Samba) |
+
+### ⚠️ Regla Crítica: Puertos en Red Local
+
+**Solo los puertos de sistema (<1024) son accesibles desde otros dispositivos.**
+Puertos altos (5000, 8080, etc.) aparecen bloqueados desde afuera.
+
+✅ Abiertos: 22 (SSH), 80 (HTTP), 445 (Samba)
+❌ Bloqueados: 5000, 8080 y cualquier >1024
+
+**Solución:** Siempre usar nginx en puerto 80 como proxy reverso hacia la app.
+
+---
+
+### 🚀 Cómo levantar la API para pruebas locales
+
+#### 1. Publicar la aplicación
+```bash
+cd ~/.openclaw/workspace/FarmaciaSolidariaCristiana/FarmaciaSolidariaCristiana
+dotnet publish -c Release -o ./publish
+```
+
+#### 2. Configurar appsettings.json para SQL Server local
+```bash
+cd publish
+nano appsettings.json
+```
+Con cadena de conexión al SQL Server en Docker:
+```json
+{
+  "ConnectionStrings": {
+    "DefaultConnection": "Server=localhost,1433;Database=FarmaciaDb;User Id=sa;Password=TuPassword123;TrustServerCertificate=True"
+  }
+}
+```
+
+#### 3. Probar la app manualmente
+```bash
+dotnet FarmaciaSolidariaCristiana.dll --urls="http://0.0.0.0:5000"
+```
+Probar en local: `http://localhost:5000`
+
+#### 4. Ejecutar como servicio persistente (systemd --user)
+```bash
+systemd-run --user --unit=farmacia-dev \
+    --working-directory=/ruta/a/publish \
+    dotnet FarmaciaSolidariaCristiana.dll --urls="http://0.0.0.0:5000"
+```
+
+#### 5. Acceder desde red local
+La app corre en puerto 5000, pero desde otros dispositivos solo puerto 80 funciona.
+Nginx ya está configurado para proxyar `http://localhost:5000`.
+
+Acceder desde el móvil/otra PC:
+```
+http://192.168.2.105
+```
+
+#### Comandos rápidos
+```bash
+# Ver servicios activos
+systemctl --user list-units | grep farmacia
+
+# Ver logs
+journalctl --user -u farmacia-dev -f
+
+# Detener
+systemctl --user stop farmacia-dev
+```
+
+---
+
+## 📋 Requisitos Previos (Producción)
+
+### En el Servidor Ubuntu (192.168.x.x):
 - Ubuntu Server (18.04 o superior)
 - Acceso SSH
 - Usuario con permisos sudo
@@ -27,7 +113,7 @@ sudo apt update
 sudo apt upgrade -y
 ```
 
-### 1.3 Instalar .NET 9 Runtime y SDK
+### 1.3 Instalar .NET 10 Runtime y SDK (si no está instalado)
 ```bash
 # Descargar el script de instalación de Microsoft
 wget https://dot.net/v1/dotnet-install.sh -O dotnet-install.sh
