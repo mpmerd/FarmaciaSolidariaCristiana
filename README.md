@@ -205,6 +205,12 @@ Desarrollado por Rev. Maikel Eduardo Peláez Martínez
 
 Contacto: mpmerd@gmail.com
 
-## � Licencia
+## 📄 Licencia
 
-MIT License.
+**Copyright (c) 2024-2026 Rev. Maikel Eduardo Peláez Martínez — Todos los derechos reservados.**
+
+El uso, copia, modificación o distribución de este software requiere una licencia comercial pagada otorgada por el autor.
+
+Para obtener una licencia comercial, contactar al autor: mpmerd@gmail.com
+
+> **Nota sobre versiones anteriores:** Las versiones publicadas antes del 30 de abril de 2026 (commit `d811883`) fueron distribuidas bajo MIT License. A partir de esa fecha, todas las versiones nuevas se distribuyen exclusivamente bajo esta licencia propietaria comercial. Quienes obtuvieron el código bajo MIT conservan sus derechos sobre esa versión, pero no sobre versiones posteriores.
