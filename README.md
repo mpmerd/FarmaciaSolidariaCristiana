@@ -100,44 +100,71 @@ bash update-app.sh
 
 ## 📚 Documentación
 
-- **[TURNOS_SYSTEM.md](./TURNOS_SYSTEM.md)** - 🎯 **Documentación completa del Sistema de Turnos**
-- **[SECURITY.md](./SECURITY.md)** - ⚠️ **Guía de seguridad y manejo de credenciales** (LEER PRIMERO)
-- **[DEPLOYMENT_UBUNTU.md](./DEPLOYMENT_UBUNTU.md)** - Guía completa de despliegue en Ubuntu Server
+- **[SECURITY.md](./SECURITY.md)** - ⚠️ **Guía de seguridad y credenciales** (LEER PRIMERO)
+- **[TURNOS_SYSTEM.md](./TURNOS_SYSTEM.md)** - Sistema de Turnos (documentación completa)
+- **[API_DOCUMENTATION.md](./API_DOCUMENTATION.md)** - Documentación de la API REST
+- **[DEPLOYMENT_UBUNTU.md](./DEPLOYMENT_UBUNTU.md)** - Despliegue en Ubuntu Server
+- **[DEPLOYMENT_SOMEE.md](./DEPLOYMENT_SOMEE.md)** - Despliegue en somee.com
+- **[ONESIGNAL_INTEGRATION.md](./ONESIGNAL_INTEGRATION.md)** - Integración de notificaciones push
 - **[QUICK_COMMANDS.md](./QUICK_COMMANDS.md)** - Comandos rápidos de referencia
-- **.env.example** - Plantilla de variables de entorno (copiar a .env)
-- **setup-ubuntu.sh** - Script de instalación automática
-- **update-app.sh** - Script de actualización
+- **[CHANGELOG.md](./CHANGELOG.md)** - Historial de cambios
+- **.env.example** - Plantilla de variables de entorno
+- **setup-ubuntu.sh** - Script de instalación en Ubuntu
+- **update-app.sh** - Script de actualización del servidor
 
 ## 🔧 Tecnologías
 
-- **Framework:** ASP.NET Core 10 MVC (net10.0)
-- **ORM:** Entity Framework Core 10.0.7
+### Backend (Web + API)
+- **Framework:** ASP.NET Core 10 MVC + API RESTful (net10.0)
+- **ORM:** Entity Framework Core 10
 - **Base de Datos:** SQL Server (compatible con Linux)
-- **Autenticación:** ASP.NET Core Identity 10.0.7
-- **PDF:** iText7 9.3.0 + BouncyCastle adapter
-- **UI:** Bootstrap 5 + Bootstrap Icons
+- **Autenticación Web:** ASP.NET Core Identity + cookies
+- **Autenticación API:** JWT Bearer
+- **PDF:** iText7 + BouncyCastle adapter
+- **Imágenes:** SixLabors.ImageSharp (compresión automática)
+- **UI Web:** Bootstrap 5 + FontAwesome + DataTables
 - **API Externa:** CIMA (Agencia Española de Medicamentos)
-- **App Móvil:** .NET MAUI net10.0-android (workload .NET 10)
+- **Notificaciones Push:** OneSignal (opcional) + sistema de polling propio
 
-## 🌐 Acceso en Red Local
+### App Móvil
+- **Framework:** .NET MAUI net10.0-android (workload .NET 10)
+- **Patrón:** MVVM con CommunityToolkit.Mvvm
+- **Navegación:** Shell
+- **Almacenamiento seguro:** SecureStorage para token JWT
 
-Una vez desplegado en Ubuntu Server:
-- **Por IP:** http://TU_SERVIDOR_IP
-- **Por nombre:** http://NOMBRE_SERVIDOR
+## 🌐 Acceso
+
+Una vez desplegado:
+- **Red local (Ubuntu):** `http://TU_SERVIDOR_IP`
+- **Producción:** `https://tudominio.somee.com`
+- **App Android:** disponible en `https://tudominio.somee.com/android/`
 
 ## 📊 Estructura del Proyecto
 
 ```
-FarmaciaSolidariaCristiana/
-├── Controllers/         # Controladores MVC
-├── Models/             # Modelos de datos
-├── Views/              # Vistas Razor
-├── Data/               # Contexto EF Core y migraciones
-├── ViewModels/         # ViewModels para vistas
-├── wwwroot/            # Archivos estáticos (CSS, JS, imágenes)
-│   └── images/         # Logos institucionales
-├── appsettings.json    # Configuración
-└── Program.cs          # Punto de entrada
+FarmaciaSolidariaCristiana.sln
+├── FarmaciaSolidariaCristiana/          # Backend ASP.NET Core 10
+│   ├── Controllers/                     # Controladores MVC (14)
+│   ├── Api/
+│   │   ├── Controllers/                 # Controladores API REST (16)
+│   │   └── Models/                      # DTOs de la API
+│   ├── Models/                          # Entidades EF Core
+│   │   └── ViewModels/                  # ViewModels para vistas MVC
+│   ├── Views/                           # Vistas Razor
+│   ├── Services/                        # Servicios de negocio
+│   ├── Middleware/                      # Middleware (ej. verificación de versión)
+│   ├── Filters/                         # Filtros de acción
+│   ├── Data/                            # ApplicationDbContext + migraciones
+│   ├── wwwroot/                         # Estáticos (CSS, JS, imágenes, APK)
+│   ├── appsettings.json                 # Configuración (plantilla)
+│   └── Program.cs                       # Punto de entrada
+└── FarmaciaSolidariaCristiana.Maui/     # App Android .NET MAUI
+    ├── ViewModels/                      # 21 ViewModels (MVVM)
+    ├── Views/                           # Páginas XAML
+    ├── Services/                        # Servicios (API, auth, polling, etc.)
+    ├── Models/                          # Modelos cliente
+    ├── Helpers/                         # Constantes y utilidades
+    └── Converters/                      # Convertidores XAML
 ```
 
 ## 🤝 Roles y Permisos
@@ -151,23 +178,26 @@ FarmaciaSolidariaCristiana/
 
 ## 🔒 Seguridad
 
-- Autenticación obligatoria para todas las páginas (excepto login)
-- Autorización basada en roles
-- Validación de entrada en todos los formularios
-- Gestión de sesiones con cookies
-- Configuración de lockout para intentos fallidos
+- Autenticación obligatoria para todas las rutas (excepto login y endpoints públicos de la API)
+- Autorización basada en roles en controladores MVC y API
+- Tokens JWT con expiración de 8 horas
+- Documentos de identidad almacenados como hash SHA-256 (nunca en texto claro)
+- Verificación de email al registrarse (código de uso único con expiración)
+- Lockout automático tras 5 intentos fallidos de login (5 minutos)
+- Validación de entrada en todos los formularios y DTOs de la API
+- Verificación de versión mínima de la app móvil en cada petición a la API
+- HTTPS habilitado en producción
+- Imágenes y documentos servidos desde rutas no predecibles
 
+> ⚠️ **IMPORTANTE:** Lee [SECURITY.md](./SECURITY.md) antes de configurar el proyecto. Nunca incluyas credenciales reales en el código o en el repositorio.
 
-# Uso de https
+## 🌐 HTTPS en Producción
 
-En producción (ej. somee.com), se habilita HTTPS para cifrar datos en tránsito. (logins, entregas, donaciones).
+En producción (ej. somee.com) se habilita HTTPS para cifrar todos los datos en tránsito.
 
-## Ejemplo en somee.com
-- Sube el proyecto publicado via FTP o Git deploy.
-- En el panel de somee.com, activa SSL (gratuito con Let's Encrypt o similar).
-- Accede via: https://tudominio.somee.com
-
-> ⚠️ **IMPORTANTE:** Lee [SECURITY.md](./SECURITY.md) antes de configurar el proyecto. Nunca incluyas credenciales reales en el código o repositorio.
+- Sube el proyecto publicado vía FTP o deploy desde terminal.
+- Activa SSL desde el panel de control del hosting.
+- Accede vía: `https://tudominio.somee.com`
 
 ## 📝 Comandos Útiles
 
