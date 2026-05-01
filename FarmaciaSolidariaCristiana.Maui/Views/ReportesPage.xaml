@@ -120,14 +120,16 @@
                             <Label Text="Año:" FontSize="14" TextColor="{StaticResource Gray600}"/>
                             <Picker ItemsSource="{Binding AvailableYears}"
                                     SelectedItem="{Binding SelectedYear}"
-                                    BackgroundColor="{StaticResource Gray100}"/>
+                                    BackgroundColor="{AppThemeBinding Light={StaticResource Gray100}, Dark=#3a3a3a}"
+                                    TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource White}}"/>
                         </StackLayout>
                         
                         <StackLayout Grid.Column="1" Spacing="5">
                             <Label Text="Mes:" FontSize="14" TextColor="{StaticResource Gray600}"/>
                             <Picker ItemsSource="{Binding AvailableMonths}"
                                     SelectedIndex="{Binding SelectedMonth, Converter={StaticResource MonthIndexConverter}}"
-                                    BackgroundColor="{StaticResource Gray100}"/>
+                                    BackgroundColor="{AppThemeBinding Light={StaticResource Gray100}, Dark=#3a3a3a}"
+                                    TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource White}}"/>
                         </StackLayout>
                     </Grid>
 
