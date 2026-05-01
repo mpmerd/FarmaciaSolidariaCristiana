@@ -1,10 +1,10 @@
 {
-  "version": "1.0.5",
-  "versionCode": 5,
-  "releaseDate": "2026-03-19",
+  "version": "1.0.6",
+  "versionCode": 6,
+  "releaseDate": "2026-04-30",
   "downloadUrl": "https://farmaciasolidaria.somee.com/android/farmaciasolidaria.apk",
   "fileSize": "35M",
   "minAndroidVersion": "24",
-  "minimumVersion": "1.0.5",
-  "releaseNotes": "- La aplicación ha sido renovada para mayor estabilidad y muestra la versión..   - Se habilita la opción de versiones mínimas obligatorias, para asegurar que todos tengan la app actualizada.   - Mejoras en la aprobación de turnos: el proceso es más claro y ordenado para farmacéuticos y administradores.   - Al revisar documentos de pacientes, los farmacéuticos regresan directamente a la vista anterior, sin perder tiempo.   - Se evita que un mismo medicamento sea solicitado dos veces en el mismo mes natural.   - En la web, si no se indica la cantidad de medicamentos, aparece un aviso antes de enviar la solicitud.   - Se enfatiza que el número de identidad o pasaporte debe coincidir con las evidencias médicas del paciente.   - Nuevo canal de notificaciones masivas: el administrador puede enviar mensajes a todos los usuarios de manera directa.   - Cuando la web está en mantenimiento, la app también mostrará la misma página de aviso.   - La reprogramación de turnos ahora muestra correctamente tanto el día como la hora.uestra correctamente dia y hora. "
+  "minimumVersion": "1.0.6",
+  "releaseNotes": "Múltiples optimizaciones en velocidad de respuesta. Corrección de información de la versión en el perfil del usuario. App lista para controlar si es necesario préstamos de determinados insumos como recipientes, determinados tipos de vendas, etc… "
 }
