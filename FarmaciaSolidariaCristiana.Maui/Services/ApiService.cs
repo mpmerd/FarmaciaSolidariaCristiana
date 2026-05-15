@@ -1099,9 +1099,19 @@ public class ApiService : IApiService
         try
         {
             await SetAuthHeaderAsync();
-            var request = new { FechaAfectada = fechaAfectada, Motivo = motivo };
+            // DateTimeKind.Unspecified evita que System.Text.Json incluya offset de zona horaria
+            // en el JSON (ej. "-05:00"), lo que causaría que el servidor recibiera la fecha
+            // convertida a su zona horaria local y buscara el día incorrecto.
+            var fechaNormalizada = DateTime.SpecifyKind(fechaAfectada.Date, DateTimeKind.Unspecified);
+            var request = new { FechaAfectada = fechaNormalizada, Motivo = motivo };
             var response = await _httpClient.PostAsJsonAsync("/api/turnos/reprogramar", request);
-            return await ProcessResponseAsync<ReprogramarResultDto>(response);
+            var result = await ProcessResponseAsync<ReprogramarResultDto>(response);
+            if (result.Success && result.Data?.Reprogramados > 0)
+            {
+                _cache.Invalidate(CacheKeyTurnos);
+                _cache.Invalidate(CacheKeyMisTurnos);
+            }
+            return result;
         }
         catch (Exception ex)
         {
