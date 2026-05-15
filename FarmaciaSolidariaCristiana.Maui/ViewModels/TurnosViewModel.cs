@@ -2,7 +2,9 @@ using System.Collections.ObjectModel;
 using System.Text;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using CommunityToolkit.Mvvm.Messaging;
 using FarmaciaSolidariaCristiana.Maui.Helpers;
+using FarmaciaSolidariaCristiana.Maui.Messages;
 using FarmaciaSolidariaCristiana.Maui.Models;
 using FarmaciaSolidariaCristiana.Maui.Services;
 using FarmaciaSolidariaCristiana.Maui.Views;
@@ -12,7 +14,7 @@ namespace FarmaciaSolidariaCristiana.Maui.ViewModels;
 /// <summary>
 /// ViewModel para la gestión de Turnos
 /// </summary>
-public partial class TurnosViewModel : BaseViewModel
+public partial class TurnosViewModel : BaseViewModel, IRecipient<TurnosReprogramadosMessage>
 {
     [ObservableProperty]
     private ObservableCollection<Turno> _turnos = new();
@@ -57,6 +59,12 @@ public partial class TurnosViewModel : BaseViewModel
     {
         Title = "Turnos";
         _cache = cache;
+        WeakReferenceMessenger.Default.Register(this);
+    }
+
+    public async void Receive(TurnosReprogramadosMessage message)
+    {
+        await ForceRefreshAsync();
     }
 
     public async Task ForceRefreshAsync()

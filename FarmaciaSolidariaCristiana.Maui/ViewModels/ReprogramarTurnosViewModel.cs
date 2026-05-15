@@ -1,5 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using CommunityToolkit.Mvvm.Messaging;
+using FarmaciaSolidariaCristiana.Maui.Messages;
 using FarmaciaSolidariaCristiana.Maui.Services;
 using System.Collections.ObjectModel;
 
@@ -131,14 +133,23 @@ public partial class ReprogramarTurnosViewModel : BaseViewModel
                 ShowResult = true;
 
                 string message = response.Data.Mensaje;
-                
-                if (response.Data.NoReprogramados > 0)
+
+                if (response.Data.Reprogramados == 0)
+                {
+                    await Shell.Current.DisplayAlertAsync(
+                        "Sin cambios",
+                        "No se reprogramó ningún turno. Verifique que existan turnos aprobados en esa fecha.",
+                        "OK");
+                }
+                else if (response.Data.NoReprogramados > 0)
                 {
                     await Shell.Current.DisplayAlertAsync("Reprogramación Parcial", message, "OK");
+                    WeakReferenceMessenger.Default.Send(new TurnosReprogramadosMessage { Reprogramados = response.Data.Reprogramados });
                 }
                 else
                 {
                     await Shell.Current.DisplayAlertAsync("Éxito", message, "OK");
+                    WeakReferenceMessenger.Default.Send(new TurnosReprogramadosMessage { Reprogramados = response.Data.Reprogramados });
                 }
 
                 // Limpiar y recargar preview
