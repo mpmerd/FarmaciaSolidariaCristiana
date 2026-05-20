@@ -96,6 +96,12 @@
                                         <small>Bloqueos</small>
                                     </a>
                                 </li>
+                                <li class="nav-item">
+                                    <a class="nav-link text-white text-center" asp-controller="Turnos" asp-action="ReporteDia">
+                                        <i class="bi bi-printer-fill d-block"></i>
+                                        <small>Reporte</small>
+                                    </a>
+                                </li>
                             }
                             @if (User.IsInRole("Admin"))
                             {

@@ -903,6 +903,41 @@ namespace FarmaciaSolidariaCristiana.Controllers
             return RedirectToAction(nameof(ReprogramarFecha));
         }
 
+        // GET: Turnos/ReporteDia
+        /// <summary>
+        /// Vista para seleccionar fecha e imprimir/exportar listado de turnos aprobados del día.
+        /// Solo accesible a Farmacéutico y Admin.
+        /// </summary>
+        [HttpGet]
+        [Authorize(Roles = "Admin,Farmaceutico")]
+        public async Task<IActionResult> ReporteDia(DateTime? fecha = null)
+        {
+            var vm = new ReporteTurnosDiaViewModel { Fecha = fecha };
+
+            if (fecha.HasValue)
+            {
+                vm.Items = await _turnoService.GetReporteTurnosDiaAsync(fecha.Value);
+            }
+
+            return View(vm);
+        }
+
+        // GET: Turnos/ReporteDiaPdf?fecha=yyyy-MM-dd
+        /// <summary>
+        /// Genera y descarga el PDF del reporte de turnos aprobados del día indicado.
+        /// Solo accesible a Farmacéutico y Admin.
+        /// </summary>
+        [HttpGet]
+        [Authorize(Roles = "Admin,Farmaceutico")]
+        public async Task<IActionResult> ReporteDiaPdf(DateTime fecha)
+        {
+            var items = await _turnoService.GetReporteTurnosDiaAsync(fecha);
+            var pdfBytes = await _turnoService.GenerateReporteDiaPdfAsync(fecha, items);
+
+            var fileName = $"turnos_{fecha:yyyy-MM-dd}.pdf";
+            return File(pdfBytes, "application/pdf", fileName);
+        }
+
         /// <summary>
         /// Busca la próxima fecha disponible (Martes o Jueves, no bloqueada, con espacio)
         /// </summary>

@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
 using Microsoft.EntityFrameworkCore;
@@ -1585,6 +1586,267 @@ namespace FarmaciaSolidariaCristiana.Services
             {
                 _logger.LogError(ex, "Error eliminando archivos del turno {TurnoId}", turno.Id);
             }
+        }
+
+        /// <summary>
+        /// Obtiene los ítems para el reporte diario de turnos aprobados,
+        /// ordenados por hora asignada y con datos de paciente resueltos por hash.
+        /// </summary>
+        public async Task<List<TurnoReporteItem>> GetReporteTurnosDiaAsync(DateTime fecha)
+        {
+            var startOfDay = fecha.Date;
+            var endOfDay = startOfDay.AddDays(1);
+
+            var turnos = await _context.Turnos
+                .Include(t => t.Medicamentos).ThenInclude(tm => tm.Medicine)
+                .Include(t => t.Insumos).ThenInclude(ti => ti.Supply)
+                .Include(t => t.Documentos)
+                .Where(t => t.Estado == EstadoTurno.Aprobado &&
+                            t.FechaPreferida >= startOfDay &&
+                            t.FechaPreferida < endOfDay)
+                .OrderBy(t => t.FechaPreferida)
+                .ToListAsync();
+
+            // Cargar todos los pacientes en memoria para cruzar por hash
+            var patients = await _context.Patients.ToListAsync();
+
+            var items = new List<TurnoReporteItem>();
+            foreach (var turno in turnos)
+            {
+                // Buscar paciente comparando hash del documento de identidad
+                var patient = patients.FirstOrDefault(p =>
+                    HashDocument(p.IdentificationDocument) == turno.DocumentoIdentidadHash);
+
+                string? recetaImagePath = null;
+                var recetaEsPdf = false;
+
+                if (patient == null)
+                {
+                    // Solo se busca la receta cuando el paciente no está registrado
+                    var recetaDoc = turno.Documentos?
+                        .FirstOrDefault(d => d.DocumentType == "Receta Médica");
+                    if (recetaDoc != null)
+                    {
+                        var ext = Path.GetExtension(recetaDoc.FileName)?.ToLowerInvariant();
+                        if (ext == ".jpg" || ext == ".jpeg" || ext == ".png")
+                            recetaImagePath = recetaDoc.FilePath;
+                        else if (ext == ".pdf")
+                            recetaEsPdf = true;
+                    }
+                }
+
+                items.Add(new TurnoReporteItem
+                {
+                    TurnoId = turno.Id,
+                    NumeroTurnoDia = turno.NumeroTurno,
+                    FechaPreferida = turno.FechaPreferida,
+                    DocumentoIdentidad = patient?.IdentificationDocument,
+                    NombrePaciente = patient?.FullName,
+                    PacienteEncontrado = patient != null,
+                    Medicamentos = turno.Medicamentos?.Select(tm => new ItemReporte
+                    {
+                        Nombre = tm.Medicine?.Name ?? "N/A",
+                        Cantidad = tm.CantidadAprobada ?? tm.CantidadSolicitada,
+                        Unidad = tm.Medicine?.Unit ?? ""
+                    }).ToList() ?? new(),
+                    Insumos = turno.Insumos?.Select(ti => new ItemReporte
+                    {
+                        Nombre = ti.Supply?.Name ?? "N/A",
+                        Cantidad = ti.CantidadAprobada ?? ti.CantidadSolicitada,
+                        Unidad = ti.Supply?.Unit ?? ""
+                    }).ToList() ?? new(),
+                    RecetaMedicaImagePath = recetaImagePath,
+                    RecetaMedicaEsPdf = recetaEsPdf
+                });
+            }
+
+            return items;
+        }
+
+        /// <summary>
+        /// Genera el PDF del reporte diario de turnos aprobados y lo retorna como byte[].
+        /// </summary>
+        public Task<byte[]> GenerateReporteDiaPdfAsync(DateTime fecha, List<TurnoReporteItem> items)
+        {
+            var culture = new CultureInfo("es-ES");
+            var memStream = new MemoryStream();
+
+            using (var writer = new PdfWriter(memStream))
+            using (var pdf = new PdfDocument(writer))
+            {
+                var document = new Document(pdf);
+                var boldFont = PdfFontFactory.CreateFont(StandardFonts.HELVETICA_BOLD);
+                var normalFont = PdfFontFactory.CreateFont(StandardFonts.HELVETICA);
+                var bgHeader = new DeviceRgb(230, 240, 255);
+                var bgSep = new DeviceRgb(200, 200, 200);
+
+                // === ENCABEZADO ===
+                var headerTable = new Table(UnitValue.CreatePercentArray(new float[] { 20, 60, 20 }))
+                    .UseAllAvailableWidth();
+
+                var logoIglesiaPath = Path.Combine(_environment.WebRootPath, "images", "logo-iglesia.png");
+                if (File.Exists(logoIglesiaPath))
+                    headerTable.AddCell(new Cell()
+                        .Add(new Image(ImageDataFactory.Create(logoIglesiaPath)).SetWidth(55).SetHeight(55))
+                        .SetBorder(iText.Layout.Borders.Border.NO_BORDER));
+                else
+                    headerTable.AddCell(new Cell().Add(new Paragraph("")).SetBorder(iText.Layout.Borders.Border.NO_BORDER));
+
+                headerTable.AddCell(new Cell()
+                    .Add(new Paragraph("Farmacia Solidaria Cristiana").SetFont(boldFont).SetFontSize(16).SetTextAlignment(TextAlignment.CENTER))
+                    .Add(new Paragraph("Iglesia Metodista de Cárdenas").SetFont(normalFont).SetFontSize(10).SetTextAlignment(TextAlignment.CENTER))
+                    .Add(new Paragraph("Listado de Turnos Aprobados").SetFont(boldFont).SetFontSize(12).SetTextAlignment(TextAlignment.CENTER).SetFontColor(ColorConstants.BLUE))
+                    .Add(new Paragraph(fecha.ToString("dddd, dd 'de' MMMM 'de' yyyy", culture)).SetFont(normalFont).SetFontSize(10).SetTextAlignment(TextAlignment.CENTER))
+                    .SetBorder(iText.Layout.Borders.Border.NO_BORDER)
+                    .SetVerticalAlignment(VerticalAlignment.MIDDLE));
+
+                var logoAdrianoPath = Path.Combine(_environment.WebRootPath, "images", "logo-adriano.png");
+                if (File.Exists(logoAdrianoPath))
+                    headerTable.AddCell(new Cell()
+                        .Add(new Image(ImageDataFactory.Create(logoAdrianoPath)).SetWidth(55).SetHeight(55))
+                        .SetBorder(iText.Layout.Borders.Border.NO_BORDER));
+                else
+                    headerTable.AddCell(new Cell().Add(new Paragraph("")).SetBorder(iText.Layout.Borders.Border.NO_BORDER));
+
+                document.Add(headerTable);
+
+                // Línea separadora
+                var sepLineTable = new Table(1).UseAllAvailableWidth().SetMarginTop(5).SetMarginBottom(5);
+                sepLineTable.AddCell(new Cell().SetHeight(2).SetBackgroundColor(ColorConstants.BLUE)
+                    .SetBorder(iText.Layout.Borders.Border.NO_BORDER).Add(new Paragraph("")));
+                document.Add(sepLineTable);
+
+                document.Add(new Paragraph($"Total de turnos aprobados: {items.Count}")
+                    .SetFont(boldFont).SetFontSize(10).SetTextAlignment(TextAlignment.RIGHT).SetMarginBottom(10));
+
+                // === CADA TURNO ===
+                for (int i = 0; i < items.Count; i++)
+                {
+                    var item = items[i];
+
+                    if (i > 0)
+                    {
+                        // Separador entre turnos
+                        var turnoSepTable = new Table(1).UseAllAvailableWidth().SetMarginTop(10).SetMarginBottom(10);
+                        turnoSepTable.AddCell(new Cell().SetHeight(1).SetBackgroundColor(bgSep)
+                            .SetBorder(iText.Layout.Borders.Border.NO_BORDER).Add(new Paragraph("")));
+                        document.Add(turnoSepTable);
+                    }
+
+                    // Cabecera del turno
+                    var turnoHeaderTable = new Table(UnitValue.CreatePercentArray(new float[] { 45, 30, 25 }))
+                        .UseAllAvailableWidth().SetMarginBottom(4);
+
+                    turnoHeaderTable.AddCell(new Cell()
+                        .Add(new Paragraph($"Turno #{item.TurnoId}").SetFont(boldFont).SetFontSize(20).SetFontColor(ColorConstants.BLUE))
+                        .SetBackgroundColor(bgHeader).SetBorder(iText.Layout.Borders.Border.NO_BORDER)
+                        .SetVerticalAlignment(VerticalAlignment.MIDDLE).SetPaddingLeft(5));
+
+                    turnoHeaderTable.AddCell(new Cell()
+                        .Add(new Paragraph($"Nº del día: {item.NumeroTurnoDia?.ToString("00") ?? "—"}").SetFont(normalFont).SetFontSize(11))
+                        .SetBackgroundColor(bgHeader).SetBorder(iText.Layout.Borders.Border.NO_BORDER)
+                        .SetVerticalAlignment(VerticalAlignment.MIDDLE).SetTextAlignment(TextAlignment.CENTER));
+
+                    turnoHeaderTable.AddCell(new Cell()
+                        .Add(new Paragraph(item.FechaPreferida?.ToString("HH:mm") ?? "").SetFont(boldFont).SetFontSize(14).SetTextAlignment(TextAlignment.RIGHT))
+                        .Add(new Paragraph(item.FechaPreferida?.ToString("dd/MM/yyyy") ?? "").SetFont(normalFont).SetFontSize(9).SetTextAlignment(TextAlignment.RIGHT))
+                        .SetBackgroundColor(bgHeader).SetBorder(iText.Layout.Borders.Border.NO_BORDER)
+                        .SetVerticalAlignment(VerticalAlignment.MIDDLE).SetPaddingRight(5));
+
+                    document.Add(turnoHeaderTable);
+
+                    // Datos del paciente
+                    var pacienteTable = new Table(UnitValue.CreatePercentArray(new float[] { 25, 75 }))
+                        .UseAllAvailableWidth().SetMarginBottom(5);
+
+                    AddInfoRow(pacienteTable, "Documento:",
+                        item.PacienteEncontrado ? (item.DocumentoIdentidad ?? "N/A") : "Nuevo paciente",
+                        boldFont, normalFont);
+                    AddInfoRow(pacienteTable, "Nombre:",
+                        item.PacienteEncontrado ? (item.NombrePaciente ?? "N/A") : "Ver receta médica adjunta",
+                        boldFont, normalFont);
+
+                    document.Add(pacienteTable);
+
+                    // Medicamentos
+                    if (item.Medicamentos.Any())
+                    {
+                        document.Add(new Paragraph("Medicamentos:")
+                            .SetFont(boldFont).SetFontSize(10).SetMarginBottom(2));
+
+                        var medTable = new Table(UnitValue.CreatePercentArray(new float[] { 60, 20, 20 }))
+                            .UseAllAvailableWidth().SetMarginBottom(4);
+
+                        medTable.AddHeaderCell(new Cell().Add(new Paragraph("Medicamento").SetFont(boldFont).SetFontSize(9)).SetBackgroundColor(ColorConstants.LIGHT_GRAY));
+                        medTable.AddHeaderCell(new Cell().Add(new Paragraph("Cantidad").SetFont(boldFont).SetFontSize(9)).SetBackgroundColor(ColorConstants.LIGHT_GRAY).SetTextAlignment(TextAlignment.CENTER));
+                        medTable.AddHeaderCell(new Cell().Add(new Paragraph("Unidad").SetFont(boldFont).SetFontSize(9)).SetBackgroundColor(ColorConstants.LIGHT_GRAY).SetTextAlignment(TextAlignment.CENTER));
+
+                        foreach (var med in item.Medicamentos)
+                        {
+                            medTable.AddCell(new Cell().Add(new Paragraph(med.Nombre).SetFont(normalFont).SetFontSize(9)));
+                            medTable.AddCell(new Cell().Add(new Paragraph(med.Cantidad.ToString()).SetFont(normalFont).SetFontSize(9)).SetTextAlignment(TextAlignment.CENTER));
+                            medTable.AddCell(new Cell().Add(new Paragraph(med.Unidad).SetFont(normalFont).SetFontSize(9)).SetTextAlignment(TextAlignment.CENTER));
+                        }
+
+                        document.Add(medTable);
+                    }
+
+                    // Insumos
+                    if (item.Insumos.Any())
+                    {
+                        document.Add(new Paragraph("Insumos Médicos:")
+                            .SetFont(boldFont).SetFontSize(10).SetMarginBottom(2));
+
+                        var insTable = new Table(UnitValue.CreatePercentArray(new float[] { 60, 20, 20 }))
+                            .UseAllAvailableWidth().SetMarginBottom(4);
+
+                        insTable.AddHeaderCell(new Cell().Add(new Paragraph("Insumo").SetFont(boldFont).SetFontSize(9)).SetBackgroundColor(ColorConstants.LIGHT_GRAY));
+                        insTable.AddHeaderCell(new Cell().Add(new Paragraph("Cantidad").SetFont(boldFont).SetFontSize(9)).SetBackgroundColor(ColorConstants.LIGHT_GRAY).SetTextAlignment(TextAlignment.CENTER));
+                        insTable.AddHeaderCell(new Cell().Add(new Paragraph("Unidad").SetFont(boldFont).SetFontSize(9)).SetBackgroundColor(ColorConstants.LIGHT_GRAY).SetTextAlignment(TextAlignment.CENTER));
+
+                        foreach (var ins in item.Insumos)
+                        {
+                            insTable.AddCell(new Cell().Add(new Paragraph(ins.Nombre).SetFont(normalFont).SetFontSize(9)));
+                            insTable.AddCell(new Cell().Add(new Paragraph(ins.Cantidad.ToString()).SetFont(normalFont).SetFontSize(9)).SetTextAlignment(TextAlignment.CENTER));
+                            insTable.AddCell(new Cell().Add(new Paragraph(ins.Unidad).SetFont(normalFont).SetFontSize(9)).SetTextAlignment(TextAlignment.CENTER));
+                        }
+
+                        document.Add(insTable);
+                    }
+
+                    // Receta médica imagen para paciente nuevo
+                    if (!item.PacienteEncontrado && !string.IsNullOrEmpty(item.RecetaMedicaImagePath))
+                    {
+                        var fullPath = Path.Combine(_environment.WebRootPath,
+                            item.RecetaMedicaImagePath.TrimStart('/'));
+                        if (File.Exists(fullPath))
+                        {
+                            document.Add(new Paragraph("Receta Médica del paciente:")
+                                .SetFont(boldFont).SetFontSize(9).SetMarginTop(4));
+                            document.Add(new Image(ImageDataFactory.Create(fullPath))
+                                .SetMaxWidth(UnitValue.CreatePercentValue(100))
+                                .SetAutoScale(false)
+                                .SetWidth(350));
+                        }
+                    }
+                    else if (!item.PacienteEncontrado && item.RecetaMedicaEsPdf)
+                    {
+                        document.Add(new Paragraph("Receta Médica: documento PDF adjunto al turno en el sistema.")
+                            .SetFont(normalFont).SetFontSize(9).SetFontColor(ColorConstants.GRAY).SetMarginTop(3));
+                    }
+                }
+
+                // === PIE DE PÁGINA ===
+                document.Add(new Paragraph("\n"));
+                document.Add(new Paragraph($"Generado el: {DateTime.Now.ToString("dd/MM/yyyy HH:mm")}")
+                    .SetFont(normalFont).SetFontSize(8)
+                    .SetTextAlignment(TextAlignment.CENTER)
+                    .SetFontColor(ColorConstants.GRAY));
+
+                document.Close();
+            }
+
+            return Task.FromResult(memStream.ToArray());
         }
     }
 }

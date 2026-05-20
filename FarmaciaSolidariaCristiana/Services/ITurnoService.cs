@@ -124,5 +124,16 @@ namespace FarmaciaSolidariaCristiana.Services
         /// Un paciente no puede retirar el mismo medicamento en más de un turno por mes natural.
         /// </summary>
         Task<List<int>> GetPatientMedicineIdsThisMonthAsync(string documentoIdentidad);
+
+        /// <summary>
+        /// Obtiene los ítems para el reporte diario de turnos aprobados,
+        /// ordenados por hora asignada y con datos de paciente resueltos por hash.
+        /// </summary>
+        Task<List<TurnoReporteItem>> GetReporteTurnosDiaAsync(DateTime fecha);
+
+        /// <summary>
+        /// Genera el PDF del reporte diario de turnos aprobados y lo retorna como byte[].
+        /// </summary>
+        Task<byte[]> GenerateReporteDiaPdfAsync(DateTime fecha, List<TurnoReporteItem> items);
     }
 }
