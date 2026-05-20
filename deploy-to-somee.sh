@@ -67,7 +67,7 @@ FTP_REMOTE_PATH="/www.farmaciasolidaria.somee.com"
 
 # Directorio de publish fijo
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PUBLISH_DIR="$SCRIPT_DIR/FarmaciaSolidariaCristiana/publish"
+PUBLISH_DIR="$SCRIPT_DIR/publish"
 VIEWS_SOURCE="$SCRIPT_DIR/FarmaciaSolidariaCristiana/Views"
 
 if [ ! -d "$PUBLISH_DIR" ]; then
