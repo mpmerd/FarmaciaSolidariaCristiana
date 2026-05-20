@@ -70,14 +70,13 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PUBLISH_DIR="$SCRIPT_DIR/publish"
 VIEWS_SOURCE="$SCRIPT_DIR/FarmaciaSolidariaCristiana/Views"
 
-if [ ! -d "$PUBLISH_DIR" ]; then
-    echo -e "${YELLOW}📦 Compilando proyecto para producción...${NC}"
-    dotnet publish "$SCRIPT_DIR/FarmaciaSolidariaCristiana/FarmaciaSolidariaCristiana.csproj" -c Release -o "$PUBLISH_DIR"
-    if [ $? -ne 0 ]; then
-        echo -e "${RED}❌ Error al compilar el proyecto${NC}"
-        exit 1
-    fi
+echo -e "${YELLOW}📦 Compilando proyecto para producción...${NC}"
+dotnet publish "$SCRIPT_DIR/FarmaciaSolidariaCristiana/FarmaciaSolidariaCristiana.csproj" -c Release -o "$PUBLISH_DIR"
+if [ $? -ne 0 ]; then
+    echo -e "${RED}❌ Error al compilar el proyecto${NC}"
+    exit 1
 fi
+echo -e "${GREEN}✅ Compilación completada${NC}"
 
 echo -e "${BLUE}📁 Directorio publish: $PUBLISH_DIR${NC}"
 
