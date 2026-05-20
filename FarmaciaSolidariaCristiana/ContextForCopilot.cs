@@ -379,6 +379,13 @@
 // - Documentación API en API_DOCUMENTATION.md.
 // - Configuración en appsettings.json y appsettings.Development.json.
 // - APK publicado en wwwroot/android/ junto con version.json para auto-actualización.
+//
+// PRODUCCIÓN:
+// - El servidor de producción es somee.com (https://farmaciasolidaria.somee.com).
+// - Para desplegar el MVC/API usar el script deploy-to-somee.sh.
+// - Para la app MAUI Android: generar el APK con generar_apk.sh, luego subirlo con subir_apk.sh.
+// - NO se usa Google Play Store; la distribución del APK es directa mediante el servidor somee.com (wwwroot/android/).
+// - El control de versiones de la app MAUI se gestiona vía version.json en el servidor, sin intervención de tiendas de apps.
 
 // ===========================================
 // INSTRUCCIONES PARA COPILOT
@@ -390,5 +397,192 @@
 // - MAUI: usa Constants.ApiBaseUrl para la URL base; nunca hardcodees URLs.
 // - Sistema de notificaciones: usa IPendingNotificationService en el backend; en MAUI, el polling
 //   ya está implementado en PollingNotificationService.
-// - Versión actual de la app MAUI: >= 1.0.5 (verificado por AppVersionCheckMiddleware).
+// - Versión actual de la app MAUI: >= 1.0.6 (verificado por AppVersionCheckMiddleware).
 // - Compatibilidad: .NET 10 (backend), .NET MAUI con workload net10.0-android (app móvil).
+
+// ===========================================
+// CONVENCIONES DE CODIFICACIÓN (C# / Backend)
+// ===========================================
+//
+// NOMENCLATURA GENERAL:
+// - Clases, interfaces, enums, métodos, propiedades: PascalCase.
+//   Ejemplos: ApplicationDbContext, ITurnoService, TurnoCleanupService, ApiOk, StockQuantity.
+// - Variables locales y parámetros: camelCase.
+//   Ejemplos: patientId, fechaPreferida, turnoDto.
+// - Campos privados: camelCase con prefijo underscore (_camelCase).
+//   Ejemplos: _context, _emailService, _logger.
+// - Constantes: PascalCase (si son públicas/protected) o SCREAMING_SNAKE_CASE solo si son privadas de bajo nivel.
+//   Preferencia en este proyecto: PascalCase para constantes de clase.
+// - Interfaces: prefijo I + PascalCase.  Ejemplo: IEmailService, ITurnoService.
+// - DTOs (Data Transfer Objects): sufijo Dto.  Ejemplo: TurnoDto, CreateMedicineDto.
+// - ViewModels: sufijo ViewModel.  Ejemplo: LoginViewModel, CreateUserViewModel.
+// - Enums: PascalCase, valores en PascalCase.  Ejemplo: enum EstadoTurno { Pendiente, Aprobado, Rechazado }.
+// - Archivos de configuración y scripts: kebab-case.  Ejemplo: appsettings.json, deploy-to-somee.sh.
+//
+// ESTRUCTURA DE CLASES:
+// - Orden de miembros: campos estáticos → campos de instancia → constructores → propiedades → métodos públicos → métodos privados.
+// - Un tipo principal por archivo; el nombre del archivo coincide con el tipo.
+// - Usar record para DTOs inmutables si procede; class para entidades EF.
+// - No omitir modificadores de acceso; siempre explícito (public, private, protected, internal).
+//
+// ASYNC / AWAIT:
+// - Todos los métodos de servicio que tocan BD o HTTP son async Task<T>.
+// - Nombrar métodos asíncronos con sufijo Async.  Ejemplo: GetUnreadNotificationsAsync.
+// - Usar ConfigureAwait(false) en servicios de biblioteca; no es necesario en controladores ASP.NET Core.
+//
+// CONTROLADORES API:
+// - Heredar de ApiBaseController.
+// - Atributos de ruta en la clase: [Route("api/[controller]")].
+// - Retornar siempre ApiResponse<T> usando los helpers ApiOk / ApiError / ApiValidationError.
+// - Validar ModelState con if (!ModelState.IsValid) return ApiValidationError(...).
+// - Try/catch en cada acción que acceda a BD, retornar ApiError con código 500 en excepciones inesperadas.
+//
+// CONTROLADORES MVC:
+// - Heredar de Controller.
+// - Usar TempData["SuccessMessage"] y TempData["ErrorMessage"] para feedback al usuario.
+// - Redirigir con RedirectToAction tras POST exitoso (PRG pattern).
+//
+// ENTIDADES EF CORE:
+// - Propiedades de navegación: virtual (para lazy loading si se activa) o cargadas con Include().
+// - Claves foráneas: NombreEntidadId (int o string según Identity).
+// - Auditoría mínima: CreatedAt (DateTime, UTC) donde aplique.
+//
+// INYECCIÓN DE DEPENDENCIAS:
+// - Registrar servicios en Program.cs con el lifetime correcto:
+//   AddScoped para servicios con estado por request, AddSingleton para servicios sin estado.
+// - No usar ServiceLocator; inyectar siempre por constructor.
+//
+// VALIDACIÓN:
+// - Usar Data Annotations en DTOs y ViewModels ([Required], [StringLength], [RegularExpression]).
+// - Validar identificación cubana/pasaporte con el regex existente en el proyecto.
+// - No duplicar lógica de validación; centralizar en el servicio cuando la validación es compleja.
+//
+// MANEJO DE ERRORES:
+// - Loguear excepciones con ILogger<T> inyectado por constructor.
+// - No exponer stack traces en respuestas de producción.
+// - Usar mensajes de error en español (cultura es-ES).
+//
+// COMENTARIOS Y DOCUMENTACIÓN:
+// - Usar /// <summary> en métodos y clases públicos de servicios y controladores.
+// - Comentarios en español dentro del código.
+// - No comentar código obvio; comentar el "por qué", no el "qué".
+
+// ===========================================
+// CONVENCIONES DE CODIFICACIÓN (MAUI / Mobile)
+// ===========================================
+//
+// NOMENCLATURA:
+// - ViewModels: sufijo ViewModel, heredan de BaseViewModel (CommunityToolkit.Mvvm).
+// - Páginas (Views): sufijo Page.  Ejemplo: TurnosPage, SolicitarTurnoPage.
+// - Servicios: sufijo Service, interfaz prefijo I.  Ejemplo: ApiService / IApiService.
+// - Comandos: usar [RelayCommand] de CommunityToolkit.Mvvm; el método sin el sufijo Command.
+//   Ejemplo: método CargarDatos() → comando CargarDatosCommand.
+// - Propiedades observables: [ObservableProperty] (genera la propiedad con notificación).
+//   El campo privado en camelCase sin underscore cuando se usa el generador de fuente.
+//   Ejemplo: [ObservableProperty] string titulo; → genera public string Titulo { get; set; }
+// - Colecciones: ObservableCollection<T> para listas enlazadas a la UI.
+//
+// PATRONES MVVM:
+// - La lógica de negocio va en el ViewModel, NO en el code-behind de la Page.
+// - El code-behind solo contiene inicialización, event handlers de ciclo de vida y navegación.
+// - Usar IsBusy (heredado de BaseViewModel) para mostrar ActivityIndicator durante operaciones.
+// - Usar IApiService para TODOS los llamados HTTP; nunca instanciar HttpClient directamente.
+// - Usar Constants.ApiBaseUrl para la URL base; nunca hardcodear URLs.
+//
+// NAVEGACIÓN:
+// - Shell navigation con rutas registradas en AppShell.xaml.
+// - Pasar parámetros con QueryProperty o Shell.Current.GoToAsync con diccionario.
+//
+// ASYNC EN MAUI:
+// - Los comandos [RelayCommand] usan métodos async Task.
+// - Nunca bloquear el hilo principal; toda operación de red/BD es async.
+// - Capturar excepciones en comandos y mostrar await DisplayAlert con mensaje en español.
+
+// ===========================================
+// PALETA DE COLORES Y ESTILOS UI
+// ===========================================
+//
+// WEB (Bootstrap 5 — colores semánticos usados en el proyecto):
+// - Primario (acciones principales, headers de cards):  bg-primary / btn-primary   → #0d6efd (azul Bootstrap)
+// - Éxito (confirmaciones, stock disponible):           bg-success / btn-success   → #198754 (verde)
+// - Peligro (eliminaciones, errores, rechazos):         bg-danger  / btn-danger    → #dc3545 (rojo)
+// - Advertencia (alertas, turnos pendientes):           bg-warning / btn-warning   → #ffc107 (amarillo, texto dark)
+// - Información (datos secundarios, info adicional):    bg-info    / btn-info      → #0dcaf0 (cyan)
+// - Secundario (elementos neutros, badges de extra):    bg-secondary               → #6c757d (gris)
+// - Claro (fondos, badges de nombre):                   bg-light text-dark         → #f8f9fa
+// - Oscuro (números de turno, resaltados fuertes):      bg-dark                    → #212529
+//
+// SEMÁNTICA DE COLORES POR ESTADO DE TURNO:
+// - Pendiente  → badge bg-warning text-dark
+// - Aprobado   → badge bg-success
+// - Rechazado  → badge bg-danger
+// - Completado → badge bg-info
+// - Cancelado  → badge bg-secondary
+//
+// REGLAS DE ESTILOS WEB:
+// - Framework CSS: Bootstrap 5 (sin framework adicional; no agregar Tailwind u otros).
+// - Iconos: Bootstrap Icons (bi bi-*) como clase principal; FontAwesome (fa fa-*) solo donde ya existe.
+//   Preferir Bootstrap Icons para nuevas vistas.
+// - Tablas: usar DataTables (ya cargado globalmente) con class="table table-striped table-hover".
+// - Cards: estructura estándar card > card-header bg-primary text-white / card-body.
+// - Formularios: usar form-floating para campos de texto cuando el espacio lo permite.
+// - Alertas de feedback: alert alert-success / alert-danger con alert-dismissible fade show.
+// - Tipografía: fuente del sistema (Bootstrap default); tamaño base 16px en ≥768px, 14px en móvil.
+// - Espaciado: usar clases de utilidad Bootstrap (mt-*, mb-*, p-*); no CSS inline de espaciado.
+// - Modales: Bootstrap Modal (data-bs-toggle="modal"); no librerías externas de modal.
+//
+// MAUI (colores definidos en Resources/Styles/Colors.xaml y Constants.cs):
+// - Primary (botones, highlights):       #512BD4  (morado MAUI default — mantener coherencia con la app existente)
+// - PrimaryDark (modo oscuro):           #ac99ea
+// - Secondary (fondos suaves):           #DFD8F7
+// - Tertiary:                            #2B0B98
+// - Equivalencias Bootstrap usadas en la lógica (Constants.cs):
+//     PrimaryColor  = #0d6efd   (azul — para badges/texto informativo)
+//     SuccessColor  = #198754   (verde)
+//     DangerColor   = #dc3545   (rojo)
+//     WarningColor  = #ffc107   (amarillo)
+//     InfoColor     = #0dcaf0   (cyan)
+//     SecondaryColor= #6c757d   (gris)
+//     LightColor    = #f8f9fa
+//     DarkColor     = #212529
+// - Grises de escala: Gray100 (#E1E1E1) a Gray950 (#141414).
+// - Soporte light/dark con AppThemeBinding en todos los estilos XAML.
+// - Fuente: OpenSansRegular / OpenSansSemibold (incluidas en Resources/Fonts).
+// - Botones: CornerRadius=8, Padding=14,10, MinimumHeightRequest=44 (accesibilidad táctil).
+// - NO hardcodear colores directamente en XAML; usar siempre StaticResource o AppThemeBinding.
+
+// ===========================================
+// PATRONES RECURRENTES — REFERENCIA RÁPIDA
+// ===========================================
+//
+// NUEVO CONTROLADOR API:
+//   [ApiController]
+//   [Route("api/[controller]")]
+//   [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+//   public class MiEntidadApiController : ApiBaseController { ... }
+//
+// NUEVA VISTA MVC (card estándar):
+//   <div class="card shadow-sm">
+//     <div class="card-header bg-primary text-white">
+//       <h5 class="mb-0"><i class="bi bi-icon-name me-2"></i>Título</h5>
+//     </div>
+//     <div class="card-body"> ... </div>
+//   </div>
+//
+// NUEVO VIEWMODEL MAUI:
+//   public partial class MiViewModel : BaseViewModel
+//   {
+//       private readonly IApiService _apiService;
+//       public MiViewModel(IApiService apiService) { _apiService = apiService; Title = "Título"; }
+//       [RelayCommand] async Task CargarDatos() { if (IsBusy) return; try { IsBusy = true; ... } finally { IsBusy = false; } }
+//   }
+//
+// NUEVA PAGE MAUI (mínimo):
+//   public partial class MiPage : ContentPage
+//   {
+//       public MiPage(MiViewModel vm) { InitializeComponent(); BindingContext = vm; }
+//   }
+//
+// FEEDBACK AL USUARIO (MVC):
+//   TempData["SuccessMessage"] = "Operación realizada correctamente.";
+//   TempData["ErrorMessage"]   = "Ocurrió un error al procesar la solicitud.";
