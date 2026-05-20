@@ -84,22 +84,28 @@
                             }
                             @if (User.IsInRole("Farmaceutico") || User.IsInRole("Admin"))
                             {
-                                <li class="nav-item">
-                                    <a class="nav-link text-white text-center" asp-controller="Turnos" asp-action="Dashboard">
+                                <li class="nav-item dropdown">
+                                    <a class="nav-link dropdown-toggle text-white text-center" href="#" id="navbarDropdownGestion" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                                         <i class="bi bi-kanban d-block"></i>
                                         <small>Gestión</small>
                                     </a>
+                                    <ul class="dropdown-menu" aria-labelledby="navbarDropdownGestion">
+                                        <li>
+                                            <a class="dropdown-item" asp-controller="Turnos" asp-action="Dashboard">
+                                                <i class="bi bi-kanban me-2"></i>Gestión de Turnos
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item" asp-controller="Turnos" asp-action="ReporteDia">
+                                                <i class="bi bi-printer-fill me-2"></i>Reporte del Día
+                                            </a>
+                                        </li>
+                                    </ul>
                                 </li>
                                 <li class="nav-item">
                                     <a class="nav-link text-white text-center" asp-controller="Patients" asp-action="Bloqueo">
                                         <i class="bi bi-lock-fill d-block"></i>
                                         <small>Bloqueos</small>
-                                    </a>
-                                </li>
-                                <li class="nav-item">
-                                    <a class="nav-link text-white text-center" asp-controller="Turnos" asp-action="ReporteDia">
-                                        <i class="bi bi-printer-fill d-block"></i>
-                                        <small>Reporte</small>
                                     </a>
                                 </li>
                             }
