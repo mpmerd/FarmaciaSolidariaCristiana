@@ -38,6 +38,28 @@ public partial class DashboardViewModel : BaseViewModel
     [ObservableProperty]
     private bool _isRefreshingInBackground;
 
+    // Decoración del Navbar
+    [ObservableProperty]
+    private bool _hasDecoration;
+
+    [ObservableProperty]
+    private string _decorationText = string.Empty;
+
+    [ObservableProperty]
+    private Color _decorationTextColor = Colors.White;
+
+    [ObservableProperty]
+    private string _decorationIcon = string.Empty;
+
+    [ObservableProperty]
+    private string _decorationImageUrl = string.Empty;
+
+    [ObservableProperty]
+    private bool _decorationIsPredefined;
+
+    [ObservableProperty]
+    private bool _decorationIsCustom;
+
     public bool IsDataLoaded { get; private set; }
 
     public DashboardViewModel(IAuthService authService, IApiService apiService) 
@@ -65,8 +87,8 @@ public partial class DashboardViewModel : BaseViewModel
                     Constants.RoleAdmin, Constants.RoleViewer);
             }
 
-            // Cargar estadísticas
-            await LoadStatisticsAsync();
+            // Cargar estadísticas y decoración en paralelo
+            await Task.WhenAll(LoadStatisticsAsync(), LoadDecorationAsync());
             IsDataLoaded = true;
         });
     }
@@ -137,6 +159,66 @@ public partial class DashboardViewModel : BaseViewModel
         };
     }
 
+    private async Task LoadDecorationAsync()
+    {
+        try
+        {
+            var dto = await ApiService.GetNavbarDecorationAsync();
+            if (dto == null || !dto.Active || string.IsNullOrWhiteSpace(dto.DisplayText))
+            {
+                HasDecoration = false;
+                return;
+            }
+
+            DecorationText = dto.DisplayText;
+
+            // Color del texto (fallback blanco semitransparente para que quede bien sobre el fondo azul)
+            DecorationTextColor = TryParseColor(dto.TextColor, Color.FromArgb("#CCFFFFFF"));
+
+            // Tipo de decoración
+            var isCustom = string.Equals(dto.Type, "Custom", StringComparison.OrdinalIgnoreCase)
+                           && !string.IsNullOrWhiteSpace(dto.CustomIconPath);
+
+            DecorationIsCustom = isCustom;
+            DecorationIsPredefined = !isCustom;
+
+            if (isCustom)
+            {
+                DecorationImageUrl = $"{Constants.ApiBaseUrl}{dto.CustomIconPath}";
+                DecorationIcon = string.Empty;
+            }
+            else
+            {
+                DecorationIcon = MapIconClassToEmoji(dto.IconClass);
+                DecorationImageUrl = string.Empty;
+            }
+
+            HasDecoration = true;
+        }
+        catch
+        {
+            HasDecoration = false;
+        }
+    }
+
+    private static Color TryParseColor(string? hex, Color fallback)
+    {
+        if (string.IsNullOrWhiteSpace(hex)) return fallback;
+        try { return Color.FromArgb(hex); }
+        catch { return fallback; }
+    }
+
+    private static string MapIconClassToEmoji(string? iconClass) =>
+        iconClass switch
+        {
+            var s when s != null && s.Contains("tree")           => "🎄",
+            var s when s != null && s.Contains("star")           => "⭐",
+            var s when s != null && s.Contains("cross")          => "✝️",
+            var s when s != null && s.Contains("heart")          => "❤️",
+            var s when s != null && s.Contains("fire")           => "🔥",
+            _ => "✨"
+        };
+
     [RelayCommand]
     private async Task NavigateToTurnosAsync()
     {
@@ -158,6 +240,7 @@ public partial class DashboardViewModel : BaseViewModel
     [RelayCommand]
     private async Task RefreshAsync()
     {
+        ApiService.InvalidateDashboardCache();
         await LoadDataAsync();
     }
 }

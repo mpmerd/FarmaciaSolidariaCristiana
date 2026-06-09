@@ -72,6 +72,7 @@ public partial class InsumosViewModel : BaseViewModel
     [RelayCommand]
     private async Task RefreshAsync()
     {
+        ApiService.InvalidateInsumosCache();
         await LoadInsumosAsync();
     }
 

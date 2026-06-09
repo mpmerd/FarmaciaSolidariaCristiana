@@ -59,6 +59,16 @@ namespace FarmaciaSolidariaCristiana.Services
             string motivo);
 
         /// <summary>
+        /// Envía resumen de reprogramación de turnos al farmacéutico
+        /// </summary>
+        Task SendResumenReprogramacionFarmaceuticoEmailAsync(
+            string destinatario,
+            string nombreFarmaceutico,
+            int cantidadReprogramados,
+            DateTime fechaOriginal,
+            string motivo);
+
+        /// <summary>
         /// Envía email al usuario cuando su turno es cancelado por no asistencia
         /// </summary>
         Task SendTurnoNoAsistenciaUsuarioEmailAsync(

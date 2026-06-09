@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using FarmaciaSolidariaCristiana.Data;
@@ -19,6 +20,8 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
         private readonly ITurnoService _turnoService;
         private readonly IOneSignalNotificationService _notificationService;
         private readonly IEmailService _emailService;
+        private readonly IPendingNotificationService _pendingNotificationService;
+        private readonly UserManager<IdentityUser> _userManager;
         private readonly ILogger<TurnosApiController> _logger;
         private readonly IWebHostEnvironment _environment;
 
@@ -27,6 +30,8 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
             ITurnoService turnoService,
             IOneSignalNotificationService notificationService,
             IEmailService emailService,
+            IPendingNotificationService pendingNotificationService,
+            UserManager<IdentityUser> userManager,
             ILogger<TurnosApiController> logger,
             IWebHostEnvironment environment)
         {
@@ -34,6 +39,8 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
             _turnoService = turnoService;
             _notificationService = notificationService;
             _emailService = emailService;
+            _pendingNotificationService = pendingNotificationService;
+            _userManager = userManager;
             _logger = logger;
             _environment = environment;
         }
@@ -868,6 +875,7 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
 
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             var fechaAnterior = turno.FechaPreferida;
+            var fechaAnteriorValue = fechaAnterior.GetValueOrDefault();
 
             turno.FechaPreferida = nuevoSlot.Value;
             turno.ComentariosFarmaceutico = model.Motivo ?? $"Reprogramado desde {fechaAnterior:dd/MM/yyyy}";
@@ -877,6 +885,66 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
 
             _logger.LogInformation("Turno {Id} reprogramado de {FechaAnterior} a {NuevaFecha} por usuario {UserId}", 
                 id, fechaAnterior, nuevoSlot.Value, userId);
+
+            // === NOTIFICACIÓN AL AFECTADO (reprogramación individual) ===
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    var afectadoId = turno.UserId;
+                    var afectadoEmail = turno.User?.Email;
+                    var afectadoNombre = turno.User?.UserName ?? "Usuario";
+                    var numero = turno.NumeroTurno ?? 0;
+                    var motivo = model.Motivo ?? $"Reprogramado desde {fechaAnterior:dd/MM/yyyy}";
+
+                    // Notificación pendiente (polling)
+                    try
+                    {
+                        await _pendingNotificationService.CreateNotificationAsync(
+                            afectadoId,
+                            "📅 Turno Reprogramado",
+                            $"Tu turno #{numero} fue reprogramado del {fechaAnteriorValue:dd/MM} al {nuevoSlot.Value:dd/MM HH:mm}",
+                            NotificationTypes.TurnoReprogramado,
+                            turno.Id,
+                            "Turno");
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "PendingNotification falló para turno {TurnoId}", id);
+                    }
+
+                    // Push notification
+                    try
+                    {
+                        await _notificationService.SendTurnoReprogramadoNotificationAsync(
+                            afectadoId, turno.Id, numero, fechaAnteriorValue, nuevoSlot.Value, motivo);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Push falló para turno {TurnoId}", id);
+                    }
+
+                    // Email si no tiene app MAUI
+                    try
+                    {
+                        var hasPush = await _notificationService.UserHasPushEnabledAsync(afectadoId);
+                        if (!hasPush && !string.IsNullOrEmpty(afectadoEmail))
+                        {
+                            await _emailService.SendTurnoReprogramadoEmailAsync(
+                                afectadoEmail, afectadoNombre, numero,
+                                fechaAnteriorValue, nuevoSlot.Value, motivo);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Email falló para usuario {UserId}", afectadoId);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error en notificaciones de reprogramación individual, turno {TurnoId}", id);
+                }
+            });
 
             return ApiOk(MapToDto(turno), "Turno reprogramado exitosamente");
         }
@@ -1093,6 +1161,105 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
             }
             
             await _context.SaveChangesAsync();
+
+            // === NOTIFICACIONES POR REPROGRAMACIÓN ===
+            // Notificar individualmente a cada afectado (push si usa MAUI, email si usa web)
+            // + resumen a farmacéuticos. Se envuelve en try/catch para no bloquear la respuesta.
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    foreach (var dto in turnosReprogramados)
+                    {
+                        var turnoObj = turnosAfectados.First(t => t.Id == dto.TurnoId);
+                        var userId   = turnoObj.UserId;
+                        var userName = turnoObj.User?.UserName ?? "Usuario";
+                        var email    = dto.UserEmail;
+                        var numero   = turnoObj.NumeroTurno ?? 0;
+
+                        // 1. Notificación pendiente (polling MAUI)
+                        try
+                        {
+                            await _pendingNotificationService.CreateNotificationAsync(
+                                userId,
+                                "📅 Turno Reprogramado",
+                                $"Tu turno #{numero} fue reprogramado del {dto.FechaOriginal:dd/MM} al {dto.FechaNueva:dd/MM HH:mm}",
+                                NotificationTypes.TurnoReprogramado,
+                                turnoObj.Id,
+                                "Turno");
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogWarning(ex, "Error creando PendingNotification para turno {TurnoId}", dto.TurnoId);
+                        }
+
+                        // 2. Push notification (puede fallar sin romper el flujo)
+                        try
+                        {
+                            await _notificationService.SendTurnoReprogramadoNotificationAsync(
+                                userId, turnoObj.Id, numero, dto.FechaOriginal, dto.FechaNueva, request.Motivo);
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogWarning(ex, "Push notification falló para turno {TurnoId}", dto.TurnoId);
+                        }
+
+                        // 3. Email solo si el usuario NO tiene app MAUI registrada
+                        try
+                        {
+                            var hasPush = await _notificationService.UserHasPushEnabledAsync(userId);
+                            if (!hasPush && !string.IsNullOrEmpty(email))
+                            {
+                                await _emailService.SendTurnoReprogramadoEmailAsync(
+                                    email, userName, numero, dto.FechaOriginal, dto.FechaNueva, request.Motivo);
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogWarning(ex, "Email falló para usuario {UserId}, turno {TurnoId}", userId, dto.TurnoId);
+                        }
+                    }
+
+                    // Resumen a farmacéuticos (siempre: push + email)
+                    if (turnosReprogramados.Count > 0)
+                    {
+                        var farmaceuticos = await _userManager.GetUsersInRoleAsync("Farmaceutico");
+                        var resumenMsg = $"Se reprogramaron {turnosReprogramados.Count} turno(s) del {request.FechaAfectada:dd/MM/yyyy}. Motivo: {request.Motivo}";
+
+                        foreach (var farm in farmaceuticos)
+                        {
+                            try
+                            {
+                                await _notificationService.SendNotificationToUserAsync(
+                                    farm.Id, "📋 Reprogramación de Turnos", resumenMsg,
+                                    NotificationType.General);
+                            }
+                            catch { /* push puede fallar */ }
+
+                            if (!string.IsNullOrEmpty(farm.Email))
+                            {
+                                try
+                                {
+                                    await _emailService.SendResumenReprogramacionFarmaceuticoEmailAsync(
+                                        farm.Email,
+                                        farm.UserName ?? "Farmacéutico",
+                                        turnosReprogramados.Count,
+                                        request.FechaAfectada,
+                                        request.Motivo);
+                                }
+                                catch (Exception ex)
+                                {
+                                    _logger.LogWarning(ex, "Email resumen falló para farmacéutico {UserId}", farm.Id);
+                                }
+                            }
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error en bloque de notificaciones post-reprogramación masiva");
+                }
+            });
 
             // Mensaje de resultado
             var mensaje = $"{turnosReprogramados.Count} turno(s) reprogramado(s) exitosamente.";
