@@ -118,6 +118,14 @@ public interface IApiService
     
     // Restricción de medicamentos por mes
     Task<ApiResponse<List<int>>> GetRestrictedMedicinesAsync(string documentoIdentidad);
+
+    // Decoración del Navbar
+    Task<NavbarDecorationDto?> GetNavbarDecorationAsync();
+
+    // Invalidación de caché (para pull-to-refresh)
+    void InvalidateMedicamentosCache();
+    void InvalidateInsumosCache();
+    void InvalidateDashboardCache();
 }
 
 public class BroadcastResultDto

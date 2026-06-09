@@ -25,6 +25,28 @@
                                FontSize="14"
                                TextColor="White"
                                Opacity="0.8"/>
+
+                        <!-- Decoración del Navbar (si hay una activa) -->
+                        <HorizontalStackLayout IsVisible="{Binding HasDecoration}"
+                                               Margin="0,6,0,0"
+                                               Spacing="6"
+                                               VerticalOptions="Center">
+                            <Label Text="{Binding DecorationIcon}"
+                                   IsVisible="{Binding DecorationIsPredefined}"
+                                   FontSize="16"
+                                   VerticalOptions="Center"/>
+                            <Image Source="{Binding DecorationImageUrl}"
+                                   IsVisible="{Binding DecorationIsCustom}"
+                                   WidthRequest="22"
+                                   HeightRequest="22"
+                                   Aspect="AspectFit"
+                                   VerticalOptions="Center"/>
+                            <Label Text="{Binding DecorationText}"
+                                   TextColor="{Binding DecorationTextColor}"
+                                   FontSize="13"
+                                   FontAttributes="Bold"
+                                   VerticalOptions="Center"/>
+                        </HorizontalStackLayout>
                     </VerticalStackLayout>
                 </Frame>
 

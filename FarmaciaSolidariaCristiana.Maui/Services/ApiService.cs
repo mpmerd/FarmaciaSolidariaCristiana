@@ -24,6 +24,7 @@ public class ApiService : IApiService
     private const string CacheKeyEntregas = "/api/deliveries";
     private const string CacheKeyPacientes = "/api/patients";
     private const string CacheKeyUsuarios = "/api/users";
+    private const string CacheKeyNavbarDecoration = "/api/navbar-decoration/active";
 
     public ApiService(HttpClient httpClient, IAuthService authService, ICacheService cache)
     {
@@ -799,6 +800,49 @@ public class ApiService : IApiService
 
     public Task<ApiResponse<List<Sponsor>>> GetPatrocinadoresAsync()
         => GetAsync<List<Sponsor>>("/api/sponsors");
+
+    // === DECORACIÓN DEL NAVBAR ===
+
+    public async Task<NavbarDecorationDto?> GetNavbarDecorationAsync()
+    {
+        if (_cache.TryGet<NavbarDecorationDto>(CacheKeyNavbarDecoration, out var cached) && cached != null)
+            return cached;
+
+        try
+        {
+            var response = await _httpClient.GetAsync(CacheKeyNavbarDecoration);
+            if (!response.IsSuccessStatusCode) return null;
+
+            var content = await response.Content.ReadAsStringAsync();
+            if (string.IsNullOrWhiteSpace(content) || content.TrimStart().StartsWith("<")) return null;
+
+            var dto = JsonSerializer.Deserialize<NavbarDecorationDto>(content, _jsonOptions);
+            if (dto != null)
+                _cache.Set(CacheKeyNavbarDecoration, dto, TimeSpan.FromMinutes(10));
+            return dto;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    // === INVALIDACIÓN DE CACHÉ (pull-to-refresh) ===
+
+    public void InvalidateMedicamentosCache()
+        => _cache.Invalidate(CacheKeyMedicamentos);
+
+    public void InvalidateInsumosCache()
+        => _cache.Invalidate(CacheKeyInsumos);
+
+    public void InvalidateDashboardCache()
+    {
+        _cache.Invalidate(CacheKeyMedicamentos);
+        _cache.Invalidate(CacheKeyInsumos);
+        _cache.Invalidate(CacheKeyTurnos);
+        _cache.Invalidate(CacheKeyMisTurnos);
+        _cache.Invalidate(CacheKeyEntregas);
+    }
 
     // === FECHAS BLOQUEADAS ===
 
