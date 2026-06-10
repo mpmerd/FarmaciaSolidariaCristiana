@@ -43,6 +43,9 @@ public partial class DashboardViewModel : BaseViewModel
     private bool _hasDecoration;
 
     [ObservableProperty]
+    private bool _isRefreshing;
+
+    [ObservableProperty]
     private string _decorationText = string.Empty;
 
     [ObservableProperty]
@@ -240,7 +243,14 @@ public partial class DashboardViewModel : BaseViewModel
     [RelayCommand]
     private async Task RefreshAsync()
     {
-        ApiService.InvalidateDashboardCache();
-        await LoadDataAsync();
+        try
+        {
+            ApiService.InvalidateDashboardCache();
+            await LoadDataAsync();
+        }
+        finally
+        {
+            IsRefreshing = false;
+        }
     }
 }
