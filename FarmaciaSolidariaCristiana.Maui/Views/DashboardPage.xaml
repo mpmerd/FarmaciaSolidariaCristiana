@@ -6,7 +6,7 @@
              x:DataType="viewmodels:DashboardViewModel"
              Title="{Binding Title}">
 
-    <RefreshView IsRefreshing="{Binding IsBusy}"
+    <RefreshView IsRefreshing="{Binding IsRefreshing}"
                  Command="{Binding RefreshCommand}">
         <ScrollView>
             <VerticalStackLayout Spacing="15" Padding="15">

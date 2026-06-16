@@ -55,12 +55,12 @@ namespace FarmaciaSolidariaCristiana.Services
         {
             var now = DateTime.Now;
             var startOfMonth = new DateTime(now.Year, now.Month, 1);
-            var endOfMonth = startOfMonth.AddMonths(1).AddDays(-1);
+            var startOfNextMonth = startOfMonth.AddMonths(1);
 
             var turnosEsteMes = await _context.Turnos
                 .Where(t => t.UserId == userId && 
                            t.FechaSolicitud >= startOfMonth && 
-                           t.FechaSolicitud <= endOfMonth &&
+                           t.FechaSolicitud < startOfNextMonth &&
                            (t.Estado == EstadoTurno.Pendiente || 
                             t.Estado == EstadoTurno.Aprobado ||
                             t.Estado == EstadoTurno.Completado ||
@@ -84,7 +84,7 @@ namespace FarmaciaSolidariaCristiana.Services
         {
             var now = DateTime.Now;
             var startOfMonth = new DateTime(now.Year, now.Month, 1);
-            var endOfMonth = startOfMonth.AddMonths(1).AddDays(-1);
+            var startOfNextMonth = startOfMonth.AddMonths(1);
             
             // Hash del documento para buscar
             var documentHash = HashDocument(documentoIdentidad);
@@ -104,7 +104,7 @@ namespace FarmaciaSolidariaCristiana.Services
             var turnosEsteMes = await _context.Turnos
                 .Where(t => t.DocumentoIdentidadHash == documentHash && 
                            t.FechaSolicitud >= startOfMonth && 
-                           t.FechaSolicitud <= endOfMonth &&
+                           t.FechaSolicitud < startOfNextMonth &&
                            (t.Estado == EstadoTurno.Pendiente || 
                             t.Estado == EstadoTurno.Aprobado ||
                             t.Estado == EstadoTurno.Completado ||
@@ -128,14 +128,14 @@ namespace FarmaciaSolidariaCristiana.Services
         {
             var now = DateTime.Now;
             var startOfMonth = new DateTime(now.Year, now.Month, 1);
-            var endOfMonth = startOfMonth.AddMonths(1).AddDays(-1);
+            var startOfNextMonth = startOfMonth.AddMonths(1);
             var documentHash = HashDocument(documentoIdentidad);
 
             var medicineIds = await _context.TurnoMedicamentos
                 .Where(tm => tm.Turno != null &&
                              tm.Turno.DocumentoIdentidadHash == documentHash &&
                              tm.Turno.FechaSolicitud >= startOfMonth &&
-                             tm.Turno.FechaSolicitud <= endOfMonth &&
+                             tm.Turno.FechaSolicitud < startOfNextMonth &&
                              (tm.Turno.Estado == EstadoTurno.Pendiente ||
                               tm.Turno.Estado == EstadoTurno.Aprobado ||
                               tm.Turno.Estado == EstadoTurno.Completado))
