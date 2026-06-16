@@ -682,6 +682,22 @@ namespace FarmaciaSolidariaCristiana.Controllers
             return Json(new { supplies });
         }
 
+        // GET: Turnos/GetRestrictedMedicinesForDocument
+        /// <summary>
+        /// Retorna los IDs de medicamentos ya solicitados por el paciente este mes natural.
+        /// Usado por el formulario MVC para ocultar medicamentos restringidos en la búsqueda.
+        /// </summary>
+        [HttpGet]
+        [Authorize(Roles = "ViewerPublic")]
+        public async Task<JsonResult> GetRestrictedMedicinesForDocument(string documentoIdentidad)
+        {
+            if (string.IsNullOrWhiteSpace(documentoIdentidad))
+                return Json(new { restrictedIds = new List<int>() });
+
+            var restrictedIds = await _turnoService.GetPatientMedicineIdsThisMonthAsync(documentoIdentidad);
+            return Json(new { restrictedIds });
+        }
+
         // POST: Turnos/Cancel/5
         /// <summary>
         /// Permite a un usuario cancelar su turno aprobado (si faltan más de 7 días)
