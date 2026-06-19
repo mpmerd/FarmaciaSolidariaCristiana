@@ -74,6 +74,7 @@ public partial class DashboardViewModel : BaseViewModel
     [RelayCommand]
     public async Task LoadDataAsync()
     {
+        IsRefreshingInBackground = true;
         await ExecuteAsync(async () =>
         {
             // Cargar información del usuario
@@ -94,6 +95,7 @@ public partial class DashboardViewModel : BaseViewModel
             await Task.WhenAll(LoadStatisticsAsync(), LoadDecorationAsync());
             IsDataLoaded = true;
         });
+        IsRefreshingInBackground = false;
     }
 
     public async Task RefreshInBackgroundAsync()
