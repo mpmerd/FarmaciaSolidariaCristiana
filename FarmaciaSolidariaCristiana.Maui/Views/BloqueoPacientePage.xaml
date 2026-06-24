@@ -24,6 +24,67 @@
                 </StackLayout>
             </Frame>
 
+            <!-- Lista de pacientes bloqueados -->
+            <Frame BackgroundColor="{AppThemeBinding Light=White, Dark=#2a2a2a}"
+                   BorderColor="#EF9A9A" CornerRadius="10" Padding="0">
+                <StackLayout Spacing="0">
+                    <!-- Cabecera de la lista -->
+                    <Grid BackgroundColor="#D32F2F" Padding="15,10" ColumnDefinitions="*,Auto">
+                        <Label Grid.Column="0" Text="Pacientes Bloqueados"
+                               FontSize="16" FontAttributes="Bold" TextColor="White"
+                               VerticalOptions="Center"/>
+                        <Frame Grid.Column="1" BackgroundColor="White" CornerRadius="10"
+                               Padding="8,3" HasShadow="False" BorderColor="Transparent">
+                            <Label Text="{Binding BlockedPatients.Count}"
+                                   FontAttributes="Bold" TextColor="#D32F2F" FontSize="14"
+                                   VerticalOptions="Center" HorizontalOptions="Center"/>
+                        </Frame>
+                    </Grid>
+
+                    <!-- Sin bloqueados -->
+                    <Label IsVisible="{Binding HasBlockedPatients, Converter={StaticResource InverseBoolConverter}}"
+                           Text="✅ No hay pacientes bloqueados actualmente."
+                           FontSize="14"
+                           TextColor="{AppThemeBinding Light=#555, Dark=#aaa}"
+                           Padding="15"
+                           HorizontalOptions="Center"/>
+
+                    <!-- Lista de bloqueados -->
+                    <CollectionView ItemsSource="{Binding BlockedPatients}"
+                                    IsVisible="{Binding HasBlockedPatients}"
+                                    MaximumHeightRequest="300"
+                                    SelectionMode="None">
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate x:DataType="models:PatientAutoCompleteItem">
+                                <Grid Padding="15,10" ColumnDefinitions="*,Auto"
+                                      BackgroundColor="{AppThemeBinding Light=White, Dark=#2a2a2a}">
+                                    <Grid.GestureRecognizers>
+                                        <TapGestureRecognizer
+                                            Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:BloqueoPacienteViewModel}}, Path=SelectBlockedPatientCommand}"
+                                            CommandParameter="{Binding}"/>
+                                    </Grid.GestureRecognizers>
+                                    <StackLayout Grid.Column="0" Spacing="2">
+                                        <Label Text="{Binding FullName}"
+                                               FontAttributes="Bold" FontSize="15"
+                                               TextColor="{AppThemeBinding Light=#1a1a1a, Dark=#e0e0e0}"/>
+                                        <Label Text="{Binding IdentificationDocument}"
+                                               FontSize="12"
+                                               TextColor="{StaticResource Gray600}"/>
+                                        <Label Text="{Binding LoanBlockDescription}"
+                                               FontSize="12" FontAttributes="Italic"
+                                               TextColor="#C62828"
+                                               LineBreakMode="TailTruncation"/>
+                                    </StackLayout>
+                                    <Label Grid.Column="1" Text="→ Gestionar"
+                                           FontSize="12" TextColor="{StaticResource Primary}"
+                                           VerticalOptions="Center"/>
+                                </Grid>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+                </StackLayout>
+            </Frame>
+
             <!-- Búsqueda -->
             <Frame BackgroundColor="{AppThemeBinding Light=White, Dark=#2a2a2a}"
                    BorderColor="Transparent" CornerRadius="10" Padding="15">

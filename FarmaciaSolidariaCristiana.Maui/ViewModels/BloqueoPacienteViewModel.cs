@@ -30,6 +30,12 @@ public partial class BloqueoPacienteViewModel : BaseViewModel
     [ObservableProperty]
     private string blockDescription = string.Empty;
 
+    [ObservableProperty]
+    private ObservableCollection<PatientAutoCompleteItem> blockedPatients = new();
+
+    [ObservableProperty]
+    private bool hasBlockedPatients;
+
     private CancellationTokenSource? _searchCts;
 
     public BloqueoPacienteViewModel(IApiService apiService, IAuthService authService)
@@ -44,7 +50,38 @@ public partial class BloqueoPacienteViewModel : BaseViewModel
         if (userInfo?.Role != Constants.RoleAdmin && userInfo?.Role != Constants.RoleFarmaceutico)
         {
             await ShowErrorAsync("No tiene permisos para acceder a esta funcionalidad.");
+            return;
         }
+        await LoadBlockedPatientsAsync();
+    }
+
+    private async Task LoadBlockedPatientsAsync()
+    {
+        try
+        {
+            var response = await ApiService.GetPacientesBloqueadosAsync();
+            MainThread.BeginInvokeOnMainThread(() =>
+            {
+                BlockedPatients.Clear();
+                if (response.Success && response.Data != null)
+                {
+                    foreach (var item in response.Data)
+                        BlockedPatients.Add(item);
+                }
+                HasBlockedPatients = BlockedPatients.Count > 0;
+            });
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[BloqueoPacienteVM] LoadBlocked error: {ex.Message}");
+        }
+    }
+
+    [RelayCommand]
+    private async Task SelectBlockedPatientAsync(PatientAutoCompleteItem item)
+    {
+        if (item == null) return;
+        await SelectPatientAsync(item);
     }
 
     partial void OnSearchTextChanged(string value)
@@ -156,6 +193,7 @@ public partial class BloqueoPacienteViewModel : BaseViewModel
                 SelectedPatient = response.Data;
                 IsPatientBlocked = true;
                 BlockDescription = string.Empty;
+                await LoadBlockedPatientsAsync();
                 await Shell.Current.DisplayAlertAsync("Listo",
                     $"El paciente {SelectedPatient.FullName} fue bloqueado correctamente.", "Aceptar");
             }
@@ -194,6 +232,7 @@ public partial class BloqueoPacienteViewModel : BaseViewModel
             {
                 SelectedPatient = response.Data;
                 IsPatientBlocked = false;
+                await LoadBlockedPatientsAsync();
                 await Shell.Current.DisplayAlertAsync("Listo",
                     $"El paciente {SelectedPatient.FullName} fue desbloqueado correctamente.", "Aceptar");
             }

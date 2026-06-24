@@ -792,6 +792,31 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
         // ========================================
 
         /// <summary>
+        /// Devuelve todos los pacientes actualmente bloqueados por préstamo de insumo
+        /// </summary>
+        [HttpGet("blocked")]
+        [Authorize(Roles = "Admin,Farmaceutico")]
+        [ProducesResponseType(typeof(ApiResponse<List<PatientAutoCompleteDto>>), 200)]
+        public async Task<IActionResult> GetBlocked()
+        {
+            var results = await _context.Patients
+                .Where(p => p.IsActive && p.IsBlockedByLoan)
+                .OrderBy(p => p.FullName)
+                .Select(p => new PatientAutoCompleteDto
+                {
+                    Id = p.Id,
+                    IdentificationDocument = p.IdentificationDocument,
+                    FullName = p.FullName,
+                    Age = p.Age,
+                    IsBlockedByLoan = true,
+                    LoanBlockDescription = p.LoanBlockDescription
+                })
+                .ToListAsync();
+
+            return ApiOk(results);
+        }
+
+        /// <summary>
         /// Búsqueda rápida de pacientes con autocompletado por nombre o documento de identidad
         /// </summary>
         [HttpGet("search-autocomplete")]

@@ -781,9 +781,45 @@ namespace FarmaciaSolidariaCristiana.Controllers
         /// </summary>
         [Authorize(Roles = "Admin,Farmaceutico")]
         [HttpGet]
-        public IActionResult Bloqueo()
+        public async Task<IActionResult> Bloqueo()
         {
+            var blockedPatients = await _context.Patients
+                .Where(p => p.IsActive && p.IsBlockedByLoan)
+                .OrderBy(p => p.FullName)
+                .Select(p => new
+                {
+                    id = p.Id,
+                    fullName = p.FullName,
+                    identificationDocument = p.IdentificationDocument,
+                    loanBlockDate = p.LoanBlockDate != null ? p.LoanBlockDate.Value.ToString("dd/MM/yyyy") : "",
+                    loanBlockDescription = p.LoanBlockDescription ?? ""
+                })
+                .ToListAsync();
+
+            ViewData["BlockedPatientsJson"] = System.Text.Json.JsonSerializer.Serialize(blockedPatients);
             return View();
+        }
+
+        /// <summary>
+        /// Devuelve el listado de pacientes actualmente bloqueados por préstamo (JSON)
+        /// </summary>
+        [Authorize(Roles = "Admin,Farmaceutico")]
+        [HttpGet]
+        public async Task<IActionResult> GetBlocked()
+        {
+            var list = await _context.Patients
+                .Where(p => p.IsActive && p.IsBlockedByLoan)
+                .OrderBy(p => p.FullName)
+                .Select(p => new
+                {
+                    id = p.Id,
+                    fullName = p.FullName,
+                    identificationDocument = p.IdentificationDocument,
+                    loanBlockDate = p.LoanBlockDate != null ? p.LoanBlockDate.Value.ToString("dd/MM/yyyy") : "",
+                    loanBlockDescription = p.LoanBlockDescription ?? ""
+                })
+                .ToListAsync();
+            return Json(list);
         }
 
         /// <summary>
