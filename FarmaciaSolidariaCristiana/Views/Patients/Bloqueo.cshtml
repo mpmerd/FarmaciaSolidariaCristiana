@@ -1,5 +1,6 @@
 @{
     ViewData["Title"] = "Bloqueo por Préstamo de Insumo";
+    var blockedPatientsJson = ViewData["BlockedPatientsJson"] as string ?? "[]";
 }
 
 <div class="container-fluid mt-4">
@@ -9,6 +10,33 @@
                 <i class="bi bi-lock-fill text-danger"></i> Bloqueo por Préstamo de Insumo
             </h2>
             <p class="text-muted">Bloquee a un paciente cuando deba un insumo de la farmacia. El bloqueo impide que el paciente solicite nuevos turnos hasta que devuelva el insumo.</p>
+        </div>
+    </div>
+
+    <!-- Pacientes actualmente bloqueados -->
+    <div class="card shadow-sm mb-4 border-danger">
+        <div class="card-header bg-danger text-white d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="bi bi-lock-fill"></i> Pacientes Bloqueados</h5>
+            <span id="blockedCountBadge" class="badge bg-white text-danger fw-bold">...</span>
+        </div>
+        <div class="card-body p-0">
+            <div id="blockedListEmpty" class="p-3 text-muted" style="display:none;">
+                <i class="bi bi-check-circle-fill text-success"></i> No hay pacientes bloqueados actualmente.
+            </div>
+            <div id="blockedListContainer" class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Paciente</th>
+                            <th>Carnet / Pasaporte</th>
+                            <th>Insumo en préstamo</th>
+                            <th>Fecha bloqueo</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody id="blockedListBody"></tbody>
+                </table>
+            </div>
         </div>
     </div>
 
@@ -109,6 +137,50 @@
         const antiForgeryToken = document.querySelector('input[name="__RequestVerificationToken"]')?.value
             || '@Html.AntiForgeryToken()'.match(/value="([^"]+)"/)?.[1] || '';
 
+        // ---- Lista inicial de bloqueados (inyectada desde el servidor) ----
+        const initialBlocked = @Html.Raw(blockedPatientsJson);
+        renderBlockedList(initialBlocked);
+
+        function renderBlockedList(list) {
+            const badge = document.getElementById('blockedCountBadge');
+            const empty = document.getElementById('blockedListEmpty');
+            const container = document.getElementById('blockedListContainer');
+            const tbody = document.getElementById('blockedListBody');
+
+            badge.textContent = list.length;
+
+            if (list.length === 0) {
+                empty.style.display = 'block';
+                container.style.display = 'none';
+                return;
+            }
+
+            empty.style.display = 'none';
+            container.style.display = 'block';
+            tbody.innerHTML = list.map(p => `
+                <tr>
+                    <td><strong>${escapeHtml(p.fullName)}</strong></td>
+                    <td>${escapeHtml(p.identificationDocument)}</td>
+                    <td>${escapeHtml(p.loanBlockDescription || '-')}</td>
+                    <td>${escapeHtml(p.loanBlockDate || '-')}</td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-primary" onclick="selectPatientById(${p.id}, ${JSON.stringify(escapeHtml(p.fullName))})">
+                            <i class="bi bi-arrow-right-circle"></i> Gestionar
+                        </button>
+                    </td>
+                </tr>`).join('');
+        }
+
+        function refreshBlockedList() {
+            fetch('@Url.Action("GetBlocked", "Patients")')
+                .then(r => r.json())
+                .then(data => {
+                    if (Array.isArray(data)) renderBlockedList(data);
+                })
+                .catch(() => {});
+        }
+
+        // ---- Búsqueda ----
         document.getElementById('searchInput').addEventListener('input', function () {
             clearTimeout(searchTimeout);
             const q = this.value.trim();
@@ -150,6 +222,28 @@
                     container.style.display = 'block';
                 })
                 .catch(() => hideAutocomplete());
+        }
+
+        function selectPatientById(id, name) {
+            document.getElementById('searchInput').value = name;
+            hideAutocomplete();
+            fetch('@Url.Action("AutocompleteSearch", "Patients")?q=' + encodeURIComponent(name))
+                .then(r => r.json())
+                .then(data => {
+                    const patient = data.find(p => p.id === id);
+                    if (patient) {
+                        showPatientPanel(patient);
+                    } else {
+                        // Fallback: re-fetch with name only
+                        return fetch('@Url.Action("AutocompleteSearch", "Patients")?q=' + encodeURIComponent(name))
+                            .then(r2 => r2.json())
+                            .then(data2 => {
+                                const p2 = data2.find(p => p.id === id);
+                                if (p2) showPatientPanel(p2);
+                            });
+                    }
+                })
+                .catch(() => {});
         }
 
         function selectPatient(id) {
@@ -225,6 +319,7 @@
                     if (data.success) {
                         showResult('success', data.message);
                         clearPatient();
+                        refreshBlockedList();
                     } else {
                         showResult('error', data.message || 'Error al bloquear el paciente.');
                     }
@@ -246,6 +341,7 @@
                     if (data.success) {
                         showResult('success', data.message);
                         clearPatient();
+                        refreshBlockedList();
                     } else {
                         showResult('error', data.message || 'Error al desbloquear el paciente.');
                     }

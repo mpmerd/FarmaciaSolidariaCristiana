@@ -62,6 +62,7 @@ public interface IApiService
     Task<byte[]?> DownloadPatientDocumentAsync(int patientId, int documentId);
     
     // Bloqueo de pacientes por préstamo de insumo
+    Task<ApiResponse<List<PatientAutoCompleteItem>>> GetPacientesBloqueadosAsync();
     Task<ApiResponse<List<PatientAutoCompleteItem>>> SearchPacientesAutocompleteAsync(string q);
     Task<ApiResponse<Patient>> BloquearPacientePrestamoAsync(int id, string description);
     Task<ApiResponse<Patient>> DesbloquearPacientePrestamoAsync(int id);

@@ -698,6 +698,11 @@ public class ApiService : IApiService
         }
     }
 
+    public async Task<ApiResponse<List<PatientAutoCompleteItem>>> GetPacientesBloqueadosAsync()
+    {
+        return await GetAsync<List<PatientAutoCompleteItem>>("/api/patients/blocked");
+    }
+
     public async Task<ApiResponse<List<PatientAutoCompleteItem>>> SearchPacientesAutocompleteAsync(string q)
     {
         if (string.IsNullOrWhiteSpace(q) || q.Length < 2)
