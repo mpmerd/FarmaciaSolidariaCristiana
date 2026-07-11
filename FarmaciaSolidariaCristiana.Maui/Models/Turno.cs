@@ -15,6 +15,7 @@ public class Turno
     public string? NotasSolicitante { get; set; }
     public string? ComentariosFarmaceutico { get; set; }
     public DateTime? FechaRevision { get; set; }
+    public string? RevisadoPorNombre { get; set; }
     public string? TurnoPdfPath { get; set; }
     public List<TurnoMedicamento> Medicamentos { get; set; } = new();
     public List<TurnoInsumo> Insumos { get; set; } = new();

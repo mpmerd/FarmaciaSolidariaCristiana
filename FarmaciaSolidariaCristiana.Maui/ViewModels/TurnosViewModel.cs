@@ -286,6 +286,14 @@ public partial class TurnosViewModel : BaseViewModel, IRecipient<TurnosReprogram
                 sb.AppendLine($"\n📎 Documentos adjuntos: {turno.DocumentosCount}");
             }
 
+            // Mostrar revisor para roles Admin/Farmaceutico en estados revisados
+            if (CanManageTurnos &&
+                (turno.Estado == "Aprobado" || turno.Estado == "Rechazado" || turno.Estado == "Completado") &&
+                !string.IsNullOrEmpty(turno.RevisadoPorNombre))
+            {
+                sb.AppendLine($"\n👤 Revisado por: {turno.RevisadoPorNombre}");
+            }
+
             // Mostrar alerta con opción de ver documentos si existen
             if (turno.Documentos?.Any() == true)
             {
