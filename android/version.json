@@ -1,10 +1,10 @@
 {
-  "version": "1.0.6",
-  "versionCode": 6,
-  "releaseDate": "2026-04-30",
+  "version": "1.0.7",
+  "versionCode": 7,
+  "releaseDate": "2026-06-25",
   "downloadUrl": "https://farmaciasolidaria.somee.com/android/farmaciasolidaria.apk",
   "fileSize": "35M",
   "minAndroidVersion": "24",
   "minimumVersion": "1.0.6",
-  "releaseNotes": "Múltiples optimizaciones en velocidad de respuesta. Corrección de información de la versión en el perfil del usuario. App lista para controlar si es necesario préstamos de determinados insumos como recipientes, determinados tipos de vendas, etc… "
+  "releaseNotes": "Esta versión no es requerida pero se sugiere actualizar. Optimizaciones en vistas principales. Mejoras en la reprogramación de turnos. Aparece decoración del navbar en la app. Mejoras en bloqueo/desbloqueo de deudas por insumos prestados. "
 }
