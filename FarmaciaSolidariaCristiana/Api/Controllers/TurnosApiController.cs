@@ -60,6 +60,7 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
         {
             var query = _context.Turnos
                 .Include(t => t.User)
+                .Include(t => t.RevisadoPor)
                 .Include(t => t.Medicamentos).ThenInclude(tm => tm.Medicine)
                 .Include(t => t.Insumos).ThenInclude(ti => ti.Supply)
                 .Include(t => t.Documentos)
@@ -111,6 +112,7 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
             var turnos = await _context.Turnos
+                .Include(t => t.RevisadoPor)
                 .Include(t => t.Medicamentos).ThenInclude(tm => tm.Medicine)
                 .Include(t => t.Insumos).ThenInclude(ti => ti.Supply)
                 .Include(t => t.Documentos)
@@ -136,6 +138,7 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
 
             var turno = await _context.Turnos
                 .Include(t => t.User)
+                .Include(t => t.RevisadoPor)
                 .Include(t => t.Medicamentos).ThenInclude(tm => tm.Medicine)
                 .Include(t => t.Insumos).ThenInclude(ti => ti.Supply)
                 .Include(t => t.Documentos)
@@ -447,6 +450,7 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
                 // Cargar datos completos para el DTO
                 var turnoCompleto = await _context.Turnos
                     .Include(t => t.User)
+                    .Include(t => t.RevisadoPor)
                     .Include(t => t.Medicamentos).ThenInclude(tm => tm.Medicine)
                     .Include(t => t.Insumos).ThenInclude(ti => ti.Supply)
                     .FirstOrDefaultAsync(t => t.Id == createdTurno.Id);
@@ -640,6 +644,7 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
             // Recargar turno con datos actualizados
             turno = await _context.Turnos
                 .Include(t => t.User)
+                .Include(t => t.RevisadoPor)
                 .Include(t => t.Medicamentos).ThenInclude(tm => tm.Medicine)
                 .Include(t => t.Insumos).ThenInclude(ti => ti.Supply)
                 .FirstOrDefaultAsync(t => t.Id == id);
@@ -694,6 +699,7 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
             // Recargar turno con datos actualizados
             turno = await _context.Turnos
                 .Include(t => t.User)
+                .Include(t => t.RevisadoPor)
                 .Include(t => t.Medicamentos).ThenInclude(tm => tm.Medicine)
                 .Include(t => t.Insumos).ThenInclude(ti => ti.Supply)
                 .FirstOrDefaultAsync(t => t.Id == id);
@@ -750,6 +756,7 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
             // Recargar turno con datos actualizados
             turno = await _context.Turnos
                 .Include(t => t.User)
+                .Include(t => t.RevisadoPor)
                 .Include(t => t.Medicamentos).ThenInclude(tm => tm.Medicine)
                 .Include(t => t.Insumos).ThenInclude(ti => ti.Supply)
                 .FirstOrDefaultAsync(t => t.Id == id);
@@ -804,6 +811,7 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
         {
             var turno = await _context.Turnos
                 .Include(t => t.User)
+                .Include(t => t.RevisadoPor)
                 .Include(t => t.Medicamentos).ThenInclude(tm => tm.Medicine)
                 .Include(t => t.Insumos).ThenInclude(ti => ti.Supply)
                 .FirstOrDefaultAsync(t => t.Id == id);
@@ -842,6 +850,7 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
 
             var turno = await _context.Turnos
                 .Include(t => t.User)
+                .Include(t => t.RevisadoPor)
                 .Include(t => t.Medicamentos).ThenInclude(tm => tm.Medicine)
                 .Include(t => t.Insumos).ThenInclude(ti => ti.Supply)
                 .FirstOrDefaultAsync(t => t.Id == id);
@@ -989,6 +998,7 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
                 NotasSolicitante = t.NotasSolicitante,
                 ComentariosFarmaceutico = t.ComentariosFarmaceutico,
                 FechaRevision = t.FechaRevision,
+                RevisadoPorNombre = t.RevisadoPor?.UserName,
                 TurnoPdfPath = t.TurnoPdfPath,
                 Medicamentos = t.Medicamentos.Select(m => new TurnoMedicamentoDto
                 {
