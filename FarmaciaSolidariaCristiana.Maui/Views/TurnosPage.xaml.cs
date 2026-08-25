@@ -7,19 +7,23 @@ public partial class TurnosPage : ContentPage
 {
     private readonly TurnosViewModel _viewModel;
     private readonly IPollingNotificationService _pollingService;
+    private readonly INotificationsHubClient _hubClient;
     private bool _initialized;
 
-    public TurnosPage(TurnosViewModel viewModel, IPollingNotificationService pollingService)
+    public TurnosPage(TurnosViewModel viewModel, IPollingNotificationService pollingService, INotificationsHubClient hubClient)
     {
         InitializeComponent();
         BindingContext = _viewModel = viewModel;
         _pollingService = pollingService;
+        _hubClient = hubClient;
     }
 
     protected override async void OnAppearing()
     {
         base.OnAppearing();
         _pollingService.NotificationReceived += OnNotificationReceived;
+        // Fase 2.8: también escuchar el canal SignalR (push real sobre 443).
+        _hubClient.NotificationReceived += OnNotificationReceived;
         if (!_initialized)
         {
             _initialized = true;
@@ -33,6 +37,7 @@ public partial class TurnosPage : ContentPage
     {
         base.OnDisappearing();
         _pollingService.NotificationReceived -= OnNotificationReceived;
+        _hubClient.NotificationReceived -= OnNotificationReceived;
     }
 
     private async void OnNotificationReceived(object? sender, NotificationReceivedEventArgs e)

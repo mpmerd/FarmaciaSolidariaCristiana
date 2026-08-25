@@ -17,12 +17,25 @@ public partial class App : Application
     public static bool IsOneSignalInitialized { get; private set; }
     public static string? OneSignalPlayerId { get; private set; }
     public static string? OneSignalInitError { get; private set; }
+
+    /// <summary>
+    /// Ruta pendiente a la que navegar cuando la app vuelve a primer plano
+    /// (ej. al tocar "Ver" en una notificación del sistema lanzada desde background).
+    /// </summary>
+    public static string? PendingRoute { get; set; }
+
+    /// <summary>
+    /// Proveedor de servicios raíz (para que el Foreground Service Android resuelva
+    /// INotificationsHubClient sin pasar por el MauiContext que puede no estar listo tras un kill).
+    /// </summary>
+    public static IServiceProvider? Services { get; private set; }
     
     public App(IAuthService authService, IServiceProvider serviceProvider)
     {
         InitializeComponent();
         _authService = authService;
         _serviceProvider = serviceProvider;
+        Services = serviceProvider;
         _updateService = new UpdateService();
         
         // Initialize OneSignal
@@ -99,11 +112,42 @@ public partial class App : Application
     {
         var newId = e.State.Current.Id;
         System.Diagnostics.Debug.WriteLine($"[OneSignal] Push subscription changed. New ID: {newId}");
-        
+
         if (!string.IsNullOrEmpty(newId))
         {
             OneSignalPlayerId = newId;
             System.Diagnostics.Debug.WriteLine($"[OneSignal] PlayerId updated: {newId}");
+        }
+
+        // Fase 0/1: reportar disponibilidad real del canal OneSignal al servicio de salud.
+        // Disponible = hay PlayerId (suscripción OK) Y permiso concedido.
+        ReportOneSignalAvailabilityToHealthService(newId);
+    }
+
+    /// <summary>
+    /// Reporta al PushHealthService si OneSignal es un canal instantáneo usable ahora mismo.
+    /// </summary>
+    private void ReportOneSignalAvailabilityToHealthService(string? playerId)
+    {
+        try
+        {
+            bool permission = false;
+            try { permission = OneSignal.Notifications.Permission; }
+            catch (Exception pex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[OneSignal] No se pudo leer permiso: {pex.Message}");
+            }
+
+            bool available = !string.IsNullOrEmpty(playerId) && permission;
+            System.Diagnostics.Debug.WriteLine(
+                $"[OneSignal] Canal instantáneo available={available} (playerId={(!string.IsNullOrEmpty(playerId) ? "sí" : "no")}, permission={permission})");
+
+            var pushHealth = _serviceProvider.GetService<IPushHealthService>();
+            pushHealth?.ReportOneSignalAvailable(available);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[OneSignal] Error reportando disponibilidad: {ex.Message}");
         }
     }
 
@@ -166,6 +210,22 @@ public partial class App : Application
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"[App] Error checking notifications on resume: {ex.Message}");
+            }
+
+            // Navegar a ruta pendiente (desde acción "Ver" de una notificación del sistema).
+            if (!string.IsNullOrEmpty(PendingRoute))
+            {
+                var route = PendingRoute;
+                PendingRoute = null;
+                try
+                {
+                    await Shell.Current.GoToAsync(route);
+                    System.Diagnostics.Debug.WriteLine($"[App] Navigated to pending route: {route}");
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[App] Error navigating to pending route {route}: {ex.Message}");
+                }
             }
         };
         

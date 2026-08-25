@@ -5,6 +5,7 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using FarmaciaSolidariaCristiana.Data;
 using FarmaciaSolidariaCristiana.Services;
+using FarmaciaSolidariaCristiana.Hubs;
 using FarmaciaSolidariaCristiana.Filters;
 using System.Globalization;
 
@@ -167,6 +168,13 @@ else
 // Servicio de notificaciones pendientes (polling - funciona sin push)
 builder.Services.AddScoped<IPendingNotificationService, PendingNotificationService>();
 
+// ========================================
+// Fase 2: SignalR sobre 443 (canal de "push real" para Cuba)
+// Si el host no soporta WebSocket, el cliente cae automáticamente a SSE/long-polling sobre 443.
+// ========================================
+builder.Services.AddSignalR();
+builder.Services.AddSingleton<INotificationBroadcaster, SignalRNotificationBroadcaster>();
+
 // Register Background Services
 builder.Services.AddHostedService<TurnoCleanupService>();
 
@@ -294,6 +302,9 @@ app.UseAuthorization();
 
 // Mapear controladores API (rutas bajo /api/*)
 app.MapControllers();
+
+// Fase 2: Hub de SignalR para notificaciones en tiempo real sobre 443.
+app.MapHub<NotificationsHub>("/hubs/notifications");
 
 // Mapear rutas MVC tradicionales
 app.MapControllerRoute(

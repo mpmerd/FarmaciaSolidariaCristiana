@@ -1,5 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using FarmaciaSolidariaCristiana.Maui.Helpers;
 using FarmaciaSolidariaCristiana.Maui.Services;
 
 namespace FarmaciaSolidariaCristiana.Maui.ViewModels;
@@ -115,6 +116,22 @@ public partial class LoginViewModel : BaseViewModel
                 catch (Exception ex)
                 {
                     System.Diagnostics.Debug.WriteLine($"[Login] ❌ Error iniciando Polling: {ex.Message}");
+                }
+
+                // Fase 2: arrancar el Foreground Service que mantiene la conexión SignalR
+                // (push real sobre 443) viva en background. Solo si el canal SignalR está habilitado.
+                if (Constants.SignalRChannelEnabled)
+                {
+#if ANDROID
+                    try
+                    {
+                        Platforms.Android.NotificationsForegroundStarter.Start();
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[Login] ❌ Error iniciando Foreground Service: {ex.Message}");
+                    }
+#endif
                 }
                 
                 // Navegar al Shell principal

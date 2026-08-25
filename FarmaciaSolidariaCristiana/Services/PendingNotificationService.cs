@@ -71,6 +71,7 @@ public class PendingNotificationService : IPendingNotificationService
 {
     private readonly ApplicationDbContext _context;
     private readonly ILogger<PendingNotificationService> _logger;
+    private readonly INotificationBroadcaster? _broadcaster;
 
     public PendingNotificationService(
         ApplicationDbContext context,
@@ -78,6 +79,17 @@ public class PendingNotificationService : IPendingNotificationService
     {
         _context = context;
         _logger = logger;
+        _broadcaster = null; // sin broadcast (compat retro)
+    }
+
+    public PendingNotificationService(
+        ApplicationDbContext context,
+        ILogger<PendingNotificationService> logger,
+        INotificationBroadcaster broadcaster)
+    {
+        _context = context;
+        _logger = logger;
+        _broadcaster = broadcaster;
     }
 
     public async Task<PendingNotification> CreateNotificationAsync(
@@ -108,6 +120,30 @@ public class PendingNotificationService : IPendingNotificationService
         _logger.LogInformation(
             "Notificación creada para usuario {UserId}: {Title} (Tipo: {Type})",
             userId, title, notificationType);
+
+        // Fase 2: difundir en tiempo real por SignalR (canal sobre 443).
+        // Si el usuario tiene una conexión activa, recibe el "push real" al instante.
+        // Si no, la notificación queda pendiente y la recogerá el polling (fallback).
+        if (_broadcaster != null)
+        {
+            try
+            {
+                await _broadcaster.BroadcastToUserAsync(userId, new NotificationPayload
+                {
+                    Id = notification.Id,
+                    Title = notification.Title,
+                    Message = notification.Message,
+                    NotificationType = notification.NotificationType,
+                    ReferenceId = notification.ReferenceId,
+                    ReferenceType = notification.ReferenceType,
+                    CreatedAt = notification.CreatedAt
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error difundiendo notificación {Id} por SignalR", notification.Id);
+            }
+        }
 
         return notification;
     }

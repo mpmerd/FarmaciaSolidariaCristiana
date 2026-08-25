@@ -15,6 +15,7 @@ public class PollingNotificationService : IPollingNotificationService, IDisposab
 {
     private readonly HttpClient _httpClient;
     private readonly IAuthService _authService;
+    private readonly IPushHealthService _pushHealth;
     private readonly IAudioManager _audioManager;
     private CancellationTokenSource? _cancellationTokenSource;
     private Task? _pollingTask;
@@ -26,10 +27,11 @@ public class PollingNotificationService : IPollingNotificationService, IDisposab
     public bool IsRunning { get; private set; }
     public int PollingIntervalSeconds { get; set; } = 30; // Por defecto cada 30 segundos
 
-    public PollingNotificationService(HttpClient httpClient, IAuthService authService)
+    public PollingNotificationService(HttpClient httpClient, IAuthService authService, IPushHealthService pushHealth)
     {
         _httpClient = httpClient;
         _authService = authService;
+        _pushHealth = pushHealth;
         _audioManager = AudioManager.Current;
     }
 
@@ -52,7 +54,7 @@ public class PollingNotificationService : IPollingNotificationService, IDisposab
         _cancellationTokenSource = new CancellationTokenSource();
         IsRunning = true;
 
-        System.Diagnostics.Debug.WriteLine($"[PollingService] Starting with interval of {PollingIntervalSeconds} seconds");
+        System.Diagnostics.Debug.WriteLine($"[PollingService] Starting with interval of {PollingIntervalSeconds} seconds (heartbeat-only: {Constants.HeartbeatIntervalSeconds}s when canal instantáneo disponible)");
 
         _pollingTask = Task.Run(async () =>
         {
@@ -60,9 +62,22 @@ public class PollingNotificationService : IPollingNotificationService, IDisposab
             {
                 try
                 {
-                    await PollForNotificationsAsync();
+                    // Fase 1: push-first / canal-instantáneo-first
+                    // Si hay un canal instantáneo disponible, NO consultamos /pending (modo solo-heartbeat).
+                    // Si no, modo completo (comportamiento anterior).
+                    var instantAvailable = Constants.EnablePushAwarePolling && _pushHealth.IsInstantChannelAvailable;
+
+                    if (!instantAvailable)
+                    {
+                        await PollForNotificationsAsync();
+                    }
+
+                    // Heartbeat siempre: alimenta LastActivityAt en el backend
+                    // para que la lógica de email (no spam a pacientes activos) siga correcta.
                     await SendHeartbeatAsync();
-                    await Task.Delay(TimeSpan.FromSeconds(PollingIntervalSeconds), _cancellationTokenSource.Token);
+
+                    var delaySeconds = instantAvailable ? Constants.HeartbeatIntervalSeconds : PollingIntervalSeconds;
+                    await Task.Delay(TimeSpan.FromSeconds(delaySeconds), _cancellationTokenSource.Token);
                 }
                 catch (OperationCanceledException)
                 {
@@ -111,6 +126,13 @@ public class PollingNotificationService : IPollingNotificationService, IDisposab
 
     public async Task<int> CheckNowAsync()
     {
+        // Fase 1: si hay canal instantáneo disponible, el push/SignalR entrega; no forzamos poll.
+        if (Constants.EnablePushAwarePolling && _pushHealth.IsInstantChannelAvailable)
+        {
+            System.Diagnostics.Debug.WriteLine("[PollingService] CheckNowAsync: canal instantáneo disponible, skip poll");
+            return 0;
+        }
+
         return await PollForNotificationsAsync();
     }
 
@@ -201,6 +223,15 @@ public class PollingNotificationService : IPollingNotificationService, IDisposab
             var newNotifications = new List<PendingNotificationItem>();
             foreach (var notification in result.Data.Notifications)
             {
+                // Fase 1.6: de-duplicación - si un canal instantáneo ya la entregó, marcar y saltar.
+                if (_pushHealth.WasDeliveredInstantly(notification.Id))
+                {
+                    System.Diagnostics.Debug.WriteLine($"[PollingService] Notificación {notification.Id} ya entregada por canal instantáneo, saltando");
+                    _shownNotificationIds.Add(notification.Id);
+                    _ = MarkAsReadAsync(notification.Id);
+                    continue;
+                }
+
                 if (!_shownNotificationIds.Contains(notification.Id))
                 {
                     _shownNotificationIds.Add(notification.Id);
