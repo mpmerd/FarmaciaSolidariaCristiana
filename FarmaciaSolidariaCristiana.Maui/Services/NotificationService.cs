@@ -12,12 +12,14 @@ public class NotificationService : INotificationService
 {
     private readonly HttpClient _httpClient;
     private readonly IAuthService _authService;
+    private readonly IPushHealthService _pushHealth;
     private string? _playerId;
 
-    public NotificationService(HttpClient httpClient, IAuthService authService)
+    public NotificationService(HttpClient httpClient, IAuthService authService, IPushHealthService pushHealth)
     {
         _httpClient = httpClient;
         _authService = authService;
+        _pushHealth = pushHealth;
     }
 
     public void Initialize()
@@ -94,6 +96,8 @@ public class NotificationService : INotificationService
             if (!string.IsNullOrEmpty(playerId))
             {
                 System.Diagnostics.Debug.WriteLine($"[NotificationService] PlayerId obtained: {playerId} (attempt {i + 1}/{maxRetries})");
+                // Fase 0/1: OneSignal disponible (suscripción OK) -> reportar al servicio de salud
+                _pushHealth.ReportOneSignalAvailable(true);
                 return playerId;
             }
             
@@ -105,6 +109,8 @@ public class NotificationService : INotificationService
         }
         
         System.Diagnostics.Debug.WriteLine($"[NotificationService] Failed to get PlayerId after {maxRetries} attempts - Push notifications not available");
+        // Fase 0/1: tras agotar reintentos, OneSignal no está disponible
+        _pushHealth.ReportOneSignalAvailable(false);
         return null;
     }
 

@@ -1,6 +1,7 @@
 ﻿using FarmaciaSolidariaCristiana.Maui.Helpers;
 using FarmaciaSolidariaCristiana.Maui.Services;
 using FarmaciaSolidariaCristiana.Maui.Views;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace FarmaciaSolidariaCristiana.Maui;
 
@@ -71,11 +72,98 @@ public partial class AppShell : Shell
         {
             await UpdateMenuForRoleAsync();
             await GoToAsync("//DashboardPage");
+
+            // Fase 1.4: arrancar notificaciones en el path de token guardado (auto-login).
+            // LoginViewModel ya arranca en el path de login manual; aquí cubrimos el cold-start.
+            await StartNotificationsOnAutoLoginAsync();
         }
         else
         {
             HideAllRoleMenus();
             await GoToAsync("//LoginPage");
+        }
+    }
+
+    /// <summary>
+    /// Inicia push + polling cuando el usuario entra por auto-login (token guardado).
+    /// Idempotente: si el polling ya está corriendo (vínimos de login manual), no hace nada.
+    /// Resuelve los servicios desde el MauiContext (AppShell se construye manualmente en App.xaml.cs).
+    /// </summary>
+    private async Task StartNotificationsOnAutoLoginAsync()
+    {
+        try
+        {
+            IServiceProvider? services = null;
+            for (int i = 0; i < 10; i++)
+            {
+                services = Application.Current?.Handler?.MauiContext?.Services;
+                if (services != null) break;
+                await Task.Delay(100);
+            }
+
+            if (services == null)
+            {
+                System.Diagnostics.Debug.WriteLine("[AppShell] No se pudo resolver ServiceProvider para notificaciones en auto-login");
+                return;
+            }
+
+            var polling = services.GetService<IPollingNotificationService>();
+            var notif = services.GetService<INotificationService>();
+
+            // Si el polling ya corre, venimos de login manual -> nada que hacer aquí.
+            if (polling != null && polling.IsRunning)
+            {
+                System.Diagnostics.Debug.WriteLine("[AppShell] Polling ya activo (login manual), auto-login no reinicia");
+                return;
+            }
+
+            var userInfo = await _authService.GetUserInfoAsync();
+            if (notif != null && userInfo != null)
+            {
+                var role = (userInfo.Roles != null && userInfo.Roles.Count > 0) ? userInfo.Roles[0] : "user";
+                try
+                {
+                    await notif.SetUserTagsAsync(userInfo.Id, role);
+                    await notif.RegisterDeviceAsync();
+                    System.Diagnostics.Debug.WriteLine("[AppShell] Push registrado en auto-login");
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[AppShell] Error registrando push en auto-login: {ex.Message}");
+                }
+            }
+
+            if (polling != null)
+            {
+                try
+                {
+                    await polling.StartAsync();
+                    System.Diagnostics.Debug.WriteLine("[AppShell] Polling iniciado en auto-login");
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[AppShell] Error iniciando polling en auto-login: {ex.Message}");
+                }
+            }
+
+            // Fase 2: arrancar Foreground Service (push real sobre 443 en background).
+            if (Constants.SignalRChannelEnabled)
+            {
+#if ANDROID
+                try
+                {
+                    Platforms.Android.NotificationsForegroundStarter.Start();
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[AppShell] Error iniciando Foreground Service en auto-login: {ex.Message}");
+                }
+#endif
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[AppShell] Error en StartNotificationsOnAutoLoginAsync: {ex.Message}");
         }
     }
     
@@ -158,9 +246,69 @@ public partial class AppShell : Shell
             
         if (confirm)
         {
+            // Fase 1.5: detener polling y desregistrar push antes de borrar credenciales.
+            await StopNotificationsOnLogoutAsync();
+
+#if ANDROID
+            // Fase 2: detener Foreground Service (cierra la conexión SignalR).
+            if (Constants.SignalRChannelEnabled)
+            {
+                try { Platforms.Android.NotificationsForegroundStarter.Stop(); }
+                catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[AppShell] Error deteniendo Foreground Service: {ex.Message}"); }
+            }
+#endif
+
             await _authService.LogoutAsync();
             HideAllRoleMenus();
             await GoToAsync("//LoginPage");
+        }
+    }
+
+    /// <summary>
+    /// Detiene el polling y desregistra el dispositivo al cerrar sesión.
+    /// Evita que el polling siga corriendo contra un token invalidado.
+    /// </summary>
+    private async Task StopNotificationsOnLogoutAsync()
+    {
+        try
+        {
+            var services = Application.Current?.Handler?.MauiContext?.Services;
+            if (services == null) return;
+
+            var polling = services.GetService<IPollingNotificationService>();
+            if (polling != null)
+            {
+                try
+                {
+                    await polling.StopAsync();
+                    System.Diagnostics.Debug.WriteLine("[AppShell] Polling detenido en logout");
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[AppShell] Error deteniendo polling en logout: {ex.Message}");
+                }
+            }
+
+            var notif = services.GetService<INotificationService>();
+            if (notif != null)
+            {
+                try
+                {
+                    await notif.UnregisterUserAsync();
+                    System.Diagnostics.Debug.WriteLine("[AppShell] Dispositivo desregistrado en logout");
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[AppShell] Error desregistrando en logout: {ex.Message}");
+                }
+            }
+
+            var pushHealth = services.GetService<IPushHealthService>();
+            pushHealth?.Reset();
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[AppShell] Error en StopNotificationsOnLogoutAsync: {ex.Message}");
         }
     }
 }

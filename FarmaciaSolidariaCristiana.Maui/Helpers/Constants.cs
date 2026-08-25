@@ -46,4 +46,28 @@ public static class Constants
     public const string ErrorGenerico = "Ocurrió un error. Por favor, intente nuevamente.";
     public const string ErrorConexion = "Error de conexión. Verifique su conexión a internet.";
     public const string SesionExpirada = "Su sesión ha expirado. Por favor, inicie sesión nuevamente.";
+
+    // ========================================
+    // FEATURE FLAGS - Sistema de notificaciones
+    // Permite rollback seguro del comportamiento push-first/polling-aware.
+    // ========================================
+
+    /// <summary>
+    /// Activa la lógica "push-first": si hay canal instantáneo disponible,
+    /// el polling baja a modo solo-heartbeat (sin GET /pending).
+    /// false = el polling siempre consulta (comportamiento anterior, fallback).
+    /// </summary>
+    public const bool EnablePushAwarePolling = true;
+
+    /// <summary>
+    /// Activa el canal SignalR sobre 443 (el "push real" para Cuba).
+    /// false hasta completar la Fase 2; el Foreground Service lo respetará.
+    /// </summary>
+    public const bool SignalRChannelEnabled = false;
+
+    /// <summary>
+    /// Intervalo (segundos) del loop cuando hay canal instantáneo disponible.
+    /// Solo envía heartbeat (no consulta /pending). Opción (a) de heartbeat.
+    /// </summary>
+    public const int HeartbeatIntervalSeconds = 60;
 }

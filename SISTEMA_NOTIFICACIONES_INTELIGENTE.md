@@ -459,9 +459,10 @@ public const int UserActiveTimeoutMinutes = 5;  // Para IsUserActiveOnMobileAsyn
 - [x] Email llegando a farmacéuticos cuando se solicita turno (web)
 - [x] Email llegando a farmacéuticos cuando se solicita turno (MAUI)
 - [x] Email llegando a admins en ambos casos
-- [ ] Push funcionando fuera de Cuba
-- [ ] Polling funcionando en Cuba
-- [ ] Auto-login funcionando después de reiniciar app
+- [ ] Push funcionando fuera de Cuba (OneSignal/FCM)
+- [x] Polling funcionando en Cuba (y ahora con lógica push-first)
+- [x] Canal SignalR sobre 443 implementado (activar con `SignalRChannelEnabled=true`)
+- [x] Auto-login arranca notificaciones (fix Fase 1.4)
 - [ ] Email NO enviándose a pacientes activos en app
 - [ ] Email SÍ enviándose a pacientes inactivos
 
@@ -476,5 +477,96 @@ public const int UserActiveTimeoutMinutes = 5;  // Para IsUserActiveOnMobileAsyn
 
 ---
 
-**Última actualización**: 9 de febrero de 2026  
-**Versión del sistema**: Post-despliegue c32178e + JWT 30 días
+# 🚀 Plan de mejora: canal 443 + push-first + Foreground Service
+
+> **Motivación**: el 99.9 % de los usuarios están en Cuba, donde FCM/OneSignal no entrega
+> (ETECSA filtra los puertos 5228/5229/5230 que usa FCM). Solo el polling funcionaba.
+> La idea del documento `notificaciones-push-cuba.md` se traduce así: **no forzar a Google a
+> usar 443 (no controlamos mtalk.google.com), sino usar nuestro propio servidor extranjero
+> sobre 443, que Cuba ya alcanza (lo prueba que el polling funciona)**.
+
+## Estado deseado (confirmado)
+- **Push funciona (cualquier canal instantáneo: OneSignal o SignalR)** → el polling baja a
+  **modo solo-heartbeat** (cada 60 s, solo `POST /heartbeat`, sin `GET /pending`).
+- **Push falla** → el polling sube a **modo completo** (30 s, `GET /pending` + mostrar + heartbeat).
+- **Transición** automática vía `IPushHealthService`, con de-duplicación (watermark) para no repetir.
+- El **heartbeat siempre corre** (opción a) para que `IsUserActiveOnMobileAsync` (5 min) siga
+  alimentando la decisión de email (no spam a pacientes activos en la app).
+- **Entrega en background (push real)** para Cuba vía **Foreground Service** Android que mantiene
+  viva la conexión SignalR y lanza notificaciones del sistema (estilo Telegram).
+
+## Fases implementadas
+
+### ✅ Fase 0 — Diagnóstico (MAUI)
+- Logging estructurado en `App.xaml.cs` (`ReportOneSignalAvailabilityToHealthService`) y
+  `NotificationService.cs`: estado de suscripción, permiso, PlayerId y disponibilidad de canal.
+- Backend: logs existentes en `OneSignalNotificationService` registran envíos push.
+- Confirma si la causa es suscripción vs entrega (con GMS presente → apunta a puerto 5228 bloqueado).
+
+### ✅ Fase 1 — Lógica push-first (MAUI)
+- **`IPushHealthService` / `PushHealthService`** (`Services/PushHealthService.cs`):
+  `IsInstantChannelAvailable` (OneSignal ∨ SignalR), `ReportDelivery`/`WasDeliveredInstantly`
+  (watermark de dedup), `AvailabilityChanged` event, `Reset()` en logout.
+- **Polling consciente** (`PollingNotificationService.cs`): modo solo-heartbeat cuando hay canal
+  instantáneo; `CheckNowAsync` respeta el flag; de-dup frente a entregas instantáneas.
+- **Fix auto-login** (`AppShell.CheckAuthenticationAsync`): arranca push+polling en el path de
+  token guardado (cold-start) — antes un usuario que volvía por token **no recibía notificaciones**.
+- **Fix logout** (`AppShell.OnLogoutClicked`): `StopAsync` + `UnregisterUserAsync` + `Reset()`.
+
+### ✅ Fase 2 — Canal SignalR sobre 443 + Foreground Service (push real para Cuba)
+- **Backend**: `Hubs/NotificationsHub.cs` (`[Authorize]` JWT, grupo `user:{userId}`),
+  `Services/INotificationBroadcaster.cs` + `SignalRNotificationBroadcaster.cs`,
+  `AddSignalR()` + `MapHub<NotificationsHub>("/hubs/notifications")` en `Program.cs`.
+  Integrado en `PendingNotificationService.CreateNotificationAsync` (difunde al crear).
+  Si el host no soporta WebSocket, el cliente cae automáticamente a SSE/long-polling sobre 443.
+- **MAUI cliente**: NuGet `Microsoft.AspNetCore.SignalR.Client`, `Services/NotificationsHubClient.cs`
+  con `WithAutomaticReconnect` (backoff 0→2→5→10→20→30→60 s), reporta estado a `PushHealthService`,
+  de-dup, y dispara `NotificationReceived` + notificación del sistema.
+- **Foreground Service** (`Platforms/Android/NotificationsForegroundService.cs`): aloja el hub client,
+  notificación persistente, `START_STICKY`, `OnBind` null. Arrancado por
+  `NotificationsForegroundStarter` desde login y auto-login; detenido en logout.
+- **Notificaciones del sistema** (`Platforms/Android/Services/SystemNotificationService.cs`):
+  canal `fsc_notifications`, icono `ic_notification`, sonido `notfar.mp3` (in-process), acción "Ver"
+  → `App.PendingRoute` → navegación a `//TurnosPage`.
+- **Ciclo de vida Android**: `MainActivity` lee `route` extra y pide exención de optimización de
+  batería (una sola vez). Permisos en `AndroidManifest.xml`: `FOREGROUND_SERVICE`,
+  `FOREGROUND_SERVICE_DATA_SYNC`, `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`.
+- **Integración UI** (`TurnosPage.xaml.cs`): suscrito a `INotificationsHubClient.NotificationReceived`.
+
+### ✅ Fase 3 — Feature flags + verificación
+Flags en `Helpers/Constants.cs` (rollback seguro):
+- `EnablePushAwarePolling = true` (false = polling siempre, comportamiento anterior).
+- `SignalRChannelEnabled = false` ← **desactivado hasta probar en dispositivo Cuba; al pasarlo a `true`
+  se activa el Foreground Service y el push real sobre 443.**
+- `HeartbeatIntervalSeconds = 60`.
+
+**Matriz de verificación** (al activar `SignalRChannelEnabled = true`):
+1. Cuba, app cerrada → llega notificación del sistema (sonido + "Ver") vía SignalR 443.
+2. Cuba, app abierta → refresco del CollectionView sin duplicar (dedup).
+3. Push fuera de Cuba (OneSignal) → polling en solo-heartbeat, sin spam.
+4. Auto-login → arrancan polling + foreground service.
+5. Logout → se detiene polling + foreground service + reset de salud.
+6. SignalR caído → polling escala a completo; al reconectar → vuelve a solo-heartbeat.
+
+## 🔲 Pendientes / mejoras futuras
+- **WorkManager** de respaldo para revivir el Foreground Service si OEM agresivos (Xiaomi/Huawei)
+  lo matan (hoy se cubre con `START_STICKY` + foreground notification + exención de batería).
+- Wiring del evento foreground de OneSignal (`OneSignal.Notifications.ReceivedInForeground`) para
+  reportar entregas reales de FCM a `PushHealthService` (cuando se confirme la API del SDK 5.2.2).
+- Sonido `notfar.mp3` como sonido del canal del sistema (hoy se reproduce in-process; queda como
+  canal default en la barra).
+- Verificar explícitamente si Somee (plan de pago) soporta WebSocket; si no, SignalR ya cae a SSE.
+
+## 📌 Futuro: opción (b) — mover `LastActivityAt` a webhook de OneSignal
+Hoy (opción a) se mantiene un loop mínimo de heartbeat (60 s) cuando el push funciona, para
+alimentar `LastActivityAt` y la lógica de "no email a pacientes activos". Evolución limpia:
+- Configurar **OneSignal delivery webhook** → endpoint en el backend que, al confirmar entrega push
+  a un dispositivo, actualice `UserDeviceToken.LastActivityAt`.
+- Así se puede **eliminar el heartbeat** y el loop de polling queda 100 % apagado cuando hay canal
+  instantáneo (estado deseado puro, sin tráfico residual).
+- Requiere añadir endpoint `POST /api/notifications/onesignal-webhook` y registrarlo en OneSignal.
+
+---
+
+**Última actualización**: 25 de agosto de 2026  
+**Versión del sistema**: Post-despliegue + Fase 0/1 + Fase 2 (SignalR gated, `SignalRChannelEnabled=false`)
