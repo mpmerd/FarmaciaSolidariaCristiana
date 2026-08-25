@@ -213,7 +213,7 @@
                             <VerticalStackLayout Spacing="5" HorizontalOptions="Center">
                                 <Label Text="💬" FontSize="28" HorizontalOptions="Center"/>
                                 <Label Text="WhatsApp" FontSize="12" FontAttributes="Bold" HorizontalOptions="Center"/>
-                                <Label Text="+53 53434386" 
+                                <Label Text="+53 58140494" 
                                        FontSize="12" 
                                        TextColor="#25D366"
                                        HorizontalOptions="Center"/>
