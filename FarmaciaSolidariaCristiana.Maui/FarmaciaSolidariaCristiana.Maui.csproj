@@ -66,6 +66,8 @@
 	<!-- Google Services for FCM (Android) -->
 	<ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">
 		<GoogleServicesJson Include="Platforms\Android\google-services.json" />
+		<AndroidResource Include="Platforms\Android\Resources\xml\network_security_config.xml" />
+		<AndroidResource Include="Platforms\Android\Resources\raw\isrgrootx2.pem" />
 	</ItemGroup>
 
 </Project>
