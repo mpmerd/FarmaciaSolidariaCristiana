@@ -459,10 +459,11 @@ public const int UserActiveTimeoutMinutes = 5;  // Para IsUserActiveOnMobileAsyn
 - [x] Email llegando a farmacéuticos cuando se solicita turno (web)
 - [x] Email llegando a farmacéuticos cuando se solicita turno (MAUI)
 - [x] Email llegando a admins en ambos casos
-- [ ] Push funcionando fuera de Cuba (OneSignal/FCM)
+- [ ] Push funcionando fuera de Cuba (OneSignal/FCM) — OneSignal no bloquea fuera de Cuba, pero sin probar explícitamente
 - [x] Polling funcionando en Cuba (y ahora con lógica push-first)
-- [x] Canal SignalR sobre 443 implementado (activar con `SignalRChannelEnabled=true`)
+- [x] Canal SignalR sobre 443 implementado y VALIDADO en Cuba (background)
 - [x] Auto-login arranca notificaciones (fix Fase 1.4)
+- [x] Push real en background para Cuba (Foreground Service + SignalR)
 - [ ] Email NO enviándose a pacientes activos en app
 - [ ] Email SÍ enviándose a pacientes inactivos
 
@@ -479,11 +480,14 @@ public const int UserActiveTimeoutMinutes = 5;  // Para IsUserActiveOnMobileAsyn
 
 # 🚀 Plan de mejora: canal 443 + push-first + Foreground Service
 
-> **Motivación**: el 99.9 % de los usuarios están en Cuba, donde FCM/OneSignal no entrega
-> (ETECSA filtra los puertos 5228/5229/5230 que usa FCM). Solo el polling funcionaba.
-> La idea del documento `notificaciones-push-cuba.md` se traduce así: **no forzar a Google a
-> usar 443 (no controlamos mtalk.google.com), sino usar nuestro propio servidor extranjero
-> sobre 443, que Cuba ya alcanza (lo prueba que el polling funciona)**.
+> **Motivación**: el 99.9 % de los usuarios están en Cuba, donde OneSignal/FCM no entrega.
+> **Causa raíz confirmada en pruebas (25 ago 2026)**: OneSignal **bloquea Cuba por IP** —
+> el log muestra `Access denied... from a country we do support` con la IP cubana del cliente.
+> No es ETECSA filtrando el puerto 5228: es OneSignal bloqueando el registro/distribución
+> desde IPs cubanas. Por eso OneSignal **nunca** funcionará en Cuba.
+> La idea del documento `notificaciones-push-cuba.md` se traduce así: **no depender de
+> Google/OneSignal, sino usar nuestro propio servidor extranjero sobre 443, que Cuba ya
+> alcanza (lo prueba que el polling funciona)**. Ese canal es SignalR.
 
 ## Estado deseado (confirmado)
 - **Push funciona (cualquier canal instantáneo: OneSignal o SignalR)** → el polling baja a
@@ -501,7 +505,7 @@ public const int UserActiveTimeoutMinutes = 5;  // Para IsUserActiveOnMobileAsyn
 - Logging estructurado en `App.xaml.cs` (`ReportOneSignalAvailabilityToHealthService`) y
   `NotificationService.cs`: estado de suscripción, permiso, PlayerId y disponibilidad de canal.
 - Backend: logs existentes en `OneSignalNotificationService` registran envíos push.
-- Confirma si la causa es suscripción vs entrega (con GMS presente → apunta a puerto 5228 bloqueado).
+- **Causa raíz confirmada en pruebas**: OneSignal bloquea Cuba por IP (ver "Estado de pruebas").
 
 ### ✅ Fase 1 — Lógica push-first (MAUI)
 - **`IPushHealthService` / `PushHealthService`** (`Services/PushHealthService.cs`):
@@ -519,12 +523,19 @@ public const int UserActiveTimeoutMinutes = 5;  // Para IsUserActiveOnMobileAsyn
   `AddSignalR()` + `MapHub<NotificationsHub>("/hubs/notifications")` en `Program.cs`.
   Integrado en `PendingNotificationService.CreateNotificationAsync` (difunde al crear).
   Si el host no soporta WebSocket, el cliente cae automáticamente a SSE/long-polling sobre 443.
+- **Catch-up server-side**: `OnConnectedAsync` envía al cliente las pendientes no leídas al
+  conectar/reconectar → red de seguridad para notificaciones perdidas en huecos de desconexión.
+  (El cliente las de-dup con `WasDeliveredInstantly` para no repetir.)
 - **MAUI cliente**: NuGet `Microsoft.AspNetCore.SignalR.Client`, `Services/NotificationsHubClient.cs`
-  con `WithAutomaticReconnect` (backoff 0→2→5→10→20→30→60 s), reporta estado a `PushHealthService`,
-  de-dup, y dispara `NotificationReceived` + notificación del sistema.
+  con `WithAutomaticReconnect()` (retry infinito con backoff 0→2→10→30s), `ServerTimeout=3min`
+  (Somee no envía keep-alives; el default 30s provocaba desconexiones cada 30s), reporta estado
+  a `PushHealthService`, de-dup, y dispara `NotificationReceived` + notificación del sistema.
 - **Foreground Service** (`Platforms/Android/NotificationsForegroundService.cs`): aloja el hub client,
   notificación persistente, `START_STICKY`, `OnBind` null. Arrancado por
   `NotificationsForegroundStarter` desde login y auto-login; detenido en logout.
+  **Tipo de servicio**: `ForegroundServiceType.TypeDataSync` (valor enum `TypeDataSync=1`).
+  ⚠️ No usar el literal `4` — en el enum de .NET Android `4` = `TypePhoneCall` (requería permiso
+  `FOREGROUND_SERVICE_PHONE_CALL` y fallaba silenciosamente el `startForeground`).
 - **Notificaciones del sistema** (`Platforms/Android/Services/SystemNotificationService.cs`):
   canal `fsc_notifications`, icono `ic_notification`, sonido `notfar.mp3` (in-process), acción "Ver"
   → `App.PendingRoute` → navegación a `//TurnosPage`.
@@ -536,26 +547,36 @@ public const int UserActiveTimeoutMinutes = 5;  // Para IsUserActiveOnMobileAsyn
 ### ✅ Fase 3 — Feature flags + verificación
 Flags en `Helpers/Constants.cs` (rollback seguro):
 - `EnablePushAwarePolling = true` (false = polling siempre, comportamiento anterior).
-- `SignalRChannelEnabled = false` ← **desactivado hasta probar en dispositivo Cuba; al pasarlo a `true`
-  se activa el Foreground Service y el push real sobre 443.**
+- `SignalRChannelEnabled = true` ← **activado tras validar en dispositivo/emulador Cuba**.
 - `HeartbeatIntervalSeconds = 60`.
 
-**Matriz de verificación** (al activar `SignalRChannelEnabled = true`):
-1. Cuba, app cerrada → llega notificación del sistema (sonido + "Ver") vía SignalR 443.
-2. Cuba, app abierta → refresco del CollectionView sin duplicar (dedup).
-3. Push fuera de Cuba (OneSignal) → polling en solo-heartbeat, sin spam.
-4. Auto-login → arrancan polling + foreground service.
-5. Logout → se detiene polling + foreground service + reset de salud.
-6. SignalR caído → polling escala a completo; al reconectar → vuelve a solo-heartbeat.
+## ✅ Estado de pruebas (25 ago 2026) — push real VALIDADO
+- **Causa raíz confirmada**: OneSignal bloquea Cuba por IP. Log: `Access denied... from a
+  country we do not support` con IP cubana del cliente. OneSignal **nunca** funcionará en Cuba.
+- **Bug crítico encontrado y arreglado**: el tipo de Foreground Service usaba el literal `4` que
+  en el enum .NET es `TypePhoneCall` → `startForeground` fallaba silenciosamente → el servicio
+  no era foreground de verdad → en background Android mataba el proceso y SignalR se perdía.
+  Fix: `ForegroundServiceType.TypeDataSync` (valor `1`). Tras el fix, `isForeground=true`.
+- **Entrega en background (push real) VALIDADA en Cuba**: paciente real solicitó turno, el
+  farmacéutico con la app en background (emulador saliendo por IP cubana) recibió la notificación
+  del sistema con sonido `notfar.mp3`. Log: `[HubClient] Recibida notificación #...` vía SignalR.
+- **Timeout de Somee**: Somee no envía keep-alives de SignalR → el cliente (default 30s)
+  desconectaba cada 30s. Fix: `ServerTimeout=3min` + `WithAutomaticReconnect()` infinito →
+  huecos de desconexión mucho menores; el catch-up cubre los restantes.
 
 ## 🔲 Pendientes / mejoras futuras
+- **Redeploy backend** con el catch-up de `OnConnectedAsync` (commiteado, falta desplegar a Somee)
+  para tener la red de seguridad definitiva ante huecos de desconexión.
 - **WorkManager** de respaldo para revivir el Foreground Service si OEM agresivos (Xiaomi/Huawei)
   lo matan (hoy se cubre con `START_STICKY` + foreground notification + exención de batería).
 - Wiring del evento foreground de OneSignal (`OneSignal.Notifications.ReceivedInForeground`) para
   reportar entregas reales de FCM a `PushHealthService` (cuando se confirme la API del SDK 5.2.2).
+  Nota: dado que OneSignal bloquea Cuba por IP, esto solo aplicaría a usuarios fuera de Cuba.
 - Sonido `notfar.mp3` como sonido del canal del sistema (hoy se reproduce in-process; queda como
   canal default en la barra).
-- Verificar explícitamente si Somee (plan de pago) soporta WebSocket; si no, SignalR ya cae a SSE.
+- Exención de batería en el S25 (release) no apareció: investigar si fue Auto-Backup restaurando
+  el flag `battery_exemption_requested` o si Samsung exime por defecto. No bloquea el push real.
+- Prueba de estrés pendiente: varias solicitudes seguidas, alguna con background prolongado.
 
 ## 📌 Futuro: opción (b) — mover `LastActivityAt` a webhook de OneSignal
 Hoy (opción a) se mantiene un loop mínimo de heartbeat (60 s) cuando el push funciona, para
@@ -569,4 +590,4 @@ alimentar `LastActivityAt` y la lógica de "no email a pacientes activos". Evolu
 ---
 
 **Última actualización**: 25 de agosto de 2026  
-**Versión del sistema**: Post-despliegue + Fase 0/1 + Fase 2 (SignalR gated, `SignalRChannelEnabled=false`)
+**Versión del sistema**: Fase 0/1/2 + fixes (TypeDataSync, ServerTimeout 3min, catch-up) — `SignalRChannelEnabled=true` validado en Cuba
