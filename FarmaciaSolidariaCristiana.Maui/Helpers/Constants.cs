@@ -61,9 +61,9 @@ public static class Constants
 
     /// <summary>
     /// Activa el canal SignalR sobre 443 (el "push real" para Cuba).
-    /// false hasta completar la Fase 2; el Foreground Service lo respetará.
+    /// true: el Foreground Service arranca y mantiene la conexión SignalR en background.
     /// </summary>
-    public const bool SignalRChannelEnabled = false;
+    public const bool SignalRChannelEnabled = true;
 
     /// <summary>
     /// Intervalo (segundos) del loop cuando hay canal instantáneo disponible.

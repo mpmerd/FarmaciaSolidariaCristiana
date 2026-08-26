@@ -72,17 +72,14 @@ public class NotificationsHubClient : INotificationsHubClient, IDisposable
                         return string.IsNullOrEmpty(t) ? null : t;
                     };
                 })
-                .WithAutomaticReconnect(new[]
-                {
-                    TimeSpan.Zero,
-                    TimeSpan.FromSeconds(2),
-                    TimeSpan.FromSeconds(5),
-                    TimeSpan.FromSeconds(10),
-                    TimeSpan.FromSeconds(20),
-                    TimeSpan.FromSeconds(30),
-                    TimeSpan.FromSeconds(60)
-                })
+                .WithAutomaticReconnect() // retry infinito con backoff (0,2,10,30s...) - no se rinde
                 .Build();
+
+            // Somee (IIS compartido) no envía los keep-alive de SignalR con fiabilidad,
+            // lo que provoca timeouts cada 30s. Ampliamos el timeout del servidor para
+            // reducir los huecos de desconexión (menos ventanas donde se pierde una entrega).
+            _connection.ServerTimeout = TimeSpan.FromMinutes(3);
+            _connection.KeepAliveInterval = TimeSpan.FromSeconds(15);
 
             _connection.Reconnecting += ex =>
             {
@@ -162,6 +159,14 @@ public class NotificationsHubClient : INotificationsHubClient, IDisposable
     {
         try
         {
+            // De-dup: si ya fue entregada antes (catch-up en un reconectar anterior),
+            // no la volvemos a mostrar/sonar.
+            if (_pushHealth.WasDeliveredInstantly(payload.Id))
+            {
+                System.Diagnostics.Debug.WriteLine($"[HubClient] Notificación #{payload.Id} ya entregada, skip (dedup)");
+                return;
+            }
+
             System.Diagnostics.Debug.WriteLine($"[HubClient] Recibida notificación #{payload.Id}: {payload.Title}");
 
             // De-dup: reportar entrega al PushHealthService para que el polling no la repita.

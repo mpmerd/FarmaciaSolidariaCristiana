@@ -16,7 +16,7 @@ namespace FarmaciaSolidariaCristiana.Maui.Platforms.Android;
 /// el proceso permanece activo y recibe notificaciones por el canal 443 aunque la UI esté cerrada.
 /// Mantiene una notificación persistente (estilo Telegram).
 /// </summary>
-[Service(Exported = false, ForegroundServiceType = (global::Android.Content.PM.ForegroundService)4 /* 4 = dataSync */)]
+[Service(Exported = false, ForegroundServiceType = global::Android.Content.PM.ForegroundService.TypeDataSync)]
 public class NotificationsForegroundService : Service
 {
     private const int ForegroundNotificationId = 7770;
@@ -122,9 +122,10 @@ public class NotificationsForegroundService : Service
             .SetContentIntent(pendingIntent);
 
         // ServiceCompat.StartForeground gestiona las diferencias de versión y el tipo de servicio.
-        // 4 = FOREGROUND_SERVICE_TYPE_DATA_SYNC (Android 14+ requiere tipo declarado).
+        // TypeDataSync = 1 (Android.Content.PM.ForegroundService.TypeDataSync).
         var notif = builder.Build();
-        ServiceCompat.StartForeground(this, ForegroundNotificationId, notif, 4);
+        ServiceCompat.StartForeground(this, ForegroundNotificationId, notif,
+            (int)global::Android.Content.PM.ForegroundService.TypeDataSync);
     }
 
     private static void EnsureForegroundChannel(Context context)
