@@ -326,30 +326,9 @@ namespace FarmaciaSolidariaCristiana.Controllers
                     }
                 }
 
-                // Enviar notificación a farmacéuticos (NO en segundo plano para mantener contexto de BD)
-                try
-                {
-                    var tipoSolicitud = medicamentos.Any() ? "Medicamentos" : "Insumos";
-                    _logger.LogInformation("Iniciando envío de notificaciones a farmacéuticos para turno {TurnoId} (Tipo: {Tipo})", 
-                        createdTurno.Id, tipoSolicitud);
-                    var notificationSent = await _emailService.SendTurnoNotificationToFarmaceuticosAsync(
-                        user?.UserName ?? "Usuario", 
-                        createdTurno.Id,
-                        tipoSolicitud);
-                    
-                    if (notificationSent)
-                    {
-                        _logger.LogInformation("✓ Notificaciones por email enviadas a farmacéuticos para turno {TurnoId}", createdTurno.Id);
-                    }
-                    else
-                    {
-                        _logger.LogWarning("⚠ No se pudieron enviar notificaciones por email a farmacéuticos para turno {TurnoId}", createdTurno.Id);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "✗ Error enviando notificaciones por email a farmacéuticos para turno {TurnoId}", createdTurno.Id);
-                }
+                // Email a farmacéuticos/admins por "nueva solicitud" ELIMINADO:
+                // ahora SignalR (push real sobre 443) + OneSignal (fuera de Cuba) + polling
+                // entregan la notificación en tiempo real. El email para este evento era redundante.
 
                 // Enviar notificación push/polling a farmacéuticos (para la app móvil)
                 try

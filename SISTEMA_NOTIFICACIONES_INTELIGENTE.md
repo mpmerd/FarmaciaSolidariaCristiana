@@ -63,18 +63,12 @@ El sistema de notificaciones de Farmacia Solidaria Cristiana combina **cuatro** 
 
 1. Usuario completa formulario web y envía solicitud
 2. Sistema crea el turno en base de datos
-3. **Email a Farmacéuticos/Admins** (línea 319):
-   ```csharp
-   await _emailService.SendTurnoNotificationToFarmaceuticosAsync(
-       user?.UserName ?? "Usuario", 
-       createdTurno.Id,
-       tipoSolicitud);
-   ```
-   - Envía a **TODOS** los usuarios con rol Farmaceutico + Admin
-   - No verifica si están en la app móvil
-   - Email con enlace directo a revisar el turno
+3. **Email a Farmacéuticos/Admins — ELIMINADO**:
+   > Antes se enviaba email a todos los farmacéuticos+admins por cada nueva solicitud.
+   > **Eliminado**: ahora SignalR (push real 443) + OneSignal (fuera de Cuba) + polling
+   > entregan la notificación en tiempo real. El email era redundante.
 
-4. **Push/Polling a Farmacéuticos** (línea 333):
+4. **Push/SignalR/Polling a Farmacéuticos** (línea 336):
    ```csharp
    await _notificationService.SendNuevaSolicitudToFarmaceuticosAsync(
        createdTurno.Id,
@@ -93,7 +87,7 @@ El sistema de notificaciones de Farmacia Solidaria Cristiana combina **cuatro** 
 
 1. Usuario envía solicitud desde la app móvil
 2. Sistema crea el turno en base de datos
-3. **Push/Polling a Farmacéuticos** (línea 407):
+3. **Push/SignalR/Polling a Farmacéuticos** (línea 465):
    ```csharp
    await _notificationService.SendNuevaSolicitudToFarmaceuticosAsync(
        turno.Id,
@@ -101,16 +95,11 @@ El sistema de notificaciones de Farmacia Solidaria Cristiana combina **cuatro** 
        userName ?? "Usuario");
    ```
    - Crea `PendingNotifications` para polling
-   - Intenta Push si hay dispositivos activos
+   - Difunde por SignalR (entrega instantánea) + intenta OneSignal push
 
-4. **Email a Farmacéuticos/Admins** (línea 413):
-   ```csharp
-   await _emailService.SendTurnoNotificationToFarmaceuticosAsync(
-       userName ?? "Usuario",
-       turno.Id,
-       tipoSolicitud);
-   ```
-   - Igual que en web, envía a TODOS los farmacéuticos/admins
+4. **Email a Farmacéuticos/Admins — ELIMINADO**:
+   > Antes se enviaba email a farmacéuticos inactivos. **Eliminado**: redundante con SignalR/push.
+   > (El email a PACIENTES por aprobación/rechazo sí se mantiene — es un evento distinto.)
 
 **Resultado**: Ambos paths (web y MAUI) notifican igual a farmacéuticos.
 
@@ -249,7 +238,7 @@ El loop mínimo de heartbeat (60s) alimenta `LastActivityAt` en el backend, que 
 
 | Evento | Destinatario | Email | Push | Polling | Condición |
 |--------|-------------|-------|------|---------|-----------|
-| Nueva solicitud turno | Farmacéuticos/Admins | ✅ Siempre | ✅ Intenta | ✅ Siempre | - |
+| Nueva solicitud turno | Farmacéuticos/Admins | ❌ Eliminado | ✅ SignalR+OneSignal | ✅ Siempre (fallback) | El email era redundante con SignalR/push |
 | Nueva solicitud turno | Paciente (confirmación) | ✅ Siempre | ❌ No | ❌ No | Solo confirmación |
 | Turno aprobado | Paciente | ✅ Si inactivo | ✅ Intenta | ✅ Siempre | Verifica IsUserActiveOnMobile |
 | Turno rechazado | Paciente | ✅ Si inactivo | ✅ Intenta | ✅ Siempre | Verifica IsUserActiveOnMobile |
@@ -336,9 +325,10 @@ El loop mínimo de heartbeat (60s) alimenta `LastActivityAt` en el backend, que 
 1. Usuario completa formulario en navegador
 2. TurnosController.RequestForm procesa la solicitud
 3. Farmacéuticos/Admins reciben:
-   ✅ Email: "Nueva solicitud turno #123"
-   ✅ PendingNotification (si usan app móvil)
-   ✅ Push (si están fuera de Cuba con Google Services)
+   ✅ SignalR (push real 443, si están en la app — background incluido)
+   ✅ OneSignal push (si están fuera de Cuba)
+   ✅ PendingNotification (polling lo recoge como fallback)
+   ❌ Email a farmacéuticos ELIMINADO (redundante con SignalR/push)
 4. Paciente recibe:
    ✅ Email de confirmación: "Tu solicitud ha sido enviada"
 ```
@@ -678,5 +668,5 @@ alimentar `LastActivityAt` y la lógica de "no email a pacientes activos". Evolu
 ---
 
 **Última actualización**: 26 de agosto de 2026  
-**Versión del sistema**: SignalR push-first + Foreground Service + fixes (TypeDataSync, ServerTimeout 3min, catch-up) — `SignalRChannelEnabled=true` validado en Cuba y fuera de Cuba  
-**Commits clave**: `0067a7a` (plan), `2a74744` (fix push real bg), `7cd65d8` (docs)
+**Versión del sistema**: SignalR push-first + Foreground Service + email a farmacéuticos por solicitud ELIMINADO — `SignalRChannelEnabled=true` validado en Cuba y fuera de Cuba  
+**Commits clave**: `0067a7a` (plan), `2a74744` (fix push real bg), `7cd65d8` (docs), `93c622f` (docs exhaustivo), este commit (email eliminado)
