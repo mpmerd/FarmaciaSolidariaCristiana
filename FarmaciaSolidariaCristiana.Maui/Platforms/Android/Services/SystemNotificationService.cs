@@ -6,19 +6,19 @@ using Android.OS;
 using AndroidX.Core.App;
 using FarmaciaSolidariaCristiana.Maui.Services;
 using FarmaciaSolidariaCristiana.Maui.Helpers;
-using Plugin.Maui.Audio;
 using Application = Android.App.Application;
 
 namespace FarmaciaSolidariaCristiana.Maui.Platforms.Android.Services;
 
 /// <summary>
 /// Implementación Android de ISystemNotificationService.
-/// Muestra notificaciones nativas (barra de estado) con sonido notfar.mp3 (reproducido in-process,
-/// el proceso está vivo gracias al Foreground Service) y acción "Ver".
+/// Muestra notificaciones nativas (barra de estado) con sonido notfar.mp3 como sonido del
+/// canal (lo reproduce el sistema, no el proceso) y acción "Ver".
 /// </summary>
 public class SystemNotificationService : ISystemNotificationService
 {
-    private const string ChannelId = "fsc_notifications";
+    private const string ChannelId = "fsc_notifications_v2";
+    private const string LegacyChannelId = "fsc_notifications";
     private const string ChannelName = "Notificaciones de Farmacia";
 
     private static int _nextId = 1000;
@@ -30,9 +30,6 @@ public class SystemNotificationService : ISystemNotificationService
             var context = Application.Context;
 
             EnsureChannel(context);
-
-            // Sonido in-process (el Foreground Service mantiene el proceso vivo en background).
-            await PlaySoundAsync();
 
             // Intent: abrir MainActivity; si es notificación de turno, navegar a Mis Turnos.
             var intent = new Intent(context, typeof(MainActivity));
@@ -57,6 +54,12 @@ public class SystemNotificationService : ISystemNotificationService
                 .SetAutoCancel(true)
                 .SetContentIntent(pendingIntent);
 
+            // API < 26: no existen canales; el sonido se define en el builder.
+            if (!OperatingSystem.IsAndroidVersionAtLeast(26))
+            {
+                builder.SetSound(NotificationSoundUri(context));
+            }
+
             NotificationManagerCompat.From(context).Notify(notifId, builder.Build());
 
             AppLog.Info($"[SysNotif] Mostrada notificación del sistema: {title}");
@@ -73,7 +76,18 @@ public class SystemNotificationService : ISystemNotificationService
 
         var mgr = (NotificationManager?)context.GetSystemService(Context.NotificationService);
         if (mgr == null) return;
+
+        // El canal no es modificable una vez creado. La v1 quedó con el sonido por defecto;
+        // creamos la v2 con notfar.mp3 como sonido del canal y eliminamos la v1 (Android la
+        // recrea con la nueva configuración en el siguiente arranque).
+        mgr.DeleteNotificationChannel(LegacyChannelId);
+
         if (mgr.GetNotificationChannel(ChannelId) != null) return;
+
+        var attrs = new global::Android.Media.AudioAttributes.Builder()
+            .SetUsage(global::Android.Media.AudioUsageKind.Notification)
+            .SetContentType(global::Android.Media.AudioContentType.Sonification)
+            .Build();
 
         var channel = new NotificationChannel(ChannelId, ChannelName, NotificationImportance.High)
         {
@@ -81,22 +95,11 @@ public class SystemNotificationService : ISystemNotificationService
         };
         channel.EnableVibration(true);
         channel.LockscreenVisibility = NotificationVisibility.Public;
+        channel.SetSound(NotificationSoundUri(context), attrs);
         mgr.CreateNotificationChannel(channel);
     }
 
-    private static async Task PlaySoundAsync()
-    {
-        try
-        {
-            using var stream = await FileSystem.OpenAppPackageFileAsync("notfar.mp3");
-            var player = AudioManager.Current.CreatePlayer(stream);
-            player.Play();
-            // No esperamos a que termine para no bloquear; el player se autolimpia al acabar.
-        }
-        catch (Exception ex)
-        {
-            AppLog.Info($"[SysNotif] Sonido: {ex.Message}");
-        }
-    }
+    private static global::Android.Net.Uri NotificationSoundUri(Context context)
+        => global::Android.Net.Uri.Parse($"android.resource://{context.PackageName}/raw/notfar");
 }
 #endif
