@@ -25,6 +25,7 @@ public class NotificationsForegroundService : Service
     private const string ChannelName = "Servicio de notificaciones";
 
     private INotificationsHubClient? _hubClient;
+    private System.Threading.Timer? _watchdogTimer;
 
     public override StartCommandResult OnStartCommand(Intent? intent, StartCommandFlags flags, int startId)
     {
@@ -40,6 +41,10 @@ public class NotificationsForegroundService : Service
 
         // Arrancar el hub client (push real sobre 443).
         _ = StartHubAsync();
+
+        // Watchdog: refuerzo ante OEM agresivos — si el hub quedó muerto
+        // (o el loop de supervisión del propio hub fallara), se revive aquí.
+        StartWatchdog();
 
         // START_STICKY: si Android mata el servicio, lo recrea y llama OnStartCommand de nuevo.
         return StartCommandResult.Sticky;
@@ -92,9 +97,48 @@ public class NotificationsForegroundService : Service
         }
     }
 
+    /// <summary>
+    /// Watchdog: cada Constants.SignalRWatchdogIntervalSeconds segundos verifica que el hub
+    /// esté conectado; si no, lo revive (StartAsync es ensure-connected: no-op si ya vive).
+    /// Es el refuerzo externo al loop de supervisión interno del hub client.
+    /// </summary>
+    private void StartWatchdog()
+    {
+        StopWatchdog();
+        _watchdogTimer = new System.Threading.Timer(async _ =>
+        {
+            try
+            {
+                if (_hubClient == null)
+                {
+                    _hubClient = App.Services?.GetService<INotificationsHubClient>();
+                }
+
+                if (_hubClient != null && !_hubClient.IsConnected)
+                {
+                    AppLog.Info("[FgService] Watchdog: SignalR no conectado, reintentando");
+                    await _hubClient.StartAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                AppLog.Info($"[FgService] Watchdog error: {ex.Message}");
+            }
+        }, null, TimeSpan.FromSeconds(Constants.SignalRWatchdogIntervalSeconds),
+           TimeSpan.FromSeconds(Constants.SignalRWatchdogIntervalSeconds));
+        AppLog.Info("[FgService] Watchdog iniciado");
+    }
+
+    private void StopWatchdog()
+    {
+        _watchdogTimer?.Dispose();
+        _watchdogTimer = null;
+    }
+
     public override async void OnDestroy()
     {
         AppLog.Info("[FgService] OnDestroy");
+        StopWatchdog();
         await StopHubAsync();
         base.OnDestroy();
     }

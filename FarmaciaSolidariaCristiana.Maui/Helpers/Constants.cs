@@ -70,4 +70,18 @@ public static class Constants
     /// Solo envía heartbeat (no consulta /pending). Opción (a) de heartbeat.
     /// </summary>
     public const int HeartbeatIntervalSeconds = 60;
+
+    /// <summary>
+    /// Intervalo (segundos) del loop de supervisión del hub SignalR:
+    /// si la conexión está muerta (null/Disconnected), se recrea y reintenta.
+    /// Junto con la política de reconexión infinita (cap 30s) garantiza que
+    /// SignalR se recupere solo tras cortes de red prolongados.
+    /// </summary>
+    public const int SignalRSupervisionIntervalSeconds = 30;
+
+    /// <summary>
+    /// Intervalo (segundos) del watchdog del Foreground Service que verifica
+    /// la conexión SignalR y la revive si hace falta (refuerzo para OEM agresivos).
+    /// </summary>
+    public const int SignalRWatchdogIntervalSeconds = 60;
 }

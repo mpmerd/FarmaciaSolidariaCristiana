@@ -285,7 +285,8 @@ El loop mínimo de heartbeat (60s) alimenta `LastActivityAt` en el backend, que 
    - Intervalo: 30s (completo) / 60s (heartbeat-only)
 
 3. **NotificationsHubClient.cs** (SignalR client)
-   - `WithAutomaticReconnect()` infinito, `ServerTimeout=3min`
+   - Retry infinito REAL (`InfiniteRetryPolicy` custom, cap 30s), `ServerTimeout=3min`
+   - Loop de supervisión (30s) que revive la conexión si muere + reconexión inmediata al volver la red
    - Recibe `ReceiveNotification`, reporta a `PushHealthService`, muestra notificación del sistema
    - De-dup: skip si `WasDeliveredInstantly`
 
@@ -475,6 +476,9 @@ public const int UserActiveTimeoutMinutes = 5;  // Para IsUserActiveOnMobileAsyn
 - [x] Canal SignalR sobre 443 implementado y VALIDADO en Cuba (background) y fuera de Cuba
 - [x] Auto-login arranca notificaciones (fix Fase 1.4)
 - [x] Push real en background para Cuba (Foreground Service + SignalR)
+- [x] SignalR se auto-recupera tras cortes de red prolongados (Fase 5: retry infinito +
+      supervisión + trigger de red + OnResume + watchdog) — **pendiente validar en dispositivo
+      físico con el protocolo de la Fase 5**
 - [ ] Email NO enviándose a pacientes activos en app (verificar en producción)
 - [ ] Email SÍ enviándose a pacientes inactivos (verificar en producción)
 
@@ -538,7 +542,9 @@ public const int UserActiveTimeoutMinutes = 5;  // Para IsUserActiveOnMobileAsyn
   conectar/reconectar → red de seguridad para notificaciones perdidas en huecos de desconexión.
   (El cliente las de-dup con `WasDeliveredInstantly` para no repetir.)
 - **MAUI cliente**: NuGet `Microsoft.AspNetCore.SignalR.Client`, `Services/NotificationsHubClient.cs`
-  con `WithAutomaticReconnect()` (retry infinito con backoff 0→2→10→30s), `ServerTimeout=3min`
+  con `InfiniteRetryPolicy` (retry infinito REAL con backoff 0→2→10s y luego 30s para siempre —
+  ⚠️ la política default de `WithAutomaticReconnect()` se rinde tras 4 intentos y la conexión
+  muere para siempre; ver Fase 5), `ServerTimeout=3min`
   (Somee no envía keep-alives; el default 30s provocaba desconexiones cada 30s), reporta estado
   a `PushHealthService`, de-dup, y dispara `NotificationReceived` + notificación del sistema.
 - **Foreground Service** (`Platforms/Android/NotificationsForegroundService.cs`): aloja el hub client,
@@ -560,6 +566,8 @@ Flags en `Helpers/Constants.cs` (rollback seguro):
 - `EnablePushAwarePolling = true` (false = polling siempre, comportamiento anterior).
 - `SignalRChannelEnabled = true` ← **activado tras validar en dispositivo/emulador Cuba**.
 - `HeartbeatIntervalSeconds = 60`.
+- `SignalRSupervisionIntervalSeconds = 30` (Fase 5: loop de supervisión del hub).
+- `SignalRWatchdogIntervalSeconds = 60` (Fase 5: watchdog del FG service).
 
 ### ✅ Fase 4 — Robustez del auto-login + logging en release + bulk broadcast (26 ago 2026)
 
@@ -613,6 +621,59 @@ usuarios**: completó sin timeout de Somee; el S25 recibió `[HubClient] Recibid
 #22212` por SignalR en <1s. El resto (app vieja en producción, sin SignalR) lo recibió por
 polling como era esperado.
 
+### ✅ Fase 5 — Auto-sanación de SignalR (27 ago 2026)
+
+**Síntoma real (madrugada del 27 ago)**: móvil en Cuba conectado por SignalR pasó la noche sin
+internet. En la mañana (con internet) las notificaciones llegaban **solo por polling**. Borrar
+datos + re-login "arreglaba" SignalR. Diagnóstico: 4 bugs encadenados, todos en el cliente MAUI
+(el backend no tiene culpa — su catch-up de `OnConnectedAsync` recupera las pendientes al
+reconectar; el cliente simplemente nunca reconectaba):
+
+1. **`WithAutomaticReconnect()` default NO es infinito** (el comentario y este doc lo decían mal):
+   reintenta solo 4 veces (0s, 2s, 10s, 30s ≈ 42s) y luego pasa a `Closed` **para siempre**.
+   Una noche sin internet = conexión muerta permanente.
+2. **El handler `Closed` no rearrancaba nada**: solo reportaba `ReportSignalRConnected(false)`.
+3. **Si el `StartAsync` inicial fallaba** (ej. login sin internet), no había reintento: la
+   política de auto-reconnect solo cubre caídas de una conexión ya establecida, no el primer start.
+4. **`StartAsync` hacía `return` si `_connection != null`** aunque estuviera `Closed` → ni el
+   Foreground Service podía revivirla ("Ya existe conexión, skip start"). Callejón sin salida.
+
+Además **no existía ningún trigger de reconexión**: ni listener de `Connectivity.ConnectivityChanged`,
+ni `StartAsync` en el `Resumed` de la app, ni watchdog en el FG service.
+
+**Fix (preferencia de canales garantizada: SignalR > polling siempre que sea posible)**:
+
+- **`InfiniteRetryPolicy`** (clase `IRetryPolicy` custom en `NotificationsHubClient.cs`):
+  delays 0→2→10s y luego **cap de 30s para siempre**. La conexión establecida reintenta toda
+  la noche y reconecta sola a los ~30s de volver la red. Nunca devuelve `null` (= rendirse).
+- **Loop de supervisión** dentro del hub client (cada `SignalRSupervisionIntervalSeconds=30s`,
+  cancelado en `StopAsync`): si la conexión está `null`/`Disconnected` → recrea y reintenta.
+  Cubre el fallo del start inicial, `Closed` y residuos. Timeout de 20s por intento de start.
+- **Trigger de red** (`Connectivity.ConnectivityChanged` en el propio hub client): al detectar
+  `NetworkAccess.Internet` con la conexión muerta → reconexión **inmediata** (`force: true`,
+  descarta incluso un estado `Reconnecting` para no esperar el backoff). Este es el "en la
+  mañana SignalR regresa solo".
+- **Trigger OnResume** (`App.xaml.cs` `Resumed`): `hubClient.StartAsync()` junto al
+  `CheckNowAsync` existente. `StartAsync` ahora es *ensure-connected*: no-op si ya vive;
+  si existe pero está muerta → dispose + recrear (fix del bug 4).
+- **Watchdog del Foreground Service** (`StartWatchdog`, cada
+  `SignalRWatchdogIntervalSeconds=60s`): llama `hubClient.StartAsync()` si `!IsConnected`.
+  Refuerzo externo (OEM agresivos) — el hub se resuelve desde `App.Services` si hacía falta.
+
+**De-dup intacto**: watermark de `PushHealthService` + catch-up del servidor evitan duplicar
+las notificaciones que el polling entregó durante el hueco de desconexión.
+
+**Protocolo de verificación** (emulador o S25, `adb logcat -s FSC`):
+1. Login → `[HubClient] Conectado` + `[HubClient] Loop de supervisión iniciado`.
+2. Modo avión >2 min (pasar los 42s del default viejo) → ver `[HubClient] Reconectando`
+   repetirse indefinidamente (cada 30s), nunca `Closed` definitivo.
+3. Quitar modo avión → `[HubClient] Red disponible de nuevo — reconexión inmediata` →
+   `[HubClient] Conectado` en <30s **sin tocar la app**.
+4. Enviar notificación → llega por SignalR (`[HubClient] Recibida notificación #N`) y
+   `[PushHealth] SignalR connected = true` (el polling baja a solo-heartbeat).
+5. Matar la app desde el switcheo (OnTaskRemoved) → el FG service sobrevive → watchdog
+   (`[FgService] Watchdog`) mantiene el canal.
+
 ## ✅ Estado de pruebas (25-26 ago 2026) — push real VALIDADO en Cuba y fuera
 
 ### Pruebas en Cuba (emulador + S25, IP cubana)
@@ -628,6 +689,7 @@ polling como era esperado.
 - **Timeout de Somee**: Somee no envía keep-alives de SignalR → el cliente (default 30s)
   desconectaba cada 30s. Fix: `ServerTimeout=3min` + `WithAutomaticReconnect()` infinito →
   huecos de desconexión mucho menores; el catch-up cubre los restantes.
+  (Nota Fase 5: el "infinito" original era falso — la política default se rinde a los ~42s.)
 
 ### Pruebas fuera de Cuba (emulador + S25, red Starlink USA)
 - **OneSignal fuera de Cuba: FUNCIONA**. API REST 200, suscripción `enabled=true` con token.
@@ -674,14 +736,22 @@ polling como era esperado.
 4. **Auto-login no arrancaba notificaciones** (ya arreglado Fase 1.4): `AppShell.CheckAuthenticationAsync`
    ahora arranca push+polling+foreground en el path de token guardado.
 5. **Logout no detenía polling** (ya arreglado Fase 1.5): ahora `StopAsync` + `UnregisterUserAsync` + `Reset()`.
+6. **`WithAutomaticReconnect()` default NO es infinito** (ya arreglado Fase 5): se rinde tras
+   4 intentos (~42s) → `Closed` permanente. Una noche sin internet mataba SignalR para siempre
+   y solo el polling (o borrar datos + re-login) lo "recuperaba". Ahora:
+   `InfiniteRetryPolicy` (cap 30s) + loop de supervisión + trigger por conectividad +
+   trigger OnResume + watchdog del FG service.
+7. **`StartAsync` con skip bug** (ya arreglado Fase 5): hacia `return` si `_connection != null`
+   aunque estuviera muerta → nadie podía revivir la conexión. Ahora es *ensure-connected*
+   (recrea si está `Disconnected`/`Closed`).
 
 ### Archivos clave (mapa rápido)
 | Archivo | Rol |
 |---------|-----|
 | `Maui/Services/PushHealthService.cs` | Salud de canal instantáneo + dedup watermark |
-| `Maui/Services/NotificationsHubClient.cs` | Cliente SignalR (reconnect infinito, ServerTimeout 3min) |
+| `Maui/Services/NotificationsHubClient.cs` | Cliente SignalR (retry infinito real, supervisión, trigger de red) |
 | `Maui/Services/PollingNotificationService.cs` | Polling push-aware (solo-heartbeat vs completo) |
-| `Maui/Platforms/Android/NotificationsForegroundService.cs` | FG service (TypeDataSync, START_STICKY) |
+| `Maui/Platforms/Android/NotificationsForegroundService.cs` | FG service (TypeDataSync, START_STICKY, watchdog SignalR) |
 | `Maui/Platforms/Android/Services/SystemNotificationService.cs` | Notificaciones del sistema (canal + sonido) |
 | `Maui/Platforms/Android/NotificationsForegroundStarter.cs` | Arrancar/detener FG service |
 | `Maui/App.xaml.cs` | `App.Services` (IServiceProvider), `PendingRoute`, reporte OneSignal |
@@ -731,6 +801,6 @@ alimentar `LastActivityAt` y la lógica de "no email a pacientes activos". Evolu
 
 ---
 
-**Última actualización**: 26 de agosto de 2026 (noche)  
-**Versión del sistema**: SignalR push-first + Foreground Service + bulk broadcast + AppLog (release logcat) + actividad desacoplada de OneSignal + sonido notfar.mp3 como sonido del canal — fix del auto-login validado en S25 FE (release)  
-**Commits clave**: `0067a7a` (plan), `2a74744` (fix push real bg), `7cd65d8` (docs), `93c622f` (docs exhaustivo), commit email-eliminado, `daf8c2c` (Fase 4: fix auto-login + AppLog + bulk broadcast), `34a59fd` (desacoplar actividad de OneSignal), este commit (sonido notfar en el canal)
+**Última actualización**: 27 de agosto de 2026 (mañana)  
+**Versión del sistema**: SignalR push-first + Foreground Service + bulk broadcast + AppLog (release logcat) + actividad desacoplada de OneSignal + sonido notfar.mp3 como sonido del canal + auto-sanación de SignalR (Fase 5: InfiniteRetryPolicy + supervisión + triggers de red/resume + watchdog)  
+**Commits clave**: `0067a7a` (plan), `2a74744` (fix push real bg), `7cd65d8` (docs), `93c622f` (docs exhaustivo), commit email-eliminado, `daf8c2c` (Fase 4: fix auto-login + AppLog + bulk broadcast), `34a59fd` (desacoplar actividad de OneSignal), commit sonido notfar, commit Fase 5 (auto-sanación SignalR)
