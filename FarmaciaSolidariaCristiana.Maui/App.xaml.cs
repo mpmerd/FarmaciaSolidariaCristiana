@@ -194,6 +194,21 @@ public partial class App : Application
             // Verificar actualizaciones obligatorias al volver a primer plano
             await _updateService.CheckForUpdatesAsync();
             
+            // Revivir SignalR si la conexión murió mientras la app estuvo en background
+            // (ensure-connected: no-op si ya está viva).
+            try
+            {
+                var hubClient = _serviceProvider.GetService<INotificationsHubClient>();
+                if (hubClient != null)
+                {
+                    await hubClient.StartAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                AppLog.Info($"[App] Error reviviendo SignalR on resume: {ex.Message}");
+            }
+
             try
             {
                 var pollingService = _serviceProvider.GetService<IPollingNotificationService>();
