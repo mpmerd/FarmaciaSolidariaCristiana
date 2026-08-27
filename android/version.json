@@ -1,10 +1,10 @@
 {
-  "version": "1.0.7",
-  "versionCode": 7,
-  "releaseDate": "2026-06-25",
+  "version": "1.0.8",
+  "versionCode": 8,
+  "releaseDate": "2026-08-27",
   "downloadUrl": "https://farmaciasolidaria.somee.com/android/farmaciasolidaria.apk",
-  "fileSize": "35M",
+  "fileSize": "37M",
   "minAndroidVersion": "24",
-  "minimumVersion": "1.0.6",
-  "releaseNotes": "Esta versión no es requerida pero se sugiere actualizar. Optimizaciones en vistas principales. Mejoras en la reprogramación de turnos. Aparece decoración del navbar en la app. Mejoras en bloqueo/desbloqueo de deudas por insumos prestados. "
+  "minimumVersion": "1.0.8",
+  "releaseNotes": "Notificaciones push SIGNAL1R como segunda opcion si Onesignal falla por bloqueo geográfico y pooling si ambos fallan. Correcciones en revisión de turnos. Fix de certificados de confianza para lograr en login en móviles antiguos. Actualización del número de whatsapp en la vista \"Quienes somos\". "
 }
