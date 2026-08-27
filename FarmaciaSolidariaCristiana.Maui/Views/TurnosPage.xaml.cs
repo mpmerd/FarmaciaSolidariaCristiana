@@ -1,4 +1,5 @@
 using FarmaciaSolidariaCristiana.Maui.Services;
+using FarmaciaSolidariaCristiana.Maui.Helpers;
 using FarmaciaSolidariaCristiana.Maui.ViewModels;
 
 namespace FarmaciaSolidariaCristiana.Maui.Views;
@@ -50,11 +51,11 @@ public partial class TurnosPage : ContentPage
                 try
                 {
                     await _viewModel.ForceRefreshAsync();
-                    System.Diagnostics.Debug.WriteLine($"[TurnosPage] Force-refreshed after notification: {e.NotificationType}");
+                    AppLog.Info($"[TurnosPage] Force-refreshed after notification: {e.NotificationType}");
                 }
                 catch (Exception ex)
                 {
-                    System.Diagnostics.Debug.WriteLine($"[TurnosPage] Error auto-refreshing: {ex.Message}");
+                    AppLog.Info($"[TurnosPage] Error auto-refreshing: {ex.Message}");
                 }
             });
         }

@@ -6,6 +6,7 @@ using Android.OS;
 using AndroidX.Core.App;
 using AndroidX.Core.Content;
 using FarmaciaSolidariaCristiana.Maui.Services;
+using FarmaciaSolidariaCristiana.Maui.Helpers;
 using Application = Android.App.Application;
 
 namespace FarmaciaSolidariaCristiana.Maui.Platforms.Android;
@@ -30,11 +31,11 @@ public class NotificationsForegroundService : Service
         try
         {
             StartForegroundCompat();
-            System.Diagnostics.Debug.WriteLine("[FgService] Foreground service iniciado");
+            AppLog.Info("[FgService] Foreground service iniciado");
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[FgService] Error StartForeground: {ex.Message}");
+            AppLog.Info($"[FgService] Error StartForeground: {ex.Message}");
         }
 
         // Arrancar el hub client (push real sobre 443).
@@ -54,14 +55,14 @@ public class NotificationsForegroundService : Service
             var services = App.Services;
             if (services == null)
             {
-                System.Diagnostics.Debug.WriteLine("[FgService] App.Services aún no disponible");
+                AppLog.Info("[FgService] App.Services aún no disponible");
                 return;
             }
 
             _hubClient = services.GetService<INotificationsHubClient>();
             if (_hubClient == null)
             {
-                System.Diagnostics.Debug.WriteLine("[FgService] INotificationsHubClient no registrado");
+                AppLog.Info("[FgService] INotificationsHubClient no registrado");
                 return;
             }
 
@@ -72,7 +73,7 @@ public class NotificationsForegroundService : Service
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[FgService] Error iniciando hub: {ex.Message}");
+            AppLog.Info($"[FgService] Error iniciando hub: {ex.Message}");
         }
     }
 
@@ -87,13 +88,13 @@ public class NotificationsForegroundService : Service
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[FgService] Error deteniendo hub: {ex.Message}");
+            AppLog.Info($"[FgService] Error deteniendo hub: {ex.Message}");
         }
     }
 
     public override async void OnDestroy()
     {
-        System.Diagnostics.Debug.WriteLine("[FgService] OnDestroy");
+        AppLog.Info("[FgService] OnDestroy");
         await StopHubAsync();
         base.OnDestroy();
     }
@@ -101,7 +102,7 @@ public class NotificationsForegroundService : Service
     public override void OnTaskRemoved(Intent? rootIntent)
     {
         // Algunos OEM matan el servicio al cerrar la tarea. Mantener vivo (START_STICKY lo recrea).
-        System.Diagnostics.Debug.WriteLine("[FgService] OnTaskRemoved - manteniendo servicio");
+        AppLog.Info("[FgService] OnTaskRemoved - manteniendo servicio");
         base.OnTaskRemoved(rootIntent);
     }
 

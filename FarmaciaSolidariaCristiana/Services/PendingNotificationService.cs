@@ -23,6 +23,22 @@ public interface IPendingNotificationService
         object? additionalData = null);
 
     /// <summary>
+    /// Crea notificaciones pendientes para múltiples usuarios en una sola operación:
+    /// bulk insert (1 SaveChanges) + fan-out SignalR en paralelo por chunks.
+    /// Evita el loop secuencial de <see cref="CreateNotificationAsync"/> (que hace
+    /// 1 SaveChanges + 1 send por usuario) y previene timeout de Somee para N grande.
+    /// Usar para notificaciones masivas/broadcast.
+    /// </summary>
+    Task<List<PendingNotification>> CreateBulkNotificationsAsync(
+        IEnumerable<string> userIds,
+        string title,
+        string message,
+        string notificationType,
+        int? referenceId = null,
+        string? referenceType = null,
+        object? additionalData = null);
+
+    /// <summary>
     /// Obtiene las notificaciones no leídas de un usuario
     /// </summary>
     Task<List<PendingNotification>> GetUnreadNotificationsAsync(string userId);
@@ -146,6 +162,72 @@ public class PendingNotificationService : IPendingNotificationService
         }
 
         return notification;
+    }
+
+    /// <inheritdoc/>
+    public async Task<List<PendingNotification>> CreateBulkNotificationsAsync(
+        IEnumerable<string> userIds,
+        string title,
+        string message,
+        string notificationType,
+        int? referenceId = null,
+        string? referenceType = null,
+        object? additionalData = null)
+    {
+        var now = DateTime.UtcNow;
+        var data = additionalData != null ? JsonSerializer.Serialize(additionalData) : null;
+        var targetIds = userIds.Distinct().ToList();
+
+        if (targetIds.Count == 0)
+            return new List<PendingNotification>();
+
+        var notifications = targetIds.Select(userId => new PendingNotification
+        {
+            UserId = userId,
+            Title = title,
+            Message = message,
+            NotificationType = notificationType,
+            ReferenceId = referenceId,
+            ReferenceType = referenceType,
+            AdditionalData = data,
+            IsRead = false,
+            CreatedAt = now
+        }).ToList();
+
+        // 1 solo SaveChanges para todos (bulk insert). Evita N round-trips a la BD.
+        await _context.PendingNotifications.AddRangeAsync(notifications);
+        await _context.SaveChangesAsync();
+
+        _logger.LogInformation(
+            "Notificaciones masivas creadas: {Count} para '{Title}' (Tipo: {Type})",
+            notifications.Count, title, notificationType);
+
+        // Fan-out SignalR en paralelo por chunks de 100: no encadena 1 send tras otro
+        // por usuario. Si el usuario no está conectado, el send es no-op (barato); la
+        // notificación ya quedó en BD para polling/catch-up.
+        if (_broadcaster != null)
+        {
+            var broadcaster = _broadcaster;
+            const int chunkSize = 100;
+            for (int i = 0; i < notifications.Count; i += chunkSize)
+            {
+                var chunk = notifications.Skip(i).Take(chunkSize).ToList();
+                await Task.WhenAll(chunk.Select(n => broadcaster.BroadcastToUserAsync(
+                    n.UserId,
+                    new NotificationPayload
+                    {
+                        Id = n.Id,
+                        Title = n.Title,
+                        Message = n.Message,
+                        NotificationType = n.NotificationType,
+                        ReferenceId = n.ReferenceId,
+                        ReferenceType = n.ReferenceType,
+                        CreatedAt = n.CreatedAt
+                    })));
+            }
+        }
+
+        return notifications;
     }
 
     public async Task<List<PendingNotification>> GetUnreadNotificationsAsync(string userId)
