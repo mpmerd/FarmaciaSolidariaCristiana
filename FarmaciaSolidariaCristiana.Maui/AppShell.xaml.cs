@@ -87,23 +87,32 @@ public partial class AppShell : Shell
     /// <summary>
     /// Inicia push + polling cuando el usuario entra por auto-login (token guardado).
     /// Idempotente: si el polling ya está corriendo (vínimos de login manual), no hace nada.
-    /// Resuelve los servicios desde el MauiContext (AppShell se construye manualmente en App.xaml.cs).
+    /// Usa <see cref="App.Services"/> (static) como fuente robusta: MauiContext.Services puede no
+    /// estar listo en cold-start y hacía abortar polling+FG (bug: "Notificaciones activas" no
+    /// aparecía en auto-login hasta borrar datos). Arranca primero los canales que solo necesitan
+    /// el token local (ya validado por IsAuthenticatedAsync); GetUserInfo/push-reg va después y
+    /// no bloquea.
     /// </summary>
     private async Task StartNotificationsOnAutoLoginAsync()
     {
         try
         {
-            IServiceProvider? services = null;
-            for (int i = 0; i < 10; i++)
+            // App.Services se setea en el ctor de App (siempre disponible tras el arranque).
+            // Evita el early-return que ocurría cuando MauiContext.Services no estaba listo en ~1s.
+            var services = App.Services;
+            if (services == null)
             {
-                services = Application.Current?.Handler?.MauiContext?.Services;
-                if (services != null) break;
-                await Task.Delay(100);
+                for (int i = 0; i < 10; i++)
+                {
+                    services = Application.Current?.Handler?.MauiContext?.Services;
+                    if (services != null) break;
+                    await Task.Delay(100);
+                }
             }
 
             if (services == null)
             {
-                System.Diagnostics.Debug.WriteLine("[AppShell] No se pudo resolver ServiceProvider para notificaciones en auto-login");
+                AppLog.Error("[AppShell] No se pudo resolver ServiceProvider para notificaciones en auto-login");
                 return;
             }
 
@@ -113,10 +122,42 @@ public partial class AppShell : Shell
             // Si el polling ya corre, venimos de login manual -> nada que hacer aquí.
             if (polling != null && polling.IsRunning)
             {
-                System.Diagnostics.Debug.WriteLine("[AppShell] Polling ya activo (login manual), auto-login no reinicia");
+                AppLog.Info("[AppShell] Polling ya activo (login manual), auto-login no reinicia");
                 return;
             }
 
+            // 1) Arrancar primero los canales que SOLO necesitan el token local (ya validado
+            //    por IsAuthenticatedAsync). Desacopla el push real del GetUserInfo/push-reg,
+            //    que antes abortaban todo el arranque si fallaban.
+            if (Constants.SignalRChannelEnabled)
+            {
+#if ANDROID
+                try
+                {
+                    Platforms.Android.NotificationsForegroundStarter.Start();
+                    AppLog.Info("[AppShell] Foreground Service start solicitado en auto-login");
+                }
+                catch (Exception ex)
+                {
+                    AppLog.Error($"[AppShell] Error iniciando Foreground Service en auto-login: {ex.Message}");
+                }
+#endif
+            }
+
+            if (polling != null)
+            {
+                try
+                {
+                    await polling.StartAsync();
+                    AppLog.Info("[AppShell] Polling iniciado en auto-login");
+                }
+                catch (Exception ex)
+                {
+                    AppLog.Error($"[AppShell] Error iniciando polling en auto-login: {ex.Message}");
+                }
+            }
+
+            // 2) Registro push + tags: no bloquea los canales ya arrancados. Si falla, no afecta.
             var userInfo = await _authService.GetUserInfoAsync();
             if (notif != null && userInfo != null)
             {
@@ -125,45 +166,21 @@ public partial class AppShell : Shell
                 {
                     await notif.SetUserTagsAsync(userInfo.Id, role);
                     await notif.RegisterDeviceAsync();
-                    System.Diagnostics.Debug.WriteLine("[AppShell] Push registrado en auto-login");
+                    AppLog.Info("[AppShell] Push registrado en auto-login");
                 }
                 catch (Exception ex)
                 {
-                    System.Diagnostics.Debug.WriteLine($"[AppShell] Error registrando push en auto-login: {ex.Message}");
+                    AppLog.Warn($"[AppShell] Error registrando push en auto-login: {ex.Message}");
                 }
             }
-
-            if (polling != null)
+            else
             {
-                try
-                {
-                    await polling.StartAsync();
-                    System.Diagnostics.Debug.WriteLine("[AppShell] Polling iniciado en auto-login");
-                }
-                catch (Exception ex)
-                {
-                    System.Diagnostics.Debug.WriteLine($"[AppShell] Error iniciando polling en auto-login: {ex.Message}");
-                }
-            }
-
-            // Fase 2: arrancar Foreground Service (push real sobre 443 en background).
-            if (Constants.SignalRChannelEnabled)
-            {
-#if ANDROID
-                try
-                {
-                    Platforms.Android.NotificationsForegroundStarter.Start();
-                }
-                catch (Exception ex)
-                {
-                    System.Diagnostics.Debug.WriteLine($"[AppShell] Error iniciando Foreground Service en auto-login: {ex.Message}");
-                }
-#endif
+                AppLog.Warn("[AppShell] GetUserInfo null en auto-login (push-reg omitido; canales ya arrancados)");
             }
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[AppShell] Error en StartNotificationsOnAutoLoginAsync: {ex.Message}");
+            AppLog.Error($"[AppShell] Error en StartNotificationsOnAutoLoginAsync: {ex.Message}");
         }
     }
     
@@ -254,7 +271,7 @@ public partial class AppShell : Shell
             if (Constants.SignalRChannelEnabled)
             {
                 try { Platforms.Android.NotificationsForegroundStarter.Stop(); }
-                catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[AppShell] Error deteniendo Foreground Service: {ex.Message}"); }
+                catch (Exception ex) { AppLog.Info($"[AppShell] Error deteniendo Foreground Service: {ex.Message}"); }
             }
 #endif
 
@@ -281,11 +298,11 @@ public partial class AppShell : Shell
                 try
                 {
                     await polling.StopAsync();
-                    System.Diagnostics.Debug.WriteLine("[AppShell] Polling detenido en logout");
+                    AppLog.Info("[AppShell] Polling detenido en logout");
                 }
                 catch (Exception ex)
                 {
-                    System.Diagnostics.Debug.WriteLine($"[AppShell] Error deteniendo polling en logout: {ex.Message}");
+                    AppLog.Info($"[AppShell] Error deteniendo polling en logout: {ex.Message}");
                 }
             }
 
@@ -295,11 +312,11 @@ public partial class AppShell : Shell
                 try
                 {
                     await notif.UnregisterUserAsync();
-                    System.Diagnostics.Debug.WriteLine("[AppShell] Dispositivo desregistrado en logout");
+                    AppLog.Info("[AppShell] Dispositivo desregistrado en logout");
                 }
                 catch (Exception ex)
                 {
-                    System.Diagnostics.Debug.WriteLine($"[AppShell] Error desregistrando en logout: {ex.Message}");
+                    AppLog.Info($"[AppShell] Error desregistrando en logout: {ex.Message}");
                 }
             }
 
@@ -308,7 +325,7 @@ public partial class AppShell : Shell
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[AppShell] Error en StopNotificationsOnLogoutAsync: {ex.Message}");
+            AppLog.Info($"[AppShell] Error en StopNotificationsOnLogoutAsync: {ex.Message}");
         }
     }
 }

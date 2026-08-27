@@ -1,3 +1,5 @@
+using FarmaciaSolidariaCristiana.Maui.Helpers;
+
 namespace FarmaciaSolidariaCristiana.Maui.Services;
 
 /// <summary>
@@ -100,7 +102,7 @@ public class PushHealthService : IPushHealthService
 
         if (changed)
         {
-            System.Diagnostics.Debug.WriteLine($"[PushHealth] OneSignal available = {available}");
+            AppLog.Info($"[PushHealth] OneSignal available = {available}");
             RaiseAvailabilityChanged();
         }
     }
@@ -118,7 +120,7 @@ public class PushHealthService : IPushHealthService
 
         if (changed)
         {
-            System.Diagnostics.Debug.WriteLine($"[PushHealth] SignalR connected = {connected}");
+            AppLog.Info($"[PushHealth] SignalR connected = {connected}");
             RaiseAvailabilityChanged();
         }
     }
@@ -174,7 +176,7 @@ public class PushHealthService : IPushHealthService
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[PushHealth] AvailabilityChanged handler error: {ex.Message}");
+            AppLog.Info($"[PushHealth] AvailabilityChanged handler error: {ex.Message}");
         }
     }
 }

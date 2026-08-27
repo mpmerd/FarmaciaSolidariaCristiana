@@ -5,6 +5,7 @@ using Android.Content.PM;
 using Android.OS;
 using AndroidX.Core.App;
 using FarmaciaSolidariaCristiana.Maui.Services;
+using FarmaciaSolidariaCristiana.Maui.Helpers;
 using Plugin.Maui.Audio;
 using Application = Android.App.Application;
 
@@ -58,11 +59,11 @@ public class SystemNotificationService : ISystemNotificationService
 
             NotificationManagerCompat.From(context).Notify(notifId, builder.Build());
 
-            System.Diagnostics.Debug.WriteLine($"[SysNotif] Mostrada notificación del sistema: {title}");
+            AppLog.Info($"[SysNotif] Mostrada notificación del sistema: {title}");
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[SysNotif] Error: {ex.Message}");
+            AppLog.Info($"[SysNotif] Error: {ex.Message}");
         }
     }
 
@@ -94,7 +95,7 @@ public class SystemNotificationService : ISystemNotificationService
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[SysNotif] Sonido: {ex.Message}");
+            AppLog.Info($"[SysNotif] Sonido: {ex.Message}");
         }
     }
 }

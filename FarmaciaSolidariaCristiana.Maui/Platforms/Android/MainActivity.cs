@@ -5,6 +5,7 @@ using Android.Content.PM;
 using Android.Net;
 using Android.OS;
 using Android.Provider;
+using FarmaciaSolidariaCristiana.Maui.Helpers;
 using Application = Android.App.Application;
 
 namespace FarmaciaSolidariaCristiana.Maui;
@@ -39,12 +40,12 @@ public class MainActivity : MauiAppCompatActivity
             if (!string.IsNullOrEmpty(route))
             {
                 App.PendingRoute = route;
-                System.Diagnostics.Debug.WriteLine($"[MainActivity] Route extra: {route}");
+                AppLog.Info($"[MainActivity] Route extra: {route}");
             }
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[MainActivity] HandleRouteIntent: {ex.Message}");
+            AppLog.Info($"[MainActivity] HandleRouteIntent: {ex.Message}");
         }
     }
 
@@ -66,11 +67,11 @@ public class MainActivity : MauiAppCompatActivity
             intent.SetData(Android.Net.Uri.Parse("package:" + Application.Context.PackageName));
             intent.AddFlags(ActivityFlags.NewTask);
             Application.Context.StartActivity(intent);
-            System.Diagnostics.Debug.WriteLine("[MainActivity] Solicitando exención de batería (primera vez)");
+            AppLog.Info("[MainActivity] Solicitando exención de batería (primera vez)");
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[MainActivity] Battery exemption: {ex.Message}");
+            AppLog.Info($"[MainActivity] Battery exemption: {ex.Message}");
         }
     }
 }

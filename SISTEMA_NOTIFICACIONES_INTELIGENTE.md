@@ -561,6 +561,47 @@ Flags en `Helpers/Constants.cs` (rollback seguro):
 - `SignalRChannelEnabled = true` ← **activado tras validar en dispositivo/emulador Cuba**.
 - `HeartbeatIntervalSeconds = 60`.
 
+### ✅ Fase 4 — Robustez del auto-login + logging en release + bulk broadcast (26 ago 2026)
+
+Diagnóstico y fix de un bug residual que aparecía en release en el S25 FE: las notificaciones
+no entraban por auto-login hasta **borrar los datos** de la app (entonces aparecía la notificación
+persistente "Farmacia Solidaria — Notificaciones activas" y todo empezaba a funcionar).
+
+**Causa raíz** (`AppShell.StartNotificationsOnAutoLoginAsync`): resolvía los servicios de
+`Application.Current?.Handler?.MauiContext?.Services` esperando solo ~1s y hacía `return` si no
+estaban listos → **se saltaba polling + Foreground Service** (ambos canales muertos en cold-start).
+El login **manual** no fallaba porque `LoginViewModel` usa servicios inyectados en el constructor
+(siempre disponibles). Por eso "borrar datos" (que fuerza login manual) lo "arreglaba".
+
+**Fix**:
+- Usar `App.Services` (static, set en el ctor de `App`, siempre disponible) como fuente de
+  servicios en el auto-login (MauiContext como fallback). Esa property existía justamente para
+  esto (lo dice su comentario), pero el auto-login no la usaba.
+- Reordenar: arrancar **primero** el FG service + polling (solo necesitan el token local, ya
+  validado por `IsAuthenticatedAsync`); `GetUserInfo`/push-reg queda después y **no bloqueante**
+  (si falla, los canales ya están arriba).
+- Cada paso en su propio try/catch.
+
+**Logging visible en release** (`Maui/Helpers/AppLog.cs`): `Debug.WriteLine` es **no-op en
+release** → en el S25 no se veía nada. `AppLog` usa `Android.Util.Log` (tag `FSC`) que **sí emite
+a logcat en release**. Convertido en todos los archivos del ciclo de notificaciones. Filtrar con:
+`adb logcat -s FSC` (los mensajes conservan su prefijo `[FgService]`/`[HubClient]`/`[AppShell]`...).
+
+**Bulk broadcast** (`Backend/Services/PendingNotificationService.CreateBulkNotificationsAsync`):
+el loop del admin era `foreach` + 1 `SaveChanges` por usuario (secuencial, `await` dentro del
+request HTTP) → riesgo de **timeout de Somee** para N grande. Ahora: `AddRange` + **1 solo
+`SaveChanges`** (bulk insert) + fan-out SignalR **en paralelo por chunks de 100**
+(`Task.WhenAll`). Ambos controladores (MVC web + API MAUI) llaman al bulk. El request del admin
+devuelve el contador real casi al instante.
+
+**Validación en el S25 FE (release, 26 ago 2026 noche)**: lanzada la app por adb entró por
+auto-login (Farmaceutico, sin borrar datos) y el log mostró el path arreglado:
+`[AppShell] Foreground Service start solicitado en auto-login` → `[FgService] Foreground service
+iniciado` → `[HubClient] Conectado (push real sobre 443 activo)`. Broadcast masivo a **589
+usuarios**: completó sin timeout de Somee; el S25 recibió `[HubClient] Recibida notificación
+#22212` por SignalR en <1s. El resto (app vieja en producción, sin SignalR) lo recibió por
+polling como era esperado.
+
 ## ✅ Estado de pruebas (25-26 ago 2026) — push real VALIDADO en Cuba y fuera
 
 ### Pruebas en Cuba (emulador + S25, IP cubana)
@@ -601,7 +642,9 @@ Flags en `Helpers/Constants.cs` (rollback seguro):
   terminar (volver a `http://192.168.2.104:5003`).
 - **Logs en release no visibles**: compilar Debug para el emulador para ver `Debug.WriteLine`
   (salen en logcat con tag `DOTNET` o `com.fsolidaria.app`).
-- **logcat útil**: `adb logcat -v time | grep -iE "HubClient|PushHealth|FgService|PollingService|SysNotif|OneSignal"`
+- **logcat útil**: desde la Fase 4, los logs emiten en **release** vía `AppLog` con tag `FSC`
+  → `adb logcat -s FSC` (los mensajes conservan prefijos `[FgService]`/`[HubClient]`/`[AppShell]`...).
+  Para captura amplia: `adb logcat -v time | grep -iE "HubClient|PushHealth|FgService|PollingService|SysNotif|OneSignal"`
 
 ### Estado de despliegue
 - **App MAUI**: `SignalRChannelEnabled=true` en `Constants.cs` (activado). Compilar release
@@ -639,6 +682,11 @@ Flags en `Helpers/Constants.cs` (rollback seguro):
 | `Backend/Program.cs` | `AddSignalR()` + `MapHub<NotificationsHub>("/hubs/notifications")` |
 
 ## 🔲 Pendientes / mejoras futuras
+- **✅ Bulk broadcast del admin (Fase 4)**: `CreateBulkNotificationsAsync` (1 `SaveChanges` +
+  fan-out SignalR en paralelo por chunks) reemplazó el `foreach` secuencial → resuelto el riesgo
+  de timeout de Somee para N grande (validado con 589 usuarios). Si algún día se quieren
+  cientos de miles de usuarios, queda pendiente mandar el loop a un `BackgroundService` con
+  outbox persistente.
 - **⚠️ Verificar que el catch-up de `OnConnectedAsync` esté desplegado en Somee** (commiteado en
   `2a74744`, pero si no se redeployó, las notificaciones perdidas en huecos de desconexión no se
   recuperan al reconectar). Si hay dudas, redeployar el backend.
@@ -651,7 +699,9 @@ Flags en `Helpers/Constants.cs` (rollback seguro):
   canal default en la barra).
 - Exención de batería en el S25 (release) no apareció: investigar si fue Auto-Backup restaurando
   el flag `battery_exemption_requested` o si Samsung exime por defecto. No bloquea el push real.
-- Prueba de estrés pendiente: varias solicitudes seguidas, alguna con background prolongado.
+- ✅ Prueba de estrés (26 ago 2026): broadcast masivo a 589 usuarios completó sin timeout de
+  Somee; el S25 (conectado) recibió el push por SignalR en <1s; el resto (app vieja) por polling.
+  Pendiente: varias solicitudes seguidas con background prolongado en dispositivos físicos.
 - **Doble notificación fuera de Cuba**: si tanto OneSignal como SignalR entregan la misma
   notificación, el usuario puede ver duplicados. Investigar de-dup entre canales a nivel de
   OneSignal (reportar entrega OneSignal a PushHealth para que SignalR/sonido no duplique).
@@ -667,6 +717,6 @@ alimentar `LastActivityAt` y la lógica de "no email a pacientes activos". Evolu
 
 ---
 
-**Última actualización**: 26 de agosto de 2026  
-**Versión del sistema**: SignalR push-first + Foreground Service + email a farmacéuticos por solicitud ELIMINADO — `SignalRChannelEnabled=true` validado en Cuba y fuera de Cuba  
-**Commits clave**: `0067a7a` (plan), `2a74744` (fix push real bg), `7cd65d8` (docs), `93c622f` (docs exhaustivo), este commit (email eliminado)
+**Última actualización**: 26 de agosto de 2026 (noche)  
+**Versión del sistema**: SignalR push-first + Foreground Service + bulk broadcast + AppLog (release logcat) — fix del auto-login validado en S25 FE (release)  
+**Commits clave**: `0067a7a` (plan), `2a74744` (fix push real bg), `7cd65d8` (docs), `93c622f` (docs exhaustivo), commit email-eliminado, este commit (Fase 4: fix auto-login + AppLog + bulk broadcast)

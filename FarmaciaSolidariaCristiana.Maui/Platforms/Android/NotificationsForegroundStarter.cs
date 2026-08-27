@@ -1,6 +1,7 @@
 #if ANDROID
 using Android.Content;
 using AndroidX.Core.Content;
+using FarmaciaSolidariaCristiana.Maui.Helpers;
 using Application = Android.App.Application;
 
 namespace FarmaciaSolidariaCristiana.Maui.Platforms.Android;
@@ -20,11 +21,11 @@ public static class NotificationsForegroundStarter
             var context = Application.Context;
             var intent = new Intent(context, typeof(NotificationsForegroundService));
             ContextCompat.StartForegroundService(context, intent);
-            System.Diagnostics.Debug.WriteLine("[FgStarter] Foreground service start solicitado");
+            AppLog.Info("[FgStarter] Foreground service start solicitado");
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[FgStarter] Error al iniciar: {ex.Message}");
+            AppLog.Info($"[FgStarter] Error al iniciar: {ex.Message}");
         }
     }
 
@@ -37,11 +38,11 @@ public static class NotificationsForegroundStarter
         {
             var context = Application.Context;
             context.StopService(new Intent(context, typeof(NotificationsForegroundService)));
-            System.Diagnostics.Debug.WriteLine("[FgStarter] Foreground service stop solicitado");
+            AppLog.Info("[FgStarter] Foreground service stop solicitado");
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[FgStarter] Error al detener: {ex.Message}");
+            AppLog.Info($"[FgStarter] Error al detener: {ex.Message}");
         }
     }
 }

@@ -42,25 +42,25 @@ public class NotificationsHubClient : INotificationsHubClient, IDisposable
         {
             if (!Constants.SignalRChannelEnabled)
             {
-                System.Diagnostics.Debug.WriteLine("[HubClient] SignalR deshabilitado por feature flag (Constants.SignalRChannelEnabled=false)");
+                AppLog.Info("[HubClient] SignalR deshabilitado por feature flag (Constants.SignalRChannelEnabled=false)");
                 return;
             }
 
             if (_connection != null)
             {
-                System.Diagnostics.Debug.WriteLine("[HubClient] Ya existe conexión, skip start");
+                AppLog.Info("[HubClient] Ya existe conexión, skip start");
                 return;
             }
 
             var token = await _authService.GetTokenAsync();
             if (string.IsNullOrEmpty(token))
             {
-                System.Diagnostics.Debug.WriteLine("[HubClient] No hay JWT, no se inicia SignalR");
+                AppLog.Info("[HubClient] No hay JWT, no se inicia SignalR");
                 return;
             }
 
             var hubUrl = $"{Constants.ApiBaseUrl.TrimEnd('/')}/hubs/notifications";
-            System.Diagnostics.Debug.WriteLine($"[HubClient] Construyendo conexión a {hubUrl}");
+            AppLog.Info($"[HubClient] Construyendo conexión a {hubUrl}");
 
             _connection = new HubConnectionBuilder()
                 .WithUrl(hubUrl, options =>
@@ -83,21 +83,21 @@ public class NotificationsHubClient : INotificationsHubClient, IDisposable
 
             _connection.Reconnecting += ex =>
             {
-                System.Diagnostics.Debug.WriteLine($"[HubClient] Reconectando: {ex?.Message}");
+                AppLog.Info($"[HubClient] Reconectando: {ex?.Message}");
                 _pushHealth.ReportSignalRConnected(false);
                 return Task.CompletedTask;
             };
 
             _connection.Reconnected += connectionId =>
             {
-                System.Diagnostics.Debug.WriteLine($"[HubClient] Reconectado: {connectionId}");
+                AppLog.Info($"[HubClient] Reconectado: {connectionId}");
                 _pushHealth.ReportSignalRConnected(true);
                 return Task.CompletedTask;
             };
 
             _connection.Closed += ex =>
             {
-                System.Diagnostics.Debug.WriteLine($"[HubClient] Conexión cerrada: {ex?.Message}");
+                AppLog.Info($"[HubClient] Conexión cerrada: {ex?.Message}");
                 _pushHealth.ReportSignalRConnected(false);
                 return Task.CompletedTask;
             };
@@ -111,11 +111,11 @@ public class NotificationsHubClient : INotificationsHubClient, IDisposable
             {
                 await _connection.StartAsync();
                 _pushHealth.ReportSignalRConnected(true);
-                System.Diagnostics.Debug.WriteLine("[HubClient] Conectado (push real sobre 443 activo)");
+                AppLog.Info("[HubClient] Conectado (push real sobre 443 activo)");
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[HubClient] Start falló: {ex.Message} (auto-reconnect reintentará)");
+                AppLog.Info($"[HubClient] Start falló: {ex.Message} (auto-reconnect reintentará)");
                 _pushHealth.ReportSignalRConnected(false);
                 // WithAutomaticReconnect no cubre el fallo del Start inicial;
                 // dejamos la conexión viva para que reintente, o se relanzará desde el foreground service.
@@ -142,12 +142,12 @@ public class NotificationsHubClient : INotificationsHubClient, IDisposable
                 }
                 catch (Exception ex)
                 {
-                    System.Diagnostics.Debug.WriteLine($"[HubClient] Error en StopAsync: {ex.Message}");
+                    AppLog.Info($"[HubClient] Error en StopAsync: {ex.Message}");
                 }
                 try { await conn.DisposeAsync(); } catch { }
             }
             _pushHealth.ReportSignalRConnected(false);
-            System.Diagnostics.Debug.WriteLine("[HubClient] Detenido");
+            AppLog.Info("[HubClient] Detenido");
         }
         finally
         {
@@ -163,11 +163,11 @@ public class NotificationsHubClient : INotificationsHubClient, IDisposable
             // no la volvemos a mostrar/sonar.
             if (_pushHealth.WasDeliveredInstantly(payload.Id))
             {
-                System.Diagnostics.Debug.WriteLine($"[HubClient] Notificación #{payload.Id} ya entregada, skip (dedup)");
+                AppLog.Info($"[HubClient] Notificación #{payload.Id} ya entregada, skip (dedup)");
                 return;
             }
 
-            System.Diagnostics.Debug.WriteLine($"[HubClient] Recibida notificación #{payload.Id}: {payload.Title}");
+            AppLog.Info($"[HubClient] Recibida notificación #{payload.Id}: {payload.Title}");
 
             // De-dup: reportar entrega al PushHealthService para que el polling no la repita.
             _pushHealth.ReportDelivery(payload.Id, payload.CreatedAt);
@@ -185,15 +185,15 @@ public class NotificationsHubClient : INotificationsHubClient, IDisposable
             };
 
             try { NotificationReceived?.Invoke(this, args); }
-            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[HubClient] Error en handler de NotificationReceived: {ex.Message}"); }
+            catch (Exception ex) { AppLog.Info($"[HubClient] Error en handler de NotificationReceived: {ex.Message}"); }
 
             // Notificación del sistema (visible en background y foreground).
             try { await _systemNotification.ShowAsync(payload.Title, payload.Message, payload.NotificationType, payload.ReferenceId); }
-            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[HubClient] Error mostrando notificación del sistema: {ex.Message}"); }
+            catch (Exception ex) { AppLog.Info($"[HubClient] Error mostrando notificación del sistema: {ex.Message}"); }
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[HubClient] Error procesando notificación recibida: {ex.Message}");
+            AppLog.Info($"[HubClient] Error procesando notificación recibida: {ex.Message}");
         }
     }
 
