@@ -916,7 +916,7 @@ namespace FarmaciaSolidariaCristiana.Services
                     }
 
                     // Verificar si el usuario está activo en la app móvil (últimos 5 minutos)
-                    var isActiveOnMobile = await _notificationService.IsUserActiveOnMobileAsync(turno.UserId);
+                    var isActiveOnMobile = await _pendingNotificationService.IsUserActiveOnMobileAsync(turno.UserId);
                     
                     if (isActiveOnMobile)
                     {
@@ -1024,7 +1024,7 @@ namespace FarmaciaSolidariaCristiana.Services
                     }
                     
                     // Verificar si el usuario está activo en la app móvil
-                    var isActiveOnMobile = await _notificationService.IsUserActiveOnMobileAsync(turno.UserId);
+                    var isActiveOnMobile = await _pendingNotificationService.IsUserActiveOnMobileAsync(turno.UserId);
                     
                     if (!isActiveOnMobile && turno.User.Email != null)
                     {

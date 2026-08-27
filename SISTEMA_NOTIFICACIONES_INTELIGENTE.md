@@ -594,6 +594,17 @@ request HTTP) → riesgo de **timeout de Somee** para N grande. Ahora: `AddRange
 (`Task.WhenAll`). Ambos controladores (MVC web + API MAUI) llaman al bulk. El request del admin
 devuelve el contador real casi al instante.
 
+**Desacoplamiento de la actividad de OneSignal** (`Backend/Services/PendingNotificationService`):
+el tracking de actividad (`UpdateDeviceLastActivityAsync` + `IsUserActiveOnMobileAsync`) estaba en
+`IOneSignalNotificationService` → cuando OneSignal no estaba configurado (Null),
+`IsUserActiveOnMobileAsync` devolvía `false` **siempre** y el heartbeat era **no-op** → **todo**
+rechazo/aprobación mandaba email al paciente aunque estuviera activo (bug real: hijo logueado
+recibió email al rechazarle el turno). Movido a `IPendingNotificationService` (consulta pura a BD:
+`LastActivityAt` en los últimos 5 min) → funciona **aunque OneSignal sea Null**. `TurnoService`
+(approve/reject) y el endpoint `/heartbeat` ahora usan el servicio de pendientes. También se borró
+el `IsUserActiveOnMobileAsync` duplicado/erróneo que había en `PendingNotificationService`
+(miraba `UpdatedAt` con ventana 24h) y el de las impls de OneSignal.
+
 **Validación en el S25 FE (release, 26 ago 2026 noche)**: lanzada la app por adb entró por
 auto-login (Farmaceutico, sin borrar datos) y el log mostró el path arreglado:
 `[AppShell] Foreground Service start solicitado en auto-login` → `[FgService] Foreground service
@@ -718,5 +729,5 @@ alimentar `LastActivityAt` y la lógica de "no email a pacientes activos". Evolu
 ---
 
 **Última actualización**: 26 de agosto de 2026 (noche)  
-**Versión del sistema**: SignalR push-first + Foreground Service + bulk broadcast + AppLog (release logcat) — fix del auto-login validado en S25 FE (release)  
-**Commits clave**: `0067a7a` (plan), `2a74744` (fix push real bg), `7cd65d8` (docs), `93c622f` (docs exhaustivo), commit email-eliminado, este commit (Fase 4: fix auto-login + AppLog + bulk broadcast)
+**Versión del sistema**: SignalR push-first + Foreground Service + bulk broadcast + AppLog (release logcat) + actividad desacoplada de OneSignal — fix del auto-login validado en S25 FE (release)  
+**Commits clave**: `0067a7a` (plan), `2a74744` (fix push real bg), `7cd65d8` (docs), `93c622f` (docs exhaustivo), commit email-eliminado, `daf8c2c` (Fase 4: fix auto-login + AppLog + bulk broadcast), este commit (desacoplar actividad de OneSignal)
