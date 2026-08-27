@@ -706,8 +706,11 @@ polling como era esperado.
 - Wiring del evento foreground de OneSignal (`OneSignal.Notifications.ReceivedInForeground`) para
   reportar entregas reales de FCM a `PushHealthService` (cuando se confirme la API del SDK 5.2.2).
   Nota: dado que OneSignal bloquea Cuba por IP, esto solo aplicaría a usuarios fuera de Cuba.
-- Sonido `notfar.mp3` como sonido del canal del sistema (hoy se reproduce in-process; queda como
-  canal default en la barra).
+- ✅ Sonido `notfar.mp3` como sonido del canal del sistema: canal `fsc_notifications_v2` con
+  `SetSound(android.resource://.../raw/notfar)` + AudioAttributes (API 26+); API <26 usa
+  `NotificationCompat.Builder.SetSound`. Eliminado el sonido in-process de
+  `SystemNotificationService` (el sistema reproduce notfar nativamente). Se borra la v1 del canal
+  al arrancar. (El polling snackbar sigue con sonido in-process — fuera de alcance.)
 - Exención de batería en el S25 (release) no apareció: investigar si fue Auto-Backup restaurando
   el flag `battery_exemption_requested` o si Samsung exime por defecto. No bloquea el push real.
 - ✅ Prueba de estrés (26 ago 2026): broadcast masivo a 589 usuarios completó sin timeout de
@@ -729,5 +732,5 @@ alimentar `LastActivityAt` y la lógica de "no email a pacientes activos". Evolu
 ---
 
 **Última actualización**: 26 de agosto de 2026 (noche)  
-**Versión del sistema**: SignalR push-first + Foreground Service + bulk broadcast + AppLog (release logcat) + actividad desacoplada de OneSignal — fix del auto-login validado en S25 FE (release)  
-**Commits clave**: `0067a7a` (plan), `2a74744` (fix push real bg), `7cd65d8` (docs), `93c622f` (docs exhaustivo), commit email-eliminado, `daf8c2c` (Fase 4: fix auto-login + AppLog + bulk broadcast), este commit (desacoplar actividad de OneSignal)
+**Versión del sistema**: SignalR push-first + Foreground Service + bulk broadcast + AppLog (release logcat) + actividad desacoplada de OneSignal + sonido notfar.mp3 como sonido del canal — fix del auto-login validado en S25 FE (release)  
+**Commits clave**: `0067a7a` (plan), `2a74744` (fix push real bg), `7cd65d8` (docs), `93c622f` (docs exhaustivo), commit email-eliminado, `daf8c2c` (Fase 4: fix auto-login + AppLog + bulk broadcast), `34a59fd` (desacoplar actividad de OneSignal), este commit (sonido notfar en el canal)
