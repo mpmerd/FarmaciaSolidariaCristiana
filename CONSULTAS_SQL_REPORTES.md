@@ -195,3 +195,24 @@ WHERE d.TurnoId IS NULL
 GROUP BY YEAR(d.DeliveryDate), MONTH(d.DeliveryDate)
 ORDER BY Anio, Mes;
 ```
+
+---
+
+## 13. Donaciones registradas por mes (medicamentos e insumos)
+
+> Muestra cuántas donaciones se registraron cada mes, diferenciando las de medicamentos y las de insumos, así como las unidades donadas de cada tipo.
+
+```sql
+SELECT
+    YEAR(d.DonationDate)  AS Anio,
+    MONTH(d.DonationDate) AS Mes,
+    SUM(CASE WHEN d.MedicineId IS NOT NULL THEN 1 ELSE 0 END)       AS DonacionesMedicamentos,
+    SUM(CASE WHEN d.MedicineId IS NOT NULL THEN d.Quantity ELSE 0 END) AS UnidadesMedicamentos,
+    SUM(CASE WHEN d.SupplyId IS NOT NULL THEN 1 ELSE 0 END)         AS DonacionesInsumos,
+    SUM(CASE WHEN d.SupplyId IS NOT NULL THEN d.Quantity ELSE 0 END)   AS UnidadesInsumos,
+    COUNT(*)                                                          AS TotalDonaciones,
+    SUM(d.Quantity)                                                   AS TotalUnidadesDonadas
+FROM Donations d
+GROUP BY YEAR(d.DonationDate), MONTH(d.DonationDate)
+ORDER BY Anio, Mes;
+```
