@@ -60,16 +60,6 @@ namespace FarmaciaSolidariaCristiana.Services
             return Task.FromResult(false);
         }
 
-        public Task UpdateDeviceLastActivityAsync(string userId, string deviceType)
-        {
-            return Task.CompletedTask;
-        }
-
-        public Task<bool> IsUserActiveOnMobileAsync(string userId)
-        {
-            return Task.FromResult(false);
-        }
-
         public Task<NotificationResultDto> SendNotificationToUserAsync(
             string userId, string title, string message,
             NotificationType type = NotificationType.General,

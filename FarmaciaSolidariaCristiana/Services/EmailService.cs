@@ -832,5 +832,53 @@ namespace FarmaciaSolidariaCristiana.Services
             
             await SendEmailAsync(destinatario, subject, body);
         }
+        public async Task SendResumenReprogramacionFarmaceuticoEmailAsync(
+            string destinatario,
+            string nombreFarmaceutico,
+            int cantidadReprogramados,
+            DateTime fechaOriginal,
+            string motivo)
+        {
+            var subject = $"Resumen: {cantidadReprogramados} turno(s) reprogramado(s) del {fechaOriginal:dd/MM/yyyy}";
+
+            var body = $@"
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <style>
+                        body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+                        .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+                        .header {{ background-color: #0d6efd; color: white; padding: 20px; text-align: center; border-radius: 10px 10px 0 0; }}
+                        .content {{ background-color: #cfe2ff; padding: 30px; border-radius: 0 0 10px 10px; }}
+                        .info-box {{ background-color: white; padding: 15px; margin: 20px 0; border-left: 4px solid #0d6efd; }}
+                        .counter {{ font-size: 2.5em; font-weight: bold; color: #0d6efd; text-align: center; margin: 10px 0; }}
+                        .footer {{ text-align: center; margin-top: 20px; font-size: 12px; color: #6c757d; }}
+                    </style>
+                </head>
+                <body>
+                    <div class='container'>
+                        <div class='header'>
+                            <h1>📋 Reprogramaci\u00f3n de Turnos</h1>
+                        </div>
+                        <div class='content'>
+                            <p>Estimado/a <strong>{nombreFarmaceutico}</strong>,</p>
+                            <p>Se ha realizado una reprogramaci\u00f3n masiva de turnos. A continuaci\u00f3n el resumen:</p>
+                            <div class='info-box'>
+                                <p><strong>Fecha afectada:</strong> {fechaOriginal:dddd, dd 'de' MMMM 'de' yyyy}</p>
+                                <div class='counter'>{cantidadReprogramados}</div>
+                                <p style='text-align:center;'>turno(s) reprogramado(s) exitosamente</p>
+                                <p><strong>Motivo:</strong> {motivo}</p>
+                            </div>
+                            <p>Los pacientes afectados han sido notificados individualmente con su nueva fecha y hora.</p>
+                            <div class='footer'>
+                                <p>Farmacia Solidaria Cristiana &mdash; Iglesia Metodista de C\u00e1rdenas</p>
+                            </div>
+                        </div>
+                    </div>
+                </body>
+                </html>";
+
+            await SendEmailAsync(destinatario, subject, body);
+        }
     }
 }

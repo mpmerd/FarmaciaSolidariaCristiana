@@ -394,7 +394,7 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
                 return ApiError("Usuario no autenticado", 401);
 
             // Actualizar el timestamp de última actividad del dispositivo
-            await _notificationService.UpdateDeviceLastActivityAsync(
+            await _pendingNotificationService.UpdateDeviceLastActivityAsync(
                 userId,
                 dto?.DeviceType ?? "Android"
             );

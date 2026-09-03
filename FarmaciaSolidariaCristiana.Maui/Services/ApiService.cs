@@ -24,6 +24,7 @@ public class ApiService : IApiService
     private const string CacheKeyEntregas = "/api/deliveries";
     private const string CacheKeyPacientes = "/api/patients";
     private const string CacheKeyUsuarios = "/api/users";
+    private const string CacheKeyNavbarDecoration = "/api/navbar-decoration/active";
 
     public ApiService(HttpClient httpClient, IAuthService authService, ICacheService cache)
     {
@@ -697,6 +698,32 @@ public class ApiService : IApiService
         }
     }
 
+    public async Task<ApiResponse<List<PatientAutoCompleteItem>>> GetPacientesBloqueadosAsync()
+    {
+        return await GetAsync<List<PatientAutoCompleteItem>>("/api/patients/blocked");
+    }
+
+    public async Task<ApiResponse<List<PatientAutoCompleteItem>>> SearchPacientesAutocompleteAsync(string q)
+    {
+        if (string.IsNullOrWhiteSpace(q) || q.Length < 2)
+            return new ApiResponse<List<PatientAutoCompleteItem>> { Success = true, Data = new List<PatientAutoCompleteItem>() };
+        return await GetAsync<List<PatientAutoCompleteItem>>($"/api/patients/search-autocomplete?q={Uri.EscapeDataString(q)}");
+    }
+
+    public async Task<ApiResponse<Patient>> BloquearPacientePrestamoAsync(int id, string description)
+    {
+        var result = await PostAsync<Patient>($"/api/patients/{id}/block-loan", new BlockPatientLoanRequest { Description = description });
+        if (result.Success) _cache.Invalidate(CacheKeyPacientes);
+        return result;
+    }
+
+    public async Task<ApiResponse<Patient>> DesbloquearPacientePrestamoAsync(int id)
+    {
+        var result = await PostAsync<Patient>($"/api/patients/{id}/unblock-loan", new { });
+        if (result.Success) _cache.Invalidate(CacheKeyPacientes);
+        return result;
+    }
+
     public async Task<ApiResponse<PatientDocument>> SubirDocumentoPacienteAsync(
         int patientId, string fileName, string documentType, byte[] fileBytes, string? notes)
     {
@@ -778,6 +805,49 @@ public class ApiService : IApiService
 
     public Task<ApiResponse<List<Sponsor>>> GetPatrocinadoresAsync()
         => GetAsync<List<Sponsor>>("/api/sponsors");
+
+    // === DECORACIÓN DEL NAVBAR ===
+
+    public async Task<NavbarDecorationDto?> GetNavbarDecorationAsync()
+    {
+        if (_cache.TryGet<NavbarDecorationDto>(CacheKeyNavbarDecoration, out var cached) && cached != null)
+            return cached;
+
+        try
+        {
+            var response = await _httpClient.GetAsync(CacheKeyNavbarDecoration);
+            if (!response.IsSuccessStatusCode) return null;
+
+            var content = await response.Content.ReadAsStringAsync();
+            if (string.IsNullOrWhiteSpace(content) || content.TrimStart().StartsWith("<")) return null;
+
+            var dto = JsonSerializer.Deserialize<NavbarDecorationDto>(content, _jsonOptions);
+            if (dto != null)
+                _cache.Set(CacheKeyNavbarDecoration, dto, TimeSpan.FromMinutes(10));
+            return dto;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    // === INVALIDACIÓN DE CACHÉ (pull-to-refresh) ===
+
+    public void InvalidateMedicamentosCache()
+        => _cache.Invalidate(CacheKeyMedicamentos);
+
+    public void InvalidateInsumosCache()
+        => _cache.Invalidate(CacheKeyInsumos);
+
+    public void InvalidateDashboardCache()
+    {
+        _cache.Invalidate(CacheKeyMedicamentos);
+        _cache.Invalidate(CacheKeyInsumos);
+        _cache.Invalidate(CacheKeyTurnos);
+        _cache.Invalidate(CacheKeyMisTurnos);
+        _cache.Invalidate(CacheKeyEntregas);
+    }
 
     // === FECHAS BLOQUEADAS ===
 
@@ -1078,9 +1148,19 @@ public class ApiService : IApiService
         try
         {
             await SetAuthHeaderAsync();
-            var request = new { FechaAfectada = fechaAfectada, Motivo = motivo };
+            // DateTimeKind.Unspecified evita que System.Text.Json incluya offset de zona horaria
+            // en el JSON (ej. "-05:00"), lo que causaría que el servidor recibiera la fecha
+            // convertida a su zona horaria local y buscara el día incorrecto.
+            var fechaNormalizada = DateTime.SpecifyKind(fechaAfectada.Date, DateTimeKind.Unspecified);
+            var request = new { FechaAfectada = fechaNormalizada, Motivo = motivo };
             var response = await _httpClient.PostAsJsonAsync("/api/turnos/reprogramar", request);
-            return await ProcessResponseAsync<ReprogramarResultDto>(response);
+            var result = await ProcessResponseAsync<ReprogramarResultDto>(response);
+            if (result.Success && result.Data?.Reprogramados > 0)
+            {
+                _cache.Invalidate(CacheKeyTurnos);
+                _cache.Invalidate(CacheKeyMisTurnos);
+            }
+            return result;
         }
         catch (Exception ex)
         {

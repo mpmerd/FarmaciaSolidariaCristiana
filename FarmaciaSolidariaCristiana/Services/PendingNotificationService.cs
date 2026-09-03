@@ -23,6 +23,22 @@ public interface IPendingNotificationService
         object? additionalData = null);
 
     /// <summary>
+    /// Crea notificaciones pendientes para múltiples usuarios en una sola operación:
+    /// bulk insert (1 SaveChanges) + fan-out SignalR en paralelo por chunks.
+    /// Evita el loop secuencial de <see cref="CreateNotificationAsync"/> (que hace
+    /// 1 SaveChanges + 1 send por usuario) y previene timeout de Somee para N grande.
+    /// Usar para notificaciones masivas/broadcast.
+    /// </summary>
+    Task<List<PendingNotification>> CreateBulkNotificationsAsync(
+        IEnumerable<string> userIds,
+        string title,
+        string message,
+        string notificationType,
+        int? referenceId = null,
+        string? referenceType = null,
+        object? additionalData = null);
+
+    /// <summary>
     /// Obtiene las notificaciones no leídas de un usuario
     /// </summary>
     Task<List<PendingNotification>> GetUnreadNotificationsAsync(string userId);
@@ -48,7 +64,17 @@ public interface IPendingNotificationService
     Task<int> GetUnreadCountAsync(string userId);
 
     /// <summary>
-    /// Verifica si un usuario está activo en la app móvil (tiene registro reciente)
+    /// Actualiza la última actividad del dispositivo móvil (llamado por el endpoint
+    /// /heartbeat). Registra LastActivityAt en UserDeviceToken para que
+    /// IsUserActiveOnMobileAsync funcione. Desacoplado de OneSignal: funciona
+    /// aunque OneSignal no esté configurado (Null).
+    /// </summary>
+    Task UpdateDeviceLastActivityAsync(string userId, string deviceType);
+
+    /// <summary>
+    /// Verifica si un usuario está activo en la app móvil: dispositivo activo con
+    /// LastActivityAt en los últimos 5 minutos. Se usa para decidir NO enviar
+    /// email a pacientes activos en la app.
     /// </summary>
     Task<bool> IsUserActiveOnMobileAsync(string userId);
 
@@ -71,6 +97,7 @@ public class PendingNotificationService : IPendingNotificationService
 {
     private readonly ApplicationDbContext _context;
     private readonly ILogger<PendingNotificationService> _logger;
+    private readonly INotificationBroadcaster? _broadcaster;
 
     public PendingNotificationService(
         ApplicationDbContext context,
@@ -78,6 +105,17 @@ public class PendingNotificationService : IPendingNotificationService
     {
         _context = context;
         _logger = logger;
+        _broadcaster = null; // sin broadcast (compat retro)
+    }
+
+    public PendingNotificationService(
+        ApplicationDbContext context,
+        ILogger<PendingNotificationService> logger,
+        INotificationBroadcaster broadcaster)
+    {
+        _context = context;
+        _logger = logger;
+        _broadcaster = broadcaster;
     }
 
     public async Task<PendingNotification> CreateNotificationAsync(
@@ -109,7 +147,97 @@ public class PendingNotificationService : IPendingNotificationService
             "Notificación creada para usuario {UserId}: {Title} (Tipo: {Type})",
             userId, title, notificationType);
 
+        // Fase 2: difundir en tiempo real por SignalR (canal sobre 443).
+        // Si el usuario tiene una conexión activa, recibe el "push real" al instante.
+        // Si no, la notificación queda pendiente y la recogerá el polling (fallback).
+        if (_broadcaster != null)
+        {
+            try
+            {
+                await _broadcaster.BroadcastToUserAsync(userId, new NotificationPayload
+                {
+                    Id = notification.Id,
+                    Title = notification.Title,
+                    Message = notification.Message,
+                    NotificationType = notification.NotificationType,
+                    ReferenceId = notification.ReferenceId,
+                    ReferenceType = notification.ReferenceType,
+                    CreatedAt = notification.CreatedAt
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error difundiendo notificación {Id} por SignalR", notification.Id);
+            }
+        }
+
         return notification;
+    }
+
+    /// <inheritdoc/>
+    public async Task<List<PendingNotification>> CreateBulkNotificationsAsync(
+        IEnumerable<string> userIds,
+        string title,
+        string message,
+        string notificationType,
+        int? referenceId = null,
+        string? referenceType = null,
+        object? additionalData = null)
+    {
+        var now = DateTime.UtcNow;
+        var data = additionalData != null ? JsonSerializer.Serialize(additionalData) : null;
+        var targetIds = userIds.Distinct().ToList();
+
+        if (targetIds.Count == 0)
+            return new List<PendingNotification>();
+
+        var notifications = targetIds.Select(userId => new PendingNotification
+        {
+            UserId = userId,
+            Title = title,
+            Message = message,
+            NotificationType = notificationType,
+            ReferenceId = referenceId,
+            ReferenceType = referenceType,
+            AdditionalData = data,
+            IsRead = false,
+            CreatedAt = now
+        }).ToList();
+
+        // 1 solo SaveChanges para todos (bulk insert). Evita N round-trips a la BD.
+        await _context.PendingNotifications.AddRangeAsync(notifications);
+        await _context.SaveChangesAsync();
+
+        _logger.LogInformation(
+            "Notificaciones masivas creadas: {Count} para '{Title}' (Tipo: {Type})",
+            notifications.Count, title, notificationType);
+
+        // Fan-out SignalR en paralelo por chunks de 100: no encadena 1 send tras otro
+        // por usuario. Si el usuario no está conectado, el send es no-op (barato); la
+        // notificación ya quedó en BD para polling/catch-up.
+        if (_broadcaster != null)
+        {
+            var broadcaster = _broadcaster;
+            const int chunkSize = 100;
+            for (int i = 0; i < notifications.Count; i += chunkSize)
+            {
+                var chunk = notifications.Skip(i).Take(chunkSize).ToList();
+                await Task.WhenAll(chunk.Select(n => broadcaster.BroadcastToUserAsync(
+                    n.UserId,
+                    new NotificationPayload
+                    {
+                        Id = n.Id,
+                        Title = n.Title,
+                        Message = n.Message,
+                        NotificationType = n.NotificationType,
+                        ReferenceId = n.ReferenceId,
+                        ReferenceType = n.ReferenceType,
+                        CreatedAt = n.CreatedAt
+                    })));
+            }
+        }
+
+        return notifications;
     }
 
     public async Task<List<PendingNotification>> GetUnreadNotificationsAsync(string userId)
@@ -167,14 +295,47 @@ public class PendingNotificationService : IPendingNotificationService
             .CountAsync(n => n.UserId == userId && !n.IsRead);
     }
 
+    public async Task UpdateDeviceLastActivityAsync(string userId, string deviceType)
+    {
+        // Buscar el dispositivo más reciente del usuario
+        var device = await _context.UserDeviceTokens
+            .Where(t => t.UserId == userId && t.IsActive)
+            .OrderByDescending(t => t.LastActivityAt ?? t.UpdatedAt)
+            .FirstOrDefaultAsync();
+
+        if (device != null)
+        {
+            device.LastActivityAt = DateTime.UtcNow;
+            device.UpdatedAt = DateTime.UtcNow;
+            await _context.SaveChangesAsync();
+        }
+        else
+        {
+            // Si no hay dispositivo registrado, crear uno genérico para tracking de actividad
+            // (también cubre usuarios en Cuba donde OneSignal no registra playerId).
+            var newDevice = new UserDeviceToken
+            {
+                UserId = userId,
+                OneSignalPlayerId = $"polling-{userId[..8]}",
+                DeviceType = deviceType,
+                DeviceName = "Mobile App (Polling)",
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow,
+                LastActivityAt = DateTime.UtcNow
+            };
+            _context.UserDeviceTokens.Add(newDevice);
+            await _context.SaveChangesAsync();
+        }
+    }
+
     public async Task<bool> IsUserActiveOnMobileAsync(string userId)
     {
-        // Un usuario se considera activo en móvil si tiene un dispositivo registrado
-        // que fue actualizado en las últimas 24 horas
-        var cutoff = DateTime.UtcNow.AddHours(-24);
-        
+        // Activo = dispositivo con heartbeat (LastActivityAt) en los últimos 5 minutos.
+        // Desacoplado de OneSignal: consulta pura a BD, funciona aunque OneSignal sea Null.
+        var cutoff = DateTime.UtcNow.AddMinutes(-5);
         return await _context.UserDeviceTokens
-            .AnyAsync(d => d.UserId == userId && d.IsActive && d.UpdatedAt >= cutoff);
+            .AnyAsync(d => d.UserId == userId && d.IsActive && d.LastActivityAt >= cutoff);
     }
 
     public async Task<int> CleanupOldNotificationsAsync(int daysToKeep = 30)

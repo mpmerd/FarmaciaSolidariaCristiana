@@ -8,69 +8,70 @@
              Title="{Binding Title}"
              BackgroundColor="{StaticResource BackgroundColor}">
 
-    <Grid>
+    <Grid RowDefinitions="Auto,*">
+
+        <!-- Header fijo fuera del CollectionView para que el SearchBar no pierda el foco -->
+        <StackLayout Grid.Row="0" Padding="15,15,15,10" Spacing="15">
+
+            <!-- Header -->
+            <Frame BackgroundColor="{StaticResource Primary}" 
+                   CornerRadius="15" 
+                   Padding="20"
+                   HasShadow="True">
+                <Grid ColumnDefinitions="*,Auto">
+                    <StackLayout Grid.Column="0">
+                        <Label Text="👥 Gestión de Usuarios" 
+                               FontSize="22" 
+                               FontAttributes="Bold"
+                               TextColor="White"/>
+                        <Label Text="Administrar usuarios del sistema" 
+                               FontSize="14" 
+                               TextColor="#B0D4FF"/>
+                    </StackLayout>
+                    <Button Grid.Column="1"
+                            Text="➕"
+                            FontSize="20"
+                            BackgroundColor="{AppThemeBinding Light=White, Dark=#2a2a2a}"
+                            TextColor="{StaticResource Primary}"
+                            CornerRadius="25"
+                            WidthRequest="50"
+                            HeightRequest="50"
+                            Command="{Binding StartCreatingCommand}"
+                            IsVisible="{Binding IsEditing, Converter={StaticResource InverseBoolConverter}}"/>
+                </Grid>
+            </Frame>
+
+            <!-- Información de roles -->
+            <Frame BackgroundColor="#E3F2FD" CornerRadius="12" Padding="15" HasShadow="False">
+                <StackLayout Spacing="8">
+                    <Label Text="ℹ️ Roles Disponibles:" FontSize="16" FontAttributes="Bold" TextColor="{AppThemeBinding Light=#1a1a1a, Dark=#e0e0e0}"/>
+                    <Label Text="• Admin: Acceso completo al sistema" FontSize="13" TextColor="{StaticResource Gray600}"/>
+                    <Label Text="• Farmacéutico: Gestiona medicamentos, entregas, turnos" FontSize="13" TextColor="{StaticResource Gray600}"/>
+                    <Label Text="• Viewer: Solo visualiza información y reportes" FontSize="13" TextColor="{StaticResource Gray600}"/>
+                    <Label Text="• Paciente: Solicita turnos y ve su información" FontSize="13" TextColor="{StaticResource Gray600}"/>
+                </StackLayout>
+            </Frame>
+
+            <!-- Búsqueda -->
+            <SearchBar Placeholder="Buscar por nombre, email o rol..."
+                       Text="{Binding SearchText}"
+                       BackgroundColor="{AppThemeBinding Light=White, Dark=#2a2a2a}"/>
+
+            <!-- Conteo -->
+            <Label Text="{Binding UsuariosCountText}" 
+                   FontSize="18" 
+                   FontAttributes="Bold"
+                   TextColor="{AppThemeBinding Light=#1a1a1a, Dark=#e0e0e0}"
+                   Margin="0,5,0,0"/>
+
+        </StackLayout>
+
         <!-- Contenido Principal -->
-        <RefreshView IsRefreshing="{Binding IsRefreshing}"
+        <RefreshView Grid.Row="1"
+                     IsRefreshing="{Binding IsRefreshing}"
                      Command="{Binding LoadUsuariosCommand}">
             <CollectionView ItemsSource="{Binding Usuarios}"
                             SelectionMode="None">
-
-                <CollectionView.Header>
-                    <StackLayout Padding="15,15,15,10" Spacing="15">
-
-                        <!-- Header -->
-                        <Frame BackgroundColor="{StaticResource Primary}" 
-                               CornerRadius="15" 
-                               Padding="20"
-                               HasShadow="True">
-                            <Grid ColumnDefinitions="*,Auto">
-                                <StackLayout Grid.Column="0">
-                                    <Label Text="👥 Gestión de Usuarios" 
-                                           FontSize="22" 
-                                           FontAttributes="Bold"
-                                           TextColor="White"/>
-                                    <Label Text="Administrar usuarios del sistema" 
-                                           FontSize="14" 
-                                           TextColor="#B0D4FF"/>
-                                </StackLayout>
-                                <Button Grid.Column="1"
-                                        Text="➕"
-                                        FontSize="20"
-                                        BackgroundColor="{AppThemeBinding Light=White, Dark=#2a2a2a}"
-                                        TextColor="{StaticResource Primary}"
-                                        CornerRadius="25"
-                                        WidthRequest="50"
-                                        HeightRequest="50"
-                                        Command="{Binding StartCreatingCommand}"
-                                        IsVisible="{Binding IsEditing, Converter={StaticResource InverseBoolConverter}}"/>
-                            </Grid>
-                        </Frame>
-
-                        <!-- Información de roles -->
-                        <Frame BackgroundColor="#E3F2FD" CornerRadius="12" Padding="15" HasShadow="False">
-                            <StackLayout Spacing="8">
-                                <Label Text="ℹ️ Roles Disponibles:" FontSize="16" FontAttributes="Bold" TextColor="{AppThemeBinding Light=#1a1a1a, Dark=#e0e0e0}"/>
-                                <Label Text="• Admin: Acceso completo al sistema" FontSize="13" TextColor="{StaticResource Gray600}"/>
-                                <Label Text="• Farmacéutico: Gestiona medicamentos, entregas, turnos" FontSize="13" TextColor="{StaticResource Gray600}"/>
-                                <Label Text="• Viewer: Solo visualiza información y reportes" FontSize="13" TextColor="{StaticResource Gray600}"/>
-                                <Label Text="• Paciente: Solicita turnos y ve su información" FontSize="13" TextColor="{StaticResource Gray600}"/>
-                            </StackLayout>
-                        </Frame>
-
-                        <!-- Búsqueda -->
-                        <SearchBar Placeholder="Buscar por nombre, email o rol..."
-                                   Text="{Binding SearchText}"
-                                   BackgroundColor="{AppThemeBinding Light=White, Dark=#2a2a2a}"/>
-
-                        <!-- Conteo -->
-                        <Label Text="{Binding UsuariosCountText}" 
-                               FontSize="18" 
-                               FontAttributes="Bold"
-                               TextColor="{AppThemeBinding Light=#1a1a1a, Dark=#e0e0e0}"
-                               Margin="0,5,0,0"/>
-
-                    </StackLayout>
-                </CollectionView.Header>
 
                 <CollectionView.EmptyView>
                     <Label Text="No hay usuarios registrados" 
@@ -161,7 +162,8 @@
         </RefreshView>
 
         <!-- MODAL: Crear Usuario -->
-        <Grid IsVisible="{Binding IsCreating}" 
+        <Grid Grid.Row="0" Grid.RowSpan="2"
+              IsVisible="{Binding IsCreating}" 
               BackgroundColor="#99000000"
               InputTransparent="False">
             <ScrollView VerticalOptions="Center" 
@@ -233,7 +235,8 @@
         </Grid>
 
         <!-- MODAL: Editar Usuario -->
-        <Grid IsVisible="{Binding IsEditing}" 
+        <Grid Grid.Row="0" Grid.RowSpan="2"
+              IsVisible="{Binding IsEditing}" 
               BackgroundColor="#99000000"
               InputTransparent="False">
             <ScrollView VerticalOptions="Center" 
@@ -303,7 +306,8 @@
         </Grid>
 
         <!-- Loading Overlay -->
-        <Grid IsVisible="{Binding IsBusy}" 
+        <Grid Grid.Row="0" Grid.RowSpan="2"
+              IsVisible="{Binding IsBusy}" 
               BackgroundColor="#80000000">
             <ActivityIndicator IsRunning="True" 
                                Color="White"

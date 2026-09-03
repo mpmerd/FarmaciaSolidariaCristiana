@@ -13,7 +13,7 @@ Este documento describe la integración de OneSignal como proveedor de notificac
 ```
 ┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
 │   App MAUI      │────▶│   API Backend   │────▶│   OneSignal     │
-│   (Cliente)     │     │   (ASP.NET 8)   │     │   REST API      │
+│   (Cliente)     │     │   (ASP.NET 10)  │     │   REST API      │
 └─────────────────┘     └─────────────────┘     └─────────────────┘
         │                       │                       │
         │ 1. Obtener PlayerId   │                       │

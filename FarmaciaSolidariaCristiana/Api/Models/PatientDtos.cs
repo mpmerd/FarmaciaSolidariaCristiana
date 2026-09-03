@@ -21,6 +21,13 @@ namespace FarmaciaSolidariaCristiana.Api.Models
         public bool IsActive { get; set; }
         public DateTime RegistrationDate { get; set; }
         public int DeliveriesCount { get; set; }
+
+        // Bloqueo por préstamo de insumo
+        public bool IsBlockedByLoan { get; set; }
+        public DateTime? LoanBlockDate { get; set; }
+        public string? LoanBlockDescription { get; set; }
+        public DateTime? LoanUnblockDate { get; set; }
+        public string? LoanUnblockedByUserName { get; set; }
     }
 
     /// <summary>
@@ -180,5 +187,28 @@ namespace FarmaciaSolidariaCristiana.Api.Models
         public int TotalPatients { get; set; }
         public int TotalInactive { get; set; }
         public int NewThisMonth { get; set; }
+    }
+
+    /// <summary>
+    /// Request para bloquear un paciente por préstamo de insumo
+    /// </summary>
+    public class BlockPatientLoanRequest
+    {
+        [Required(ErrorMessage = "La descripción del insumo en préstamo es requerida")]
+        [StringLength(500, ErrorMessage = "La descripción no puede superar los 500 caracteres")]
+        public string Description { get; set; } = string.Empty;
+    }
+
+    /// <summary>
+    /// DTO de autocompletado de paciente para búsqueda rápida
+    /// </summary>
+    public class PatientAutoCompleteDto
+    {
+        public int Id { get; set; }
+        public string IdentificationDocument { get; set; } = string.Empty;
+        public string FullName { get; set; } = string.Empty;
+        public int Age { get; set; }
+        public bool IsBlockedByLoan { get; set; }
+        public string? LoanBlockDescription { get; set; }
     }
 }

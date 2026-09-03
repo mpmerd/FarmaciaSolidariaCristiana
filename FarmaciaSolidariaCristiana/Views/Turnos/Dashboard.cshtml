@@ -186,6 +186,23 @@
                                                         <i class="bi bi-check-all"></i> Completado
                                                     </span>
                                                     break;
+                                                case "Cancelado":
+                                                    if (turno.CanceladoPorNoPresentacion)
+                                                    {
+                                                        <span class="badge bg-secondary">
+                                                            <i class="bi bi-person-x"></i> Cancelado (no presentación)
+                                                        </span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="badge bg-secondary">
+                                                            <i class="bi bi-x-circle"></i> Cancelado
+                                                        </span>
+                                                    }
+                                                    break;
+                                                default:
+                                                    <span class="badge bg-secondary">@turno.Estado</span>
+                                                    break;
                                             }
                                         </td>
                                         <td>

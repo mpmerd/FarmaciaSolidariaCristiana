@@ -61,6 +61,12 @@ public interface IApiService
     Task<ApiResponse<ImportDocumentsResult>> ImportTurnoDocumentsAsync(int patientId, List<TurnoDocumentImportItem> documents);
     Task<byte[]?> DownloadPatientDocumentAsync(int patientId, int documentId);
     
+    // Bloqueo de pacientes por préstamo de insumo
+    Task<ApiResponse<List<PatientAutoCompleteItem>>> GetPacientesBloqueadosAsync();
+    Task<ApiResponse<List<PatientAutoCompleteItem>>> SearchPacientesAutocompleteAsync(string q);
+    Task<ApiResponse<Patient>> BloquearPacientePrestamoAsync(int id, string description);
+    Task<ApiResponse<Patient>> DesbloquearPacientePrestamoAsync(int id);
+    
     // Patrocinadores
     Task<ApiResponse<List<Sponsor>>> GetPatrocinadoresAsync();
     
@@ -113,6 +119,14 @@ public interface IApiService
     
     // Restricción de medicamentos por mes
     Task<ApiResponse<List<int>>> GetRestrictedMedicinesAsync(string documentoIdentidad);
+
+    // Decoración del Navbar
+    Task<NavbarDecorationDto?> GetNavbarDecorationAsync();
+
+    // Invalidación de caché (para pull-to-refresh)
+    void InvalidateMedicamentosCache();
+    void InvalidateInsumosCache();
+    void InvalidateDashboardCache();
 }
 
 public class BroadcastResultDto

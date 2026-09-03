@@ -75,24 +75,21 @@ namespace FarmaciaSolidariaCristiana.Controllers
                 "[Broadcast] {Admin} iniciando broadcast: '{Title}' a {Count} usuarios ({MobileCount} con app). Email={SendEmail}, App={SendApp}",
                 adminUser, title, users.Count, mobileUserIds.Count, sendEmail, sendNotification);
 
-            // Canal 2: Notificaciones in-app - se crean inmediatamente (son rápidas)
-            foreach (var user in users)
+            // Canal 2: Notificaciones in-app - bulk (1 SaveChanges + fan-out SignalR en paralelo).
+            // Antes era un foreach con 1 SaveChanges por usuario → timeout de Somee para N grande.
+            if (sendNotification && mobileUserIds.Count > 0)
             {
-                if (sendNotification && mobileUserIds.Contains(user.Id))
+                var mobileSet = mobileUserIds.ToHashSet();
+                var targetIds = users.Where(u => mobileSet.Contains(u.Id)).Select(u => u.Id).ToList();
+                try
                 {
-                    try
-                    {
-                        await _pendingNotificationService.CreateNotificationAsync(
-                            user.Id,
-                            title,
-                            message,
-                            NotificationTypes.General);
-                        notificationsCreated++;
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogWarning(ex, "[Broadcast] Error creando notificación para {UserId}", user.Id);
-                    }
+                    var created = await _pendingNotificationService.CreateBulkNotificationsAsync(
+                        targetIds, title, message, NotificationTypes.General);
+                    notificationsCreated = created.Count;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "[Broadcast] Error en bulk create de notificaciones in-app");
                 }
             }
 

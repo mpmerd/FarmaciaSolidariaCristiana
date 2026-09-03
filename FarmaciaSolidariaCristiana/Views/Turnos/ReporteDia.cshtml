@@ -1,0 +1,253 @@
+@model FarmaciaSolidariaCristiana.Models.ReporteTurnosDiaViewModel
+
+@{
+    ViewData["Title"] = "Reporte de Turnos del Día";
+    var culture = new System.Globalization.CultureInfo("es-ES");
+}
+
+<style>
+    @@media print {
+        .no-print { display: none !important; }
+        .navbar, footer, .breadcrumb { display: none !important; }
+        body { font-size: 11pt; background: white !important; }
+        .turno-card { break-inside: avoid; border: 1px solid #ccc !important; margin-bottom: 12pt !important; }
+        .turno-card .card-header { background-color: #e6f0ff !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        .table-light th { background-color: #f0f0f0 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        .badge { border: 1px solid #ccc; }
+        .print-title { display: block !important; }
+        .btn, .form-control, .alert-info-selector { display: none !important; }
+    }
+    .turno-card .card-header {
+        background: linear-gradient(135deg, #e6f0ff, #d0e4ff);
+        border-left: 5px solid #0d6efd;
+    }
+    .receta-img {
+        max-width: 100%;
+        max-height: 420px;
+        object-fit: contain;
+    }
+    .print-title { display: none; }
+    .print-area { max-width: 960px; margin: 0 auto; }
+</style>
+
+<div class="container-fluid py-3">
+
+    @* Controles (ocultos en impresión) *@
+    <div class="no-print">
+        <div class="d-flex align-items-center gap-3 mb-3 flex-wrap">
+            <h2 class="mb-0">
+                <i class="bi bi-printer-fill me-2 text-primary"></i>Reporte de Turnos del Día
+            </h2>
+        </div>
+
+        <div class="card shadow-sm mb-4">
+            <div class="card-body">
+                <form method="get" asp-action="ReporteDia" class="row g-3 align-items-end">
+                    <div class="col-auto">
+                        <label class="form-label fw-semibold mb-1">Seleccionar fecha</label>
+                        <input type="date"
+                               name="fecha"
+                               class="form-control"
+                               value="@(Model.Fecha?.ToString("yyyy-MM-dd"))"
+                               required />
+                    </div>
+                    <div class="col-auto">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-search me-1"></i> Ver turnos
+                        </button>
+                    </div>
+                    @if (Model.Fecha.HasValue && Model.Items.Any())
+                    {
+                        <div class="col-auto">
+                            <a href="@Url.Action("ReporteDiaPdf", "Turnos", new { fecha = Model.Fecha.Value.ToString("yyyy-MM-dd") })"
+                               class="btn btn-danger" target="_blank">
+                                <i class="bi bi-file-earmark-pdf me-1"></i> Descargar PDF
+                            </a>
+                        </div>
+                        <div class="col-auto">
+                            <button type="button" class="btn btn-secondary" onclick="window.print()">
+                                <i class="bi bi-printer me-1"></i> Imprimir
+                            </button>
+                        </div>
+                    }
+                </form>
+            </div>
+        </div>
+    </div>
+
+    @if (Model.Fecha.HasValue)
+    {
+        @* Encabezado visible solo al imprimir *@
+        <div class="print-title text-center mb-3">
+            <h4 class="mb-0">Farmacia Solidaria Cristiana — Listado de Turnos Aprobados</h4>
+            <p class="text-muted mb-0">@Model.Fecha.Value.ToString("dddd, dd 'de' MMMM 'de' yyyy", culture)</p>
+        </div>
+
+        @if (!Model.Items.Any())
+        {
+            <div class="alert alert-info no-print">
+                <i class="bi bi-info-circle me-2"></i>
+                No hay turnos <strong>aprobados</strong> para el
+                <strong>@Model.Fecha.Value.ToString("dd/MM/yyyy")</strong>.
+            </div>
+        }
+        else
+        {
+            <div class="d-flex justify-content-between align-items-center mb-3 no-print">
+                <span class="text-muted">
+                    <i class="bi bi-check-circle-fill text-success me-1"></i>
+                    <strong>@Model.Items.Count</strong> turno(s) aprobado(s) para el
+                    <strong>@Model.Fecha.Value.ToString("dd/MM/yyyy")</strong>,
+                    ordenados por hora de atención.
+                </span>
+            </div>
+
+            <div class="print-area">
+                @foreach (var item in Model.Items)
+                {
+                    <div class="card turno-card mb-3 shadow-sm">
+
+                        @* Cabecera del turno *@
+                        <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2 py-2">
+                            <div class="d-flex align-items-center gap-3">
+                                <span class="badge bg-primary fs-5 px-3 py-2">#@item.TurnoId</span>
+                                <span class="text-secondary">
+                                    Nº del día: <strong>@(item.NumeroTurnoDia?.ToString("00") ?? "—")</strong>
+                                </span>
+                            </div>
+                            <div class="text-end">
+                                <div class="fw-bold fs-5 text-primary">
+                                    @(item.FechaPreferida?.ToString("HH:mm") ?? "—")
+                                </div>
+                                <div class="text-muted small">
+                                    @(item.FechaPreferida?.ToString("dddd dd/MM/yyyy", culture) ?? "")
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card-body">
+
+                            @* Datos del paciente *@
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <span class="fw-semibold">Documento:&nbsp;</span>
+                                    @if (item.PacienteEncontrado)
+                                    {
+                                        <span>@item.DocumentoIdentidad</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-warning text-dark">
+                                            <i class="bi bi-person-plus me-1"></i>Nuevo paciente
+                                        </span>
+                                    }
+                                </div>
+                                <div class="col-md-6">
+                                    <span class="fw-semibold">Nombre:&nbsp;</span>
+                                    @if (item.PacienteEncontrado)
+                                    {
+                                        <span>@item.NombrePaciente</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted fst-italic">Ver receta médica adjunta</span>
+                                    }
+                                </div>
+                            </div>
+
+                            @* Medicamentos e Insumos *@
+                            <div class="row">
+                                @if (item.Medicamentos.Any())
+                                {
+                                    <div class="col-md-6 mb-3">
+                                        <h6 class="fw-semibold mb-2">
+                                            <i class="bi bi-capsule me-1 text-primary"></i>Medicamentos
+                                        </h6>
+                                        <table class="table table-sm table-bordered mb-0">
+                                            <thead class="table-light">
+                                                <tr>
+                                                    <th>Nombre</th>
+                                                    <th class="text-center" style="width:70px">Cant.</th>
+                                                    <th class="text-center" style="width:90px">Unidad</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @foreach (var med in item.Medicamentos)
+                                                {
+                                                    <tr>
+                                                        <td>@med.Nombre</td>
+                                                        <td class="text-center">@med.Cantidad</td>
+                                                        <td class="text-center">@med.Unidad</td>
+                                                    </tr>
+                                                }
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                }
+                                @if (item.Insumos.Any())
+                                {
+                                    <div class="col-md-6 mb-3">
+                                        <h6 class="fw-semibold mb-2">
+                                            <i class="bi bi-bandaid me-1 text-success"></i>Insumos Médicos
+                                        </h6>
+                                        <table class="table table-sm table-bordered mb-0">
+                                            <thead class="table-light">
+                                                <tr>
+                                                    <th>Nombre</th>
+                                                    <th class="text-center" style="width:70px">Cant.</th>
+                                                    <th class="text-center" style="width:90px">Unidad</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @foreach (var ins in item.Insumos)
+                                                {
+                                                    <tr>
+                                                        <td>@ins.Nombre</td>
+                                                        <td class="text-center">@ins.Cantidad</td>
+                                                        <td class="text-center">@ins.Unidad</td>
+                                                    </tr>
+                                                }
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                }
+                            </div>
+
+                            @* Receta médica imagen (solo para paciente nuevo) *@
+                            @if (!item.PacienteEncontrado && !string.IsNullOrEmpty(item.RecetaMedicaImagePath))
+                            {
+                                <div class="mt-2">
+                                    <h6 class="fw-semibold mb-2">
+                                        <i class="bi bi-file-medical me-1 text-danger"></i>Receta Médica
+                                    </h6>
+                                    <img src="@item.RecetaMedicaImagePath"
+                                         class="receta-img img-thumbnail"
+                                         alt="Receta médica del paciente" />
+                                </div>
+                            }
+                            else if (!item.PacienteEncontrado && item.RecetaMedicaEsPdf)
+                            {
+                                <div class="mt-2 alert alert-light border d-flex align-items-center gap-2">
+                                    <i class="bi bi-file-earmark-pdf text-danger fs-5"></i>
+                                    <span>
+                                        La receta médica es un documento PDF.
+                                        Consulte el turno en el sistema para verla.
+                                    </span>
+                                </div>
+                            }
+
+                        </div>@* card-body *@
+                    </div>@* turno-card *@
+                }
+            </div>@* print-area *@
+        }
+    }
+    else
+    {
+        <div class="alert alert-light border no-print">
+            <i class="bi bi-calendar-event me-2 text-primary"></i>
+            Seleccione una fecha para ver el listado de turnos aprobados de ese día.
+        </div>
+    }
+
+</div>

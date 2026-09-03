@@ -22,9 +22,11 @@ echo "DESPLIEGUE COMPLETO a Somee.com"
 echo "==========================================${NC}"
 echo ""
 
-# Verificar que estamos en la rama developerConApi
+# Verificar que estamos en la rama developerConApi (comparación insensible a mayúsculas)
 CURRENT_BRANCH=$(git branch --show-current)
-if [ "$CURRENT_BRANCH" != "developerConApi" ]; then
+EXPECTED_BRANCH="developerconapi"
+CURRENT_BRANCH_LOWER=$(printf '%s' "$CURRENT_BRANCH" | tr '[:upper:]' '[:lower:]')
+if [ "$CURRENT_BRANCH_LOWER" != "$EXPECTED_BRANCH" ]; then
     echo -e "${RED}⚠️  ADVERTENCIA: No estás en la rama 'developerConApi'${NC}"
     echo "Rama actual: $CURRENT_BRANCH"
     read -p "¿Continuar de todas formas? (s/n): " -n 1 -r
@@ -67,17 +69,16 @@ FTP_REMOTE_PATH="/www.farmaciasolidaria.somee.com"
 
 # Directorio de publish fijo
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PUBLISH_DIR="$SCRIPT_DIR/FarmaciaSolidariaCristiana/publish"
+PUBLISH_DIR="$SCRIPT_DIR/publish"
 VIEWS_SOURCE="$SCRIPT_DIR/FarmaciaSolidariaCristiana/Views"
 
-if [ ! -d "$PUBLISH_DIR" ]; then
-    echo -e "${YELLOW}📦 Compilando proyecto para producción...${NC}"
-    dotnet publish "$SCRIPT_DIR/FarmaciaSolidariaCristiana/FarmaciaSolidariaCristiana.csproj" -c Release -o "$PUBLISH_DIR"
-    if [ $? -ne 0 ]; then
-        echo -e "${RED}❌ Error al compilar el proyecto${NC}"
-        exit 1
-    fi
+echo -e "${YELLOW}📦 Compilando proyecto para producción...${NC}"
+dotnet publish "$SCRIPT_DIR/FarmaciaSolidariaCristiana/FarmaciaSolidariaCristiana.csproj" -c Release -o "$PUBLISH_DIR"
+if [ $? -ne 0 ]; then
+    echo -e "${RED}❌ Error al compilar el proyecto${NC}"
+    exit 1
 fi
+echo -e "${GREEN}✅ Compilación completada${NC}"
 
 echo -e "${BLUE}📁 Directorio publish: $PUBLISH_DIR${NC}"
 

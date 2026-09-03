@@ -17,6 +17,7 @@ namespace FarmaciaSolidariaCristiana.Api.Models
         public string? NotasSolicitante { get; set; }
         public string? ComentariosFarmaceutico { get; set; }
         public DateTime? FechaRevision { get; set; }
+        public string? RevisadoPorNombre { get; set; }
         public string? TurnoPdfPath { get; set; }
         public List<TurnoMedicamentoDto> Medicamentos { get; set; } = new();
         public List<TurnoInsumoDto> Insumos { get; set; } = new();

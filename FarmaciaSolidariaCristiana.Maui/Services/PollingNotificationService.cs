@@ -15,6 +15,7 @@ public class PollingNotificationService : IPollingNotificationService, IDisposab
 {
     private readonly HttpClient _httpClient;
     private readonly IAuthService _authService;
+    private readonly IPushHealthService _pushHealth;
     private readonly IAudioManager _audioManager;
     private CancellationTokenSource? _cancellationTokenSource;
     private Task? _pollingTask;
@@ -26,10 +27,11 @@ public class PollingNotificationService : IPollingNotificationService, IDisposab
     public bool IsRunning { get; private set; }
     public int PollingIntervalSeconds { get; set; } = 30; // Por defecto cada 30 segundos
 
-    public PollingNotificationService(HttpClient httpClient, IAuthService authService)
+    public PollingNotificationService(HttpClient httpClient, IAuthService authService, IPushHealthService pushHealth)
     {
         _httpClient = httpClient;
         _authService = authService;
+        _pushHealth = pushHealth;
         _audioManager = AudioManager.Current;
     }
 
@@ -37,7 +39,7 @@ public class PollingNotificationService : IPollingNotificationService, IDisposab
     {
         if (IsRunning)
         {
-            System.Diagnostics.Debug.WriteLine("[PollingService] Already running, skipping start");
+            AppLog.Info("[PollingService] Already running, skipping start");
             return;
         }
 
@@ -45,14 +47,14 @@ public class PollingNotificationService : IPollingNotificationService, IDisposab
         var token = await _authService.GetTokenAsync();
         if (string.IsNullOrEmpty(token))
         {
-            System.Diagnostics.Debug.WriteLine("[PollingService] No auth token, cannot start polling");
+            AppLog.Info("[PollingService] No auth token, cannot start polling");
             return;
         }
 
         _cancellationTokenSource = new CancellationTokenSource();
         IsRunning = true;
 
-        System.Diagnostics.Debug.WriteLine($"[PollingService] Starting with interval of {PollingIntervalSeconds} seconds");
+        AppLog.Info($"[PollingService] Starting with interval of {PollingIntervalSeconds} seconds (heartbeat-only: {Constants.HeartbeatIntervalSeconds}s when canal instantáneo disponible)");
 
         _pollingTask = Task.Run(async () =>
         {
@@ -60,18 +62,31 @@ public class PollingNotificationService : IPollingNotificationService, IDisposab
             {
                 try
                 {
-                    await PollForNotificationsAsync();
+                    // Fase 1: push-first / canal-instantáneo-first
+                    // Si hay un canal instantáneo disponible, NO consultamos /pending (modo solo-heartbeat).
+                    // Si no, modo completo (comportamiento anterior).
+                    var instantAvailable = Constants.EnablePushAwarePolling && _pushHealth.IsInstantChannelAvailable;
+
+                    if (!instantAvailable)
+                    {
+                        await PollForNotificationsAsync();
+                    }
+
+                    // Heartbeat siempre: alimenta LastActivityAt en el backend
+                    // para que la lógica de email (no spam a pacientes activos) siga correcta.
                     await SendHeartbeatAsync();
-                    await Task.Delay(TimeSpan.FromSeconds(PollingIntervalSeconds), _cancellationTokenSource.Token);
+
+                    var delaySeconds = instantAvailable ? Constants.HeartbeatIntervalSeconds : PollingIntervalSeconds;
+                    await Task.Delay(TimeSpan.FromSeconds(delaySeconds), _cancellationTokenSource.Token);
                 }
                 catch (OperationCanceledException)
                 {
-                    System.Diagnostics.Debug.WriteLine("[PollingService] Polling cancelled");
+                    AppLog.Info("[PollingService] Polling cancelled");
                     break;
                 }
                 catch (Exception ex)
                 {
-                    System.Diagnostics.Debug.WriteLine($"[PollingService] Error during polling: {ex.Message}");
+                    AppLog.Info($"[PollingService] Error during polling: {ex.Message}");
                     // Esperar más tiempo antes de reintentar en caso de error
                     await Task.Delay(TimeSpan.FromSeconds(PollingIntervalSeconds * 2), _cancellationTokenSource.Token);
                 }
@@ -84,7 +99,7 @@ public class PollingNotificationService : IPollingNotificationService, IDisposab
         if (!IsRunning)
             return;
 
-        System.Diagnostics.Debug.WriteLine("[PollingService] Stopping...");
+        AppLog.Info("[PollingService] Stopping...");
 
         _cancellationTokenSource?.Cancel();
         
@@ -106,11 +121,18 @@ public class PollingNotificationService : IPollingNotificationService, IDisposab
         IsRunning = false;
         _shownNotificationIds.Clear();
 
-        System.Diagnostics.Debug.WriteLine("[PollingService] Stopped");
+        AppLog.Info("[PollingService] Stopped");
     }
 
     public async Task<int> CheckNowAsync()
     {
+        // Fase 1: si hay canal instantáneo disponible, el push/SignalR entrega; no forzamos poll.
+        if (Constants.EnablePushAwarePolling && _pushHealth.IsInstantChannelAvailable)
+        {
+            AppLog.Info("[PollingService] CheckNowAsync: canal instantáneo disponible, skip poll");
+            return 0;
+        }
+
         return await PollForNotificationsAsync();
     }
 
@@ -129,7 +151,7 @@ public class PollingNotificationService : IPollingNotificationService, IDisposab
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[PollingService] Error getting unread count: {ex.Message}");
+            AppLog.Info($"[PollingService] Error getting unread count: {ex.Message}");
         }
 
         return 0;
@@ -150,7 +172,7 @@ public class PollingNotificationService : IPollingNotificationService, IDisposab
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[PollingService] Error marking as read: {ex.Message}");
+            AppLog.Info($"[PollingService] Error marking as read: {ex.Message}");
         }
 
         return false;
@@ -172,7 +194,7 @@ public class PollingNotificationService : IPollingNotificationService, IDisposab
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[PollingService] Error marking all as read: {ex.Message}");
+            AppLog.Info($"[PollingService] Error marking all as read: {ex.Message}");
         }
 
         return 0;
@@ -187,7 +209,7 @@ public class PollingNotificationService : IPollingNotificationService, IDisposab
             var response = await _httpClient.GetAsync("/api/notifications/pending");
             if (!response.IsSuccessStatusCode)
             {
-                System.Diagnostics.Debug.WriteLine($"[PollingService] Failed to get notifications: {response.StatusCode}");
+                AppLog.Info($"[PollingService] Failed to get notifications: {response.StatusCode}");
                 return 0;
             }
 
@@ -201,6 +223,15 @@ public class PollingNotificationService : IPollingNotificationService, IDisposab
             var newNotifications = new List<PendingNotificationItem>();
             foreach (var notification in result.Data.Notifications)
             {
+                // Fase 1.6: de-duplicación - si un canal instantáneo ya la entregó, marcar y saltar.
+                if (_pushHealth.WasDeliveredInstantly(notification.Id))
+                {
+                    AppLog.Info($"[PollingService] Notificación {notification.Id} ya entregada por canal instantáneo, saltando");
+                    _shownNotificationIds.Add(notification.Id);
+                    _ = MarkAsReadAsync(notification.Id);
+                    continue;
+                }
+
                 if (!_shownNotificationIds.Contains(notification.Id))
                 {
                     _shownNotificationIds.Add(notification.Id);
@@ -228,7 +259,7 @@ public class PollingNotificationService : IPollingNotificationService, IDisposab
 
                 // Mostrar notificación local y esperar a que sea visible el tiempo completo
                 await ShowLocalNotificationAsync(notification);
-                System.Diagnostics.Debug.WriteLine($"[PollingService] Showing local notification: {notification.Title}");
+                AppLog.Info($"[PollingService] Showing local notification: {notification.Title}");
 
                 // Marcar como leída en el servidor
                 await MarkAsReadAsync(notification.Id);
@@ -243,14 +274,14 @@ public class PollingNotificationService : IPollingNotificationService, IDisposab
 
             if (newCount > 0)
             {
-                System.Diagnostics.Debug.WriteLine($"[PollingService] {newCount} new notifications received");
+                AppLog.Info($"[PollingService] {newCount} new notifications received");
             }
 
             return newCount;
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[PollingService] Error polling: {ex.Message}");
+            AppLog.Info($"[PollingService] Error polling: {ex.Message}");
             return 0;
         }
     }
@@ -271,7 +302,7 @@ public class PollingNotificationService : IPollingNotificationService, IDisposab
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[PollingService] Error sending heartbeat: {ex.Message}");
+            AppLog.Info($"[PollingService] Error sending heartbeat: {ex.Message}");
         }
     }
 
@@ -306,7 +337,7 @@ public class PollingNotificationService : IPollingNotificationService, IDisposab
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[PollingService] Error showing snackbar: {ex.Message}");
+                AppLog.Info($"[PollingService] Error showing snackbar: {ex.Message}");
                 
                 // Fallback: mostrar como DisplayAlert
                 try
@@ -328,7 +359,7 @@ public class PollingNotificationService : IPollingNotificationService, IDisposab
     {
         try
         {
-            System.Diagnostics.Debug.WriteLine("[PollingService] Intentando reproducir sonido...");
+            AppLog.Info("[PollingService] Intentando reproducir sonido...");
             
             // Abrir el archivo de sonido desde Resources/Raw
             using var stream = await FileSystem.OpenAppPackageFileAsync("notfar.mp3");
@@ -346,12 +377,12 @@ public class PollingNotificationService : IPollingNotificationService, IDisposab
             // Liberar el player
             player.Dispose();
             
-            System.Diagnostics.Debug.WriteLine("[PollingService] Sonido de notificación reproducido correctamente");
+            AppLog.Info("[PollingService] Sonido de notificación reproducido correctamente");
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[PollingService] Error reproduciendo sonido: {ex.Message}");
-            System.Diagnostics.Debug.WriteLine($"[PollingService] Stack trace: {ex.StackTrace}");
+            AppLog.Info($"[PollingService] Error reproduciendo sonido: {ex.Message}");
+            AppLog.Info($"[PollingService] Stack trace: {ex.StackTrace}");
         }
     }
 

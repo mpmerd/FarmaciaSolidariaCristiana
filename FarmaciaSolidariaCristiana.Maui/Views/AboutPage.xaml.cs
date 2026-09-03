@@ -12,7 +12,7 @@ public partial class AboutPage : ContentPage
         try
         {
             // Abrir WhatsApp con el número de contacto
-            var uri = new Uri("https://wa.me/5353434386");
+            var uri = new Uri("https://wa.me/5358140494");
             await Browser.Default.OpenAsync(uri, BrowserLaunchMode.SystemPreferred);
         }
         catch (Exception ex)
