@@ -312,6 +312,7 @@ public partial class MedicamentosViewModel : BaseViewModel
     [RelayCommand]
     private async Task RefreshAsync()
     {
+        ApiService.InvalidateMedicamentosCache();
         await LoadMedicamentosAsync();
     }
 }

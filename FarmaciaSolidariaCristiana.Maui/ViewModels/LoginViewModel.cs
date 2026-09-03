@@ -1,5 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using FarmaciaSolidariaCristiana.Maui.Helpers;
 using FarmaciaSolidariaCristiana.Maui.Services;
 
 namespace FarmaciaSolidariaCristiana.Maui.ViewModels;
@@ -85,16 +86,16 @@ public partial class LoginViewModel : BaseViewModel
                     if (!string.IsNullOrEmpty(playerId))
                     {
                         pushWorking = true;
-                        System.Diagnostics.Debug.WriteLine($"[Login] ✅ Push registrado. PlayerId: {playerId}");
+                        AppLog.Info($"[Login] ✅ Push registrado. PlayerId: {playerId}");
                     }
                     else
                     {
-                        System.Diagnostics.Debug.WriteLine("[Login] ⚠️ Push sin PlayerId");
+                        AppLog.Info("[Login] ⚠️ Push sin PlayerId");
                     }
                 }
                 catch (Exception ex)
                 {
-                    System.Diagnostics.Debug.WriteLine($"[Login] ⚠️ Push falló: {ex.Message}");
+                    AppLog.Info($"[Login] ⚠️ Push falló: {ex.Message}");
                 }
                 
                 // 2. SIEMPRE iniciar Polling (para heartbeat y notificaciones de respaldo)
@@ -105,16 +106,32 @@ public partial class LoginViewModel : BaseViewModel
                     await _pollingService.StartAsync();
                     if (pushWorking)
                     {
-                        System.Diagnostics.Debug.WriteLine("[Login] ✅ Polling iniciado como respaldo (Push es primario)");
+                        AppLog.Info("[Login] ✅ Polling iniciado como respaldo (Push es primario)");
                     }
                     else
                     {
-                        System.Diagnostics.Debug.WriteLine("[Login] ✅ Polling iniciado como canal principal (Push no disponible)");
+                        AppLog.Info("[Login] ✅ Polling iniciado como canal principal (Push no disponible)");
                     }
                 }
                 catch (Exception ex)
                 {
-                    System.Diagnostics.Debug.WriteLine($"[Login] ❌ Error iniciando Polling: {ex.Message}");
+                    AppLog.Info($"[Login] ❌ Error iniciando Polling: {ex.Message}");
+                }
+
+                // Fase 2: arrancar el Foreground Service que mantiene la conexión SignalR
+                // (push real sobre 443) viva en background. Solo si el canal SignalR está habilitado.
+                if (Constants.SignalRChannelEnabled)
+                {
+#if ANDROID
+                    try
+                    {
+                        Platforms.Android.NotificationsForegroundStarter.Start();
+                    }
+                    catch (Exception ex)
+                    {
+                        AppLog.Info($"[Login] ❌ Error iniciando Foreground Service: {ex.Message}");
+                    }
+#endif
                 }
                 
                 // Navegar al Shell principal

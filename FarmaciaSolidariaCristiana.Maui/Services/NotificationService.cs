@@ -12,12 +12,14 @@ public class NotificationService : INotificationService
 {
     private readonly HttpClient _httpClient;
     private readonly IAuthService _authService;
+    private readonly IPushHealthService _pushHealth;
     private string? _playerId;
 
-    public NotificationService(HttpClient httpClient, IAuthService authService)
+    public NotificationService(HttpClient httpClient, IAuthService authService, IPushHealthService pushHealth)
     {
         _httpClient = httpClient;
         _authService = authService;
+        _pushHealth = pushHealth;
     }
 
     public void Initialize()
@@ -32,7 +34,7 @@ public class NotificationService : INotificationService
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"OneSignal init error: {ex.Message}");
+            AppLog.Info($"OneSignal init error: {ex.Message}");
         }
 #endif
     }
@@ -49,7 +51,7 @@ public class NotificationService : INotificationService
             if (!string.IsNullOrEmpty(App.OneSignalPlayerId))
             {
                 _playerId = App.OneSignalPlayerId;
-                System.Diagnostics.Debug.WriteLine($"[NotificationService] Got PlayerId from App: {_playerId}");
+                AppLog.Info($"[NotificationService] Got PlayerId from App: {_playerId}");
                 return;
             }
             
@@ -58,16 +60,16 @@ public class NotificationService : INotificationService
             if (!string.IsNullOrEmpty(subscriptionId))
             {
                 _playerId = subscriptionId;
-                System.Diagnostics.Debug.WriteLine($"[NotificationService] Got PlayerId from SDK: {_playerId}");
+                AppLog.Info($"[NotificationService] Got PlayerId from SDK: {_playerId}");
             }
             else
             {
-                System.Diagnostics.Debug.WriteLine("[NotificationService] PlayerId is null or empty from SDK");
+                AppLog.Info("[NotificationService] PlayerId is null or empty from SDK");
             }
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[NotificationService] Error getting subscription ID: {ex.Message}");
+            AppLog.Info($"[NotificationService] Error getting subscription ID: {ex.Message}");
         }
 #endif
     }
@@ -93,18 +95,22 @@ public class NotificationService : INotificationService
             
             if (!string.IsNullOrEmpty(playerId))
             {
-                System.Diagnostics.Debug.WriteLine($"[NotificationService] PlayerId obtained: {playerId} (attempt {i + 1}/{maxRetries})");
+                AppLog.Info($"[NotificationService] PlayerId obtained: {playerId} (attempt {i + 1}/{maxRetries})");
+                // Fase 0/1: OneSignal disponible (suscripción OK) -> reportar al servicio de salud
+                _pushHealth.ReportOneSignalAvailable(true);
                 return playerId;
             }
             
             if (i < maxRetries - 1) // No esperar en el último intento
             {
-                System.Diagnostics.Debug.WriteLine($"[NotificationService] PlayerId not available, retrying in {delayMs}ms... (attempt {i + 1}/{maxRetries})");
+                AppLog.Info($"[NotificationService] PlayerId not available, retrying in {delayMs}ms... (attempt {i + 1}/{maxRetries})");
                 await Task.Delay(delayMs);
             }
         }
         
-        System.Diagnostics.Debug.WriteLine($"[NotificationService] Failed to get PlayerId after {maxRetries} attempts - Push notifications not available");
+        AppLog.Info($"[NotificationService] Failed to get PlayerId after {maxRetries} attempts - Push notifications not available");
+        // Fase 0/1: tras agotar reintentos, OneSignal no está disponible
+        _pushHealth.ReportOneSignalAvailable(false);
         return null;
     }
 
@@ -136,22 +142,22 @@ public class NotificationService : INotificationService
                 if (!string.IsNullOrEmpty(playerId))
                     break;
                     
-                System.Diagnostics.Debug.WriteLine($"[NotificationService] PlayerId not available yet, retry {i + 1}/5...");
+                AppLog.Info($"[NotificationService] PlayerId not available yet, retry {i + 1}/5...");
                 await Task.Delay(1000); // Wait 1 second
             }
             
             if (string.IsNullOrEmpty(playerId))
             {
-                System.Diagnostics.Debug.WriteLine("[NotificationService] Failed to get OneSignal PlayerId after 5 retries");
+                AppLog.Info("[NotificationService] Failed to get OneSignal PlayerId after 5 retries");
                 return false;
             }
 
-            System.Diagnostics.Debug.WriteLine($"[NotificationService] PlayerId obtained: {playerId}");
+            AppLog.Info($"[NotificationService] PlayerId obtained: {playerId}");
 
             var token = await _authService.GetTokenAsync();
             if (string.IsNullOrEmpty(token))
             {
-                System.Diagnostics.Debug.WriteLine("[NotificationService] No auth token available");
+                AppLog.Info("[NotificationService] No auth token available");
                 return false;
             }
 
@@ -166,25 +172,25 @@ public class NotificationService : INotificationService
                 appVersion = AppInfo.VersionString
             };
 
-            System.Diagnostics.Debug.WriteLine($"[NotificationService] Registering device with API: {playerId}");
+            AppLog.Info($"[NotificationService] Registering device with API: {playerId}");
             
             var response = await _httpClient.PostAsJsonAsync("/api/notifications/device", request);
             
             if (response.IsSuccessStatusCode)
             {
-                System.Diagnostics.Debug.WriteLine("[NotificationService] Device registered successfully!");
+                AppLog.Info("[NotificationService] Device registered successfully!");
                 return true;
             }
             else
             {
                 var error = await response.Content.ReadAsStringAsync();
-                System.Diagnostics.Debug.WriteLine($"[NotificationService] Device registration failed: {response.StatusCode} - {error}");
+                AppLog.Info($"[NotificationService] Device registration failed: {response.StatusCode} - {error}");
                 return false;
             }
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[NotificationService] RegisterDeviceAsync error: {ex.Message}");
+            AppLog.Info($"[NotificationService] RegisterDeviceAsync error: {ex.Message}");
             return false;
         }
     }
@@ -226,7 +232,7 @@ public class NotificationService : INotificationService
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Error requesting permission: {ex.Message}");
+            AppLog.Info($"Error requesting permission: {ex.Message}");
         }
 #else
         await Task.CompletedTask;
@@ -245,11 +251,11 @@ public class NotificationService : INotificationService
             // Also login the user in OneSignal for better tracking
             OneSignal.Login(userId);
             
-            System.Diagnostics.Debug.WriteLine($"OneSignal tags set for user: {userId}, role: {role}");
+            AppLog.Info($"OneSignal tags set for user: {userId}, role: {role}");
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Error setting OneSignal tags: {ex.Message}");
+            AppLog.Info($"Error setting OneSignal tags: {ex.Message}");
         }
 #endif
         
@@ -275,7 +281,7 @@ public class NotificationService : INotificationService
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Error logging out from OneSignal: {ex.Message}");
+            AppLog.Info($"Error logging out from OneSignal: {ex.Message}");
         }
 #endif
         

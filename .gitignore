@@ -11,6 +11,8 @@
 .env.*.local
 *.key
 *.pem
+# Excepcion: certificado raiz PUBLICO ISRG Root X2 embebido en la app (no es clave privada)
+!FarmaciaSolidariaCristiana.Maui/Platforms/Android/Resources/raw/isrgrootx2.pem
 secrets.json
 appsettings.Production.json
 appsettings.*.json

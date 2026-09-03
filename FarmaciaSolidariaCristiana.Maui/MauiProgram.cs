@@ -57,7 +57,14 @@ public static class MauiProgram
         builder.Services.AddSingleton<IApiService, ApiService>();
         builder.Services.AddSingleton<INotificationService, NotificationService>();
         builder.Services.AddSingleton<IPollingNotificationService, PollingNotificationService>();
+        builder.Services.AddSingleton<IPushHealthService, PushHealthService>();
+        builder.Services.AddSingleton<INotificationsHubClient, NotificationsHubClient>();
         builder.Services.AddSingleton<IImageCompressionService, ImageCompressionService>();
+
+        // ISystemNotificationService: implementación Android (notificaciones nativas del sistema).
+#if ANDROID
+        builder.Services.AddSingleton<ISystemNotificationService, FarmaciaSolidariaCristiana.Maui.Platforms.Android.Services.SystemNotificationService>();
+#endif
 
         // Register ViewModels
         builder.Services.AddTransient<LoginViewModel>();
@@ -79,6 +86,7 @@ public static class MauiProgram
         builder.Services.AddTransient<NuevaDonacionViewModel>();
         builder.Services.AddTransient<UsuariosViewModel>();
         builder.Services.AddTransient<ReprogramarTurnosViewModel>();
+        builder.Services.AddTransient<BloqueoPacienteViewModel>();
 
         // Register Pages
         builder.Services.AddTransient<MaintenancePage>();
@@ -102,6 +110,7 @@ public static class MauiProgram
         builder.Services.AddTransient<UsuariosPage>();
         builder.Services.AddTransient<ReprogramarTurnosPage>();
         builder.Services.AddTransient<BroadcastPage>();
+        builder.Services.AddTransient<BloqueoPacientePage>();
         
         // Register AppShell
         builder.Services.AddTransient<AppShell>();

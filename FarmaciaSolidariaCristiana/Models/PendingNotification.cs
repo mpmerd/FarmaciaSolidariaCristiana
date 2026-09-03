@@ -87,5 +87,6 @@ public static class NotificationTypes
     public const string TurnoRechazado = "TurnoRechazado";
     public const string TurnoEntregado = "TurnoEntregado";
     public const string TurnoCancelado = "TurnoCancelado";
+    public const string TurnoReprogramado = "TurnoReprogramado";
     public const string General = "General";
 }

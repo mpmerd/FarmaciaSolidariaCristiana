@@ -233,6 +233,7 @@
         // Sistema de selección de medicamentos e insumos
         let selectedMedicines = [];
         let selectedSupplies = [];
+        let restrictedMedicineIds = [];
 
         $(document).ready(function() {
             // Elementos
@@ -268,6 +269,44 @@
                 }
             });
 
+            // ========== MEDICAMENTOS RESTRINGIDOS ==========
+
+            // Carga los medicamentos que el paciente ya solicitó este mes (según documento)
+            function loadRestrictedMedicines(documento) {
+                restrictedMedicineIds = [];
+                if (!documento || documento.length < 9) return;
+
+                $.ajax({
+                    url: '@Url.Action("GetRestrictedMedicinesForDocument", "Turnos")',
+                    type: 'GET',
+                    data: { documentoIdentidad: documento },
+                    success: function(response) {
+                        restrictedMedicineIds = response.restrictedIds || [];
+                        if (restrictedMedicineIds.length > 0) {
+                            // Remover del carrito los medicamentos ahora restringidos
+                            var removed = [];
+                            selectedMedicines = selectedMedicines.filter(function(m) {
+                                if (restrictedMedicineIds.includes(m.id)) {
+                                    removed.push(m.name);
+                                    medicinesList.find('.medicine-card[data-id="' + m.id + '"]').remove();
+                                    return false;
+                                }
+                                return true;
+                            });
+                            if (removed.length > 0) {
+                                if (selectedMedicines.length === 0) emptyMessage.show();
+                                alert('Se quitaron los siguientes medicamentos porque este paciente ya los solicitó este mes: ' + removed.join(', ') + '.');
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Cuando cambia el documento, recargar restricciones
+            $('#DocumentoIdentidad').on('blur', function() {
+                loadRestrictedMedicines($(this).val().trim().toUpperCase());
+            });
+
             // ========== MEDICAMENTOS ==========
             
             // Búsqueda de medicamentos con AJAX
@@ -288,21 +327,31 @@
                         
                         if (response.medicines && response.medicines.length > 0) {
                             response.medicines.forEach(function(med) {
+                                var isRestricted = restrictedMedicineIds.includes(med.id);
                                 var stockBadgeClass = med.stock > 10 ? 'bg-success' : med.stock > 5 ? 'bg-warning text-dark' : 'bg-danger';
-                                
-                                var item = $('<a href="#" class="list-group-item list-group-item-action medicine-item"></a>')
-                                    .data('id', med.id)
-                                    .data('name', med.name)
-                                    .data('stock', med.stock)
-                                    .data('unit', med.unit || 'unidades')
-                                    .html(
-                                        '<div class="d-flex justify-content-between align-items-center">' +
-                                        '<div><strong>' + med.name + '</strong></div>' +
-                                        '<span class="badge ' + stockBadgeClass + '">Stock: ' + med.stock + ' ' + (med.unit || 'unidades') + '</span>' +
-                                        '</div>'
-                                    );
-                                
-                                medicineResults.append(item);
+
+                                if (isRestricted) {
+                                    // Mostrar como deshabilitado, no seleccionable
+                                    var item = $('<div class="list-group-item disabled d-flex justify-content-between align-items-center"></div>')
+                                        .html(
+                                            '<div><strong>' + med.name + '</strong> <small class="text-muted">(ya solicitado este mes)</small></div>' +
+                                            '<span class="badge bg-secondary">Restringido</span>'
+                                        );
+                                    medicineResults.append(item);
+                                } else {
+                                    var item = $('<a href="#" class="list-group-item list-group-item-action medicine-item"></a>')
+                                        .data('id', med.id)
+                                        .data('name', med.name)
+                                        .data('stock', med.stock)
+                                        .data('unit', med.unit || 'unidades')
+                                        .html(
+                                            '<div class="d-flex justify-content-between align-items-center">' +
+                                            '<div><strong>' + med.name + '</strong></div>' +
+                                            '<span class="badge ' + stockBadgeClass + '">Stock: ' + med.stock + ' ' + (med.unit || 'unidades') + '</span>' +
+                                            '</div>'
+                                        );
+                                    medicineResults.append(item);
+                                }
                             });
                             medicineResults.show();
                         } else {

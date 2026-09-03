@@ -326,30 +326,9 @@ namespace FarmaciaSolidariaCristiana.Controllers
                     }
                 }
 
-                // Enviar notificación a farmacéuticos (NO en segundo plano para mantener contexto de BD)
-                try
-                {
-                    var tipoSolicitud = medicamentos.Any() ? "Medicamentos" : "Insumos";
-                    _logger.LogInformation("Iniciando envío de notificaciones a farmacéuticos para turno {TurnoId} (Tipo: {Tipo})", 
-                        createdTurno.Id, tipoSolicitud);
-                    var notificationSent = await _emailService.SendTurnoNotificationToFarmaceuticosAsync(
-                        user?.UserName ?? "Usuario", 
-                        createdTurno.Id,
-                        tipoSolicitud);
-                    
-                    if (notificationSent)
-                    {
-                        _logger.LogInformation("✓ Notificaciones por email enviadas a farmacéuticos para turno {TurnoId}", createdTurno.Id);
-                    }
-                    else
-                    {
-                        _logger.LogWarning("⚠ No se pudieron enviar notificaciones por email a farmacéuticos para turno {TurnoId}", createdTurno.Id);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "✗ Error enviando notificaciones por email a farmacéuticos para turno {TurnoId}", createdTurno.Id);
-                }
+                // Email a farmacéuticos/admins por "nueva solicitud" ELIMINADO:
+                // ahora SignalR (push real sobre 443) + OneSignal (fuera de Cuba) + polling
+                // entregan la notificación en tiempo real. El email para este evento era redundante.
 
                 // Enviar notificación push/polling a farmacéuticos (para la app móvil)
                 try
@@ -682,6 +661,22 @@ namespace FarmaciaSolidariaCristiana.Controllers
             return Json(new { supplies });
         }
 
+        // GET: Turnos/GetRestrictedMedicinesForDocument
+        /// <summary>
+        /// Retorna los IDs de medicamentos ya solicitados por el paciente este mes natural.
+        /// Usado por el formulario MVC para ocultar medicamentos restringidos en la búsqueda.
+        /// </summary>
+        [HttpGet]
+        [Authorize(Roles = "ViewerPublic")]
+        public async Task<JsonResult> GetRestrictedMedicinesForDocument(string documentoIdentidad)
+        {
+            if (string.IsNullOrWhiteSpace(documentoIdentidad))
+                return Json(new { restrictedIds = new List<int>() });
+
+            var restrictedIds = await _turnoService.GetPatientMedicineIdsThisMonthAsync(documentoIdentidad);
+            return Json(new { restrictedIds });
+        }
+
         // POST: Turnos/Cancel/5
         /// <summary>
         /// Permite a un usuario cancelar su turno aprobado (si faltan más de 7 días)
@@ -901,6 +896,41 @@ namespace FarmaciaSolidariaCristiana.Controllers
             }
             
             return RedirectToAction(nameof(ReprogramarFecha));
+        }
+
+        // GET: Turnos/ReporteDia
+        /// <summary>
+        /// Vista para seleccionar fecha e imprimir/exportar listado de turnos aprobados del día.
+        /// Solo accesible a Farmacéutico y Admin.
+        /// </summary>
+        [HttpGet]
+        [Authorize(Roles = "Admin,Farmaceutico")]
+        public async Task<IActionResult> ReporteDia(DateTime? fecha = null)
+        {
+            var vm = new ReporteTurnosDiaViewModel { Fecha = fecha };
+
+            if (fecha.HasValue)
+            {
+                vm.Items = await _turnoService.GetReporteTurnosDiaAsync(fecha.Value);
+            }
+
+            return View(vm);
+        }
+
+        // GET: Turnos/ReporteDiaPdf?fecha=yyyy-MM-dd
+        /// <summary>
+        /// Genera y descarga el PDF del reporte de turnos aprobados del día indicado.
+        /// Solo accesible a Farmacéutico y Admin.
+        /// </summary>
+        [HttpGet]
+        [Authorize(Roles = "Admin,Farmaceutico")]
+        public async Task<IActionResult> ReporteDiaPdf(DateTime fecha)
+        {
+            var items = await _turnoService.GetReporteTurnosDiaAsync(fecha);
+            var pdfBytes = await _turnoService.GenerateReporteDiaPdfAsync(fecha, items);
+
+            var fileName = $"turnos_{fecha:yyyy-MM-dd}.pdf";
+            return File(pdfBytes, "application/pdf", fileName);
         }
 
         /// <summary>

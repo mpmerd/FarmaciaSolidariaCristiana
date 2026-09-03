@@ -19,8 +19,8 @@
 		<ApplicationId>com.fsolidaria.app</ApplicationId>
 
 		<!-- Versions -->
-		<ApplicationDisplayVersion>1.0.5</ApplicationDisplayVersion>
-		<ApplicationVersion>5</ApplicationVersion>
+		<ApplicationDisplayVersion>1.0.8</ApplicationDisplayVersion>
+		<ApplicationVersion>8</ApplicationVersion>
 
 		<!-- Platform minimum versions -->
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">14.0</SupportedOSPlatformVersion>
@@ -57,6 +57,7 @@
 	<ItemGroup>
 		<PackageReference Include="CommunityToolkit.Maui" Version="13.0.0" />
 		<PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
+		<PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="10.0.7" />
 		<PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
 		<PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="10.0.0" />
 		<PackageReference Include="OneSignalSDK.DotNet" Version="5.2.2" />
@@ -66,6 +67,9 @@
 	<!-- Google Services for FCM (Android) -->
 	<ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">
 		<GoogleServicesJson Include="Platforms\Android\google-services.json" />
+		<AndroidResource Include="Platforms\Android\Resources\xml\network_security_config.xml" />
+		<AndroidResource Include="Platforms\Android\Resources\raw\isrgrootx2.pem" />
+		<AndroidResource Include="Platforms\Android\Resources\raw\notfar.mp3" />
 	</ItemGroup>
 
 </Project>

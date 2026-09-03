@@ -89,6 +89,26 @@ namespace FarmaciaSolidariaCristiana.Models
         [Display(Name = "Activo")]
         public bool IsActive { get; set; } = true;
 
+        // Bloqueo por préstamo de insumo de la farmacia
+        [Display(Name = "Bloqueado por préstamo")]
+        public bool IsBlockedByLoan { get; set; } = false;
+
+        [Display(Name = "Fecha de bloqueo")]
+        public DateTime? LoanBlockDate { get; set; }
+
+        [Display(Name = "Descripción del insumo en préstamo")]
+        [StringLength(500)]
+        public string? LoanBlockDescription { get; set; }
+
+        [Display(Name = "Fecha de desbloqueo")]
+        public DateTime? LoanUnblockDate { get; set; }
+
+        [Display(Name = "Desbloqueado por (UserId)")]
+        [StringLength(450)]
+        public string? LoanUnblockedByUserId { get; set; }
+
+        public Microsoft.AspNetCore.Identity.IdentityUser? LoanUnblockedByUser { get; set; }
+
         // Relaciones
         public ICollection<Delivery> Deliveries { get; set; } = new List<Delivery>();
         public ICollection<PatientDocument> Documents { get; set; } = new List<PatientDocument>();

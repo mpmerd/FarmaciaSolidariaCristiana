@@ -111,6 +111,14 @@ namespace FarmaciaSolidariaCristiana.Data
                 .Property(p => p.Height)
                 .HasPrecision(5, 2); // Max 999.99 cm
 
+            // Configure Patient loan block relationship
+            modelBuilder.Entity<Patient>()
+                .HasOne(p => p.LoanUnblockedByUser)
+                .WithMany()
+                .HasForeignKey(p => p.LoanUnblockedByUserId)
+                .OnDelete(DeleteBehavior.SetNull)
+                .IsRequired(false);
+
             // Configure FechaBloqueada
             modelBuilder.Entity<FechaBloqueada>()
                 .HasIndex(f => f.Fecha)

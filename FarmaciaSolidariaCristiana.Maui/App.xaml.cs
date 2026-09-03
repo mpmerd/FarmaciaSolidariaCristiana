@@ -17,12 +17,25 @@ public partial class App : Application
     public static bool IsOneSignalInitialized { get; private set; }
     public static string? OneSignalPlayerId { get; private set; }
     public static string? OneSignalInitError { get; private set; }
+
+    /// <summary>
+    /// Ruta pendiente a la que navegar cuando la app vuelve a primer plano
+    /// (ej. al tocar "Ver" en una notificación del sistema lanzada desde background).
+    /// </summary>
+    public static string? PendingRoute { get; set; }
+
+    /// <summary>
+    /// Proveedor de servicios raíz (para que el Foreground Service Android resuelva
+    /// INotificationsHubClient sin pasar por el MauiContext que puede no estar listo tras un kill).
+    /// </summary>
+    public static IServiceProvider? Services { get; private set; }
     
     public App(IAuthService authService, IServiceProvider serviceProvider)
     {
         InitializeComponent();
         _authService = authService;
         _serviceProvider = serviceProvider;
+        Services = serviceProvider;
         _updateService = new UpdateService();
         
         // Initialize OneSignal
@@ -50,7 +63,7 @@ public partial class App : Application
             OneSignal.Debug.LogLevel = LogLevel.VERBOSE;
 #endif
 
-            System.Diagnostics.Debug.WriteLine($"[OneSignal] Initializing with AppId: {Constants.OneSignalAppId}");
+            AppLog.Info($"[OneSignal] Initializing with AppId: {Constants.OneSignalAppId}");
 
             // OneSignal Initialization
             OneSignal.Initialize(Constants.OneSignalAppId);
@@ -63,11 +76,11 @@ public partial class App : Application
             if (!string.IsNullOrEmpty(existingId))
             {
                 OneSignalPlayerId = existingId;
-                System.Diagnostics.Debug.WriteLine($"[OneSignal] Already has PlayerId: {existingId}");
+                AppLog.Info($"[OneSignal] Already has PlayerId: {existingId}");
             }
             else
             {
-                System.Diagnostics.Debug.WriteLine("[OneSignal] No PlayerId yet, waiting for subscription...");
+                AppLog.Info("[OneSignal] No PlayerId yet, waiting for subscription...");
             }
 
             // Request notification permission (will show native prompt on Android 13+)
@@ -76,34 +89,65 @@ public partial class App : Application
                 try
                 {
                     var granted = await OneSignal.Notifications.RequestPermissionAsync(true);
-                    System.Diagnostics.Debug.WriteLine($"[OneSignal] Permission granted: {granted}");
+                    AppLog.Info($"[OneSignal] Permission granted: {granted}");
                 }
                 catch (Exception ex)
                 {
-                    System.Diagnostics.Debug.WriteLine($"[OneSignal] Permission request error: {ex.Message}");
+                    AppLog.Info($"[OneSignal] Permission request error: {ex.Message}");
                 }
             });
 
             IsOneSignalInitialized = true;
-            System.Diagnostics.Debug.WriteLine("[OneSignal] Initialized successfully");
+            AppLog.Info("[OneSignal] Initialized successfully");
         }
         catch (Exception ex)
         {
             OneSignalInitError = ex.Message;
-            System.Diagnostics.Debug.WriteLine($"[OneSignal] Initialization error: {ex.Message}");
-            System.Diagnostics.Debug.WriteLine($"[OneSignal] Stack trace: {ex.StackTrace}");
+            AppLog.Info($"[OneSignal] Initialization error: {ex.Message}");
+            AppLog.Info($"[OneSignal] Stack trace: {ex.StackTrace}");
         }
     }
     
     private void OnPushSubscriptionChanged(object? sender, PushSubscriptionChangedEventArgs e)
     {
         var newId = e.State.Current.Id;
-        System.Diagnostics.Debug.WriteLine($"[OneSignal] Push subscription changed. New ID: {newId}");
-        
+        AppLog.Info($"[OneSignal] Push subscription changed. New ID: {newId}");
+
         if (!string.IsNullOrEmpty(newId))
         {
             OneSignalPlayerId = newId;
-            System.Diagnostics.Debug.WriteLine($"[OneSignal] PlayerId updated: {newId}");
+            AppLog.Info($"[OneSignal] PlayerId updated: {newId}");
+        }
+
+        // Fase 0/1: reportar disponibilidad real del canal OneSignal al servicio de salud.
+        // Disponible = hay PlayerId (suscripción OK) Y permiso concedido.
+        ReportOneSignalAvailabilityToHealthService(newId);
+    }
+
+    /// <summary>
+    /// Reporta al PushHealthService si OneSignal es un canal instantáneo usable ahora mismo.
+    /// </summary>
+    private void ReportOneSignalAvailabilityToHealthService(string? playerId)
+    {
+        try
+        {
+            bool permission = false;
+            try { permission = OneSignal.Notifications.Permission; }
+            catch (Exception pex)
+            {
+                AppLog.Info($"[OneSignal] No se pudo leer permiso: {pex.Message}");
+            }
+
+            bool available = !string.IsNullOrEmpty(playerId) && permission;
+            AppLog.Info(
+                $"[OneSignal] Canal instantáneo available={available} (playerId={(!string.IsNullOrEmpty(playerId) ? "sí" : "no")}, permission={permission})");
+
+            var pushHealth = _serviceProvider.GetService<IPushHealthService>();
+            pushHealth?.ReportOneSignalAvailable(available);
+        }
+        catch (Exception ex)
+        {
+            AppLog.Info($"[OneSignal] Error reportando disponibilidad: {ex.Message}");
         }
     }
 
@@ -114,7 +158,7 @@ public partial class App : Application
             var maintenance = await _updateService.CheckMaintenanceAsync();
             if (maintenance != null)
             {
-                System.Diagnostics.Debug.WriteLine($"[App] Maintenance mode active: {maintenance.reason}");
+                AppLog.Info($"[App] Maintenance mode active: {maintenance.reason}");
 
                 await MainThread.InvokeOnMainThreadAsync(async () =>
                 {
@@ -131,7 +175,7 @@ public partial class App : Application
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[App] Error checking maintenance: {ex.Message}");
+            AppLog.Info($"[App] Error checking maintenance: {ex.Message}");
         }
     }
 
@@ -142,7 +186,7 @@ public partial class App : Application
         // Manejar cuando la app vuelve a primer plano
         window.Resumed += async (s, e) =>
         {
-            System.Diagnostics.Debug.WriteLine("[App] App resumed - checking maintenance, updates and notifications");
+            AppLog.Info("[App] App resumed - checking maintenance, updates and notifications");
             
             // Verificar mantenimiento al volver a primer plano
             await CheckMaintenanceModeAsync();
@@ -150,6 +194,21 @@ public partial class App : Application
             // Verificar actualizaciones obligatorias al volver a primer plano
             await _updateService.CheckForUpdatesAsync();
             
+            // Revivir SignalR si la conexión murió mientras la app estuvo en background
+            // (ensure-connected: no-op si ya está viva).
+            try
+            {
+                var hubClient = _serviceProvider.GetService<INotificationsHubClient>();
+                if (hubClient != null)
+                {
+                    await hubClient.StartAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                AppLog.Info($"[App] Error reviviendo SignalR on resume: {ex.Message}");
+            }
+
             try
             {
                 var pollingService = _serviceProvider.GetService<IPollingNotificationService>();
@@ -159,13 +218,29 @@ public partial class App : Application
                     var newCount = await pollingService.CheckNowAsync();
                     if (newCount > 0)
                     {
-                        System.Diagnostics.Debug.WriteLine($"[App] Found {newCount} new notifications on resume");
+                        AppLog.Info($"[App] Found {newCount} new notifications on resume");
                     }
                 }
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[App] Error checking notifications on resume: {ex.Message}");
+                AppLog.Info($"[App] Error checking notifications on resume: {ex.Message}");
+            }
+
+            // Navegar a ruta pendiente (desde acción "Ver" de una notificación del sistema).
+            if (!string.IsNullOrEmpty(PendingRoute))
+            {
+                var route = PendingRoute;
+                PendingRoute = null;
+                try
+                {
+                    await Shell.Current.GoToAsync(route);
+                    AppLog.Info($"[App] Navigated to pending route: {route}");
+                }
+                catch (Exception ex)
+                {
+                    AppLog.Info($"[App] Error navigating to pending route {route}: {ex.Message}");
+                }
             }
         };
         
