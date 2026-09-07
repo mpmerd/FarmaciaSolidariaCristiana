@@ -33,7 +33,8 @@ El PackageInstaller de MIUI muestra ese fallo como el mensaje **genérico**, sin
 ### 4. Por qué encaja con todo lo observado
 - **Es la primera instalación**: no hay conflicto de versión/firma previa (se descarta la hipótesis H1 de la fase 1).
 - **"Siempre son chinos"**: los teléfonos económicos chinos (Redmi 9A/9C, POCO C3 y clones MTK) con ROM de 32 bits son justo los que fallan; los teléfonos más modernos (Android 11+ o ROM arm64) instalan sin problema → el fallo parece "aislado" pero es un patrón de ABI.
-- **600 usuarios por web**: la web no tiene nada que ver con ABIs → todos acceden bien.
+- **600+ usuarios de la app Android en producción**: la instalan bien en teléfonos con ROM de 64 bits (la mayoría). El subconjunto que falla es justo el de teléfonos chinos económicos con ROM/Android de 32 bits (Redmi 9A/9C, POCO C3, clones MTK) → parece "aislado", pero es un patrón de ABI: **la app excluye silenciosamente a todo teléfono de 32 bits**.
+- **1100+ usuarios web**: sin relación con ABIs (la web no instala nada) → todos acceden bien.
 
 ## 🔎 Hallazgo secundario (no causa de ESTE fallo, pero importante)
 
