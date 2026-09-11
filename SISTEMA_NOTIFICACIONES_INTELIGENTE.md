@@ -103,6 +103,37 @@ El sistema de notificaciones de Farmacia Solidaria Cristiana combina **cuatro** 
 
 **Resultado**: Ambos paths (web y MAUI) notifican igual a farmacéuticos.
 
+## 📢 Notificación masiva (admin)
+
+**Archivos**: `Controllers/BroadcastController.cs` (web) y `Api/Controllers/BroadcastController.cs` (API MAUI).
+
+Reglas implementadas (backend-only, sin APK):
+
+1. **Destinatarios = solo `ViewerPublic`** (pacientes). Se excluyen Admin, Farmaceutico y Viewer.
+2. **Email solo a pacientes SIN app activa**: se excluye del email a quien tenga un `UserDeviceToken`
+   con `IsActive` y `LastActivityAt` dentro de `BroadcastEmailActivityDays` (default 7 días).
+   Esos ya reciben la notificación in-app (SignalR/polling); el email sería redundante.
+   Si un dispositivo tiene `IsActive=true` pero `LastActivityAt` viejo (app abandonada), **sí recibe email**
+   (no se puede confiar en que la app le entregue).
+3. **Tope `BroadcastEmailMax` (default 450)**: si los destinatarios de email superan el tope, se rechaza
+   el broadcast con mensaje explicativo. Protege la cuota de Gmail gratuito (500/día compartidos con
+   códigos de registro, resets y turnos).
+4. **Ritmo lento (`BroadcastEmailIntervalMinutes`, default 5 min)**: el envío masivo va 1 email cada
+   5 minutos en segundo plano (no urgente) → máx ~288/día, sin tocar el ritmo de los emails
+   transaccionales (códigos, resets, turnos), que se envían inmediatamente.
+   Tras un fallo, espera el doble (10 min) para no romper la cadencia diaria.
+5. **Loop endurecido**: tras **5 fallos consecutivos** de email se aborta el envío (evita martillar la
+   cuenta durante horas si Gmail bloquea la cuota).
+6. **Web**: el checkbox de email viene **desmarcado por defecto**; el formulario muestra cuántos pacientes
+   tienen app activa y cuántos son destinatarios de email.
+
+> ⚠️ **Cuota compartida**: la misma cuenta Gmail envía todo (códigos, resets, turnos y broadcast).
+> Un broadcast por email agota la cuota y puede bloquear el registro 1–24 h. Por eso el tope y la exclusión.
+
+> ⚠️ **Pendiente MAUI (próximo APK)**: `BroadcastPage.xaml:59` aún marca email por defecto.
+> No es crítico (solo el admin usa esa pantalla) pero conviene invertirlo en el próximo release.
+> No renombrar los campos de `BroadcastResult` (`EmailsSent`/`EmailsFailed`): la APK instalada los parsea.
+
 ## 🔔 Notificaciones a Pacientes
 
 ### Cuando Farmacéutico aprueba/rechaza turno
@@ -245,6 +276,7 @@ El loop mínimo de heartbeat (60s) alimenta `LastActivityAt` en el backend, que 
 | Turno cancelado por paciente | Farmacéuticos/Admins | ❌ No | ✅ Intenta | ✅ Siempre | Solo notificación in-app |
 | Turno expirado (no presentación) | Paciente | ❌ No | ✅ Intenta | ✅ Siempre | Solo notificación in-app |
 | Turno expirado (no presentación) | Farmacéuticos/Admins | ❌ No | ✅ Intenta | ✅ Siempre | Solo notificación in-app |
+| **Notificación masiva (admin)** | **Solo `ViewerPublic`** (pacientes) | ✅ Solo a quienes NO tienen app activa (7 días) | ✅ A los que tienen app | ✅ Siempre | Admin/Farmaceutico/Viewer excluidos; tope email 450 (Gmail gratuito) |
 
 ## 🔧 Archivos Clave del Sistema
 
@@ -446,6 +478,11 @@ Fuera de Cuba (IP no cubana, ej. Starlink USA):
     "Host": "smtp.gmail.com",
     "Port": "587",
     // ... otras configuraciones
+  },
+  "AppSettings": {
+    "BroadcastEmailActivityDays": 7,   // ventana de actividad para excluir del email a usuarios con app
+    "BroadcastEmailMax": 450,          // tope de emails por broadcast
+    "BroadcastEmailIntervalMinutes": 5 // ritmo del envío masivo (1 email cada N min, ~288/día)
   },
   "OneSignalSettings": {
     "AppId": "4d981851-f1a2-4112-8a08-08500e48f196",
