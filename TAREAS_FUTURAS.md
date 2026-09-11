@@ -4,6 +4,16 @@
 
 ### 🏆 Alta Prioridad
 
+#### 0. MAUI: invertir default de email en Notificación Masiva (próximo APK)
+**Descripción**: En `FarmaciaSolidariaCristiana.Maui/Views/BroadcastPage.xaml:59` el `SwitchEmail` tiene
+`IsToggled="True"`. El backend ya protege la cuota de Gmail (excluye usuarios con app activa y topea en 450),
+pero conviene desmarcarlo por defecto y ajustar los textos para reflejar que el email va solo a pacientes sin
+app activa. También ajustar el texto de éxito (`BroadcastPage.xaml.cs:63`), que hoy dice "emails enviados"
+cuando en realidad son "emails en cola".
+
+**Estado**: 📋 Pendiente (backend-only resuelto; solo cosmético en la app)
+**Requiere**: nueva APK (bundle con el próximo release por otro motivo)
+
 #### 1. Revición de los reportes
 **Descripción**: Mejorar el reporte de entregas y donaciones
 
