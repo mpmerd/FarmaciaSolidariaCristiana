@@ -7,7 +7,10 @@ El sistema de notificaciones de Farmacia Solidaria Cristiana combina **cuatro** 
 1. **📧 Email** (SMTP) - Para usuarios inactivos o solicitudes críticas
 2. **📱 OneSignal (FCM)** - Push nativo para usuarios **fuera de Cuba** (OneSignal bloquea Cuba por IP)
 3. **🔌 SignalR sobre 443** - Push real para **Cuba y fuera** (canal propio al servidor extranjero)
-4. **🔄 Polling** (Consultas cada 30s) - Respaldo universal cuando ningún canal instantáneo está disponible
+4. **💓 Heartbeat** (POST cada 60s) - Ya NO consulta notificaciones: solo alimenta
+   `LastActivityAt` para la lógica de email (no spam a pacientes activos). El fetch
+   `GET /pending` fue **eliminado** (ver Fase 6); queda como rollback de emergencia
+   (`Constants.EnableNotificationPolling = true`).
 
 > **Hecho clave (confirmado en pruebas agosto 2026)**: OneSignal **bloquea Cuba por IP**
 > (`Access denied... from a country we do not support`). No es ETECSA filtrando puertos —
@@ -218,17 +221,26 @@ private async void CheckAuthenticationAsync()
   - Se hizo logout manual
   - Pasaron más de 30 días sin usar la app
 
-## 📲 Estrategia Push-first + Polling (estado actual)
+## 📲 Estrategia SignalR + heartbeat (estado actual, Fase 6)
 
-### Lógica push-first (implementada)
+### Lógica actual (fetch de notificaciones ELIMINADO)
 
-**Estado deseado**: si hay un canal instantáneo disponible (OneSignal **o** SignalR), el polling baja a **modo solo-heartbeat** (cada 60s, solo `POST /heartbeat`, sin `GET /pending`). Si no hay canal instantáneo, el polling sube a **modo completo** (30s, `GET /pending` + mostrar + heartbeat).
+**Estado (Fase 6, 30 sep 2026)**: el loop del polling **ya no consulta `GET /pending`** —
+es 100% **heartbeat** (cada 60s, solo `POST /heartbeat`). SignalR es el único canal de
+notificaciones: entrega en vivo + catch-up del servidor al (re)conectar (`OnConnectedAsync`
+envía las pendientes no leídas, tope de 50). El heartbeat **no se puede eliminar**: es la
+única fuente de `LastActivityAt`, que `IsUserActiveOnMobileAsync` (5 min) usa para decidir
+**no enviar email** a pacientes activos en la app.
 
-El `IPushHealthService` (`Services/PushHealthService.cs`) centraliza la señal de salud:
-- `IsInstantChannelAvailable` = OneSignal disponible (playerId + permiso) **∨** SignalR conectado.
-- `ReportDelivery(notificationId, createdAt)` / `WasDeliveredInstantly(notificationId)` → watermark de de-duplicación entre canales.
-- `AvailabilityChanged` event → el polling reacciona dinámicamente (cambia de modo sin reiniciar).
-- `Reset()` en logout.
+- **Rollback de emergencia**: `Constants.EnableNotificationPolling = true` restaura el
+  fetch adaptativo anterior (GET /pending cada 30s cuando no hay canal instantáneo).
+- **Marcar-leída al recibir por SignalR**: `NotificationsHubClient.OnReceiveNotificationAsync`
+  llama fire-and-forget a `POST /pending/{id}/read` al entregar (también en el path dedup-skip).
+  Esto elimina los duplicados tras reinicios y frena la acumulación infinita de filas unread.
+- **Purga activa**: `TurnoCleanupService` (cada 1h) llama `CleanupOldNotificationsAsync(30)` —
+  antes era dead code y las pendientes se acumulaban para siempre.
+- El `IPushHealthService` (`Services/PushHealthService.cs`) mantiene la señal de salud y el
+  watermark de de-duplicación entre canales.
 
 ### Login (LoginViewModel.cs, líneas 69-120)
 
@@ -248,35 +260,38 @@ if (Constants.SignalRChannelEnabled)
     Platforms.Android.NotificationsForegroundStarter.Start();
 ```
 
-### PollingNotificationService.cs (push-aware)
+### PollingNotificationService.cs (100% heartbeat)
 
-Ya **no es** "sin push-awareness". El loop ahora:
+El loop ya **no hace fetch de notificaciones** (Fase 6). Corre siempre heartbeat:
 ```csharp
-var instantAvailable = Constants.EnablePushAwarePolling && _pushHealth.IsInstantChannelAvailable;
-if (!instantAvailable)
-    await PollForNotificationsAsync();   // solo si NO hay canal instantáneo
-await SendHeartbeatAsync();              // SIEMPRE (alimenta LastActivityAt)
-var delay = instantAvailable ? Constants.HeartbeatIntervalSeconds : PollingIntervalSeconds;
-await Task.Delay(delay, token);
+var fetchEnabled = Constants.EnableNotificationPolling; // false (rollback: true)
+if (fetchEnabled && !instantAvailable)
+    await PollForNotificationsAsync();   // SOLO en rollback de emergencia
+await SendHeartbeatAsync();               // SIEMPRE (alimenta LastActivityAt)
+await Task.Delay(TimeSpan.FromSeconds(Constants.HeartbeatIntervalSeconds), token);
 ```
-- `CheckNowAsync` respeta el flag (skip poll si canal instantáneo disponible).
-- De-dup: salta notificaciones ya entregadas por SignalR/OneSignal (`WasDeliveredInstantly`).
+- `CheckNowAsync` retorna 0 sin HTTP (el catch-up del servidor cubre el OnResume).
+- De-dup intacto para el modo rollback (`WasDeliveredInstantly`).
 
 ### Heartbeat (opción a) — por qué siempre corre
 El loop mínimo de heartbeat (60s) alimenta `LastActivityAt` en el backend, que `IsUserActiveOnMobileAsync` (5 min) usa para decidir **no enviar email** a pacientes activos en la app. Si se apagara el loop por completo cuando hay push, el backend creería que el paciente está inactivo → le llovería email spam aunque reciba push. (Ver "opción b" futura más abajo para eliminar el heartbeat.)
 
 ## 📊 Matriz de Canales de Notificación
 
-| Evento | Destinatario | Email | Push | Polling | Condición |
+| Evento | Destinatario | Email | Push | Pendientes (catch-up SignalR) | Condición |
 |--------|-------------|-------|------|---------|-----------|
-| Nueva solicitud turno | Farmacéuticos/Admins | ❌ Eliminado | ✅ SignalR+OneSignal | ✅ Siempre (fallback) | El email era redundante con SignalR/push |
+| Nueva solicitud turno | Farmacéuticos/Admins | ❌ Eliminado | ✅ SignalR+OneSignal | ✅ Siempre (se crean; el catch-up las entrega al reconectar) | El email era redundante con SignalR/push |
 | Nueva solicitud turno | Paciente (confirmación) | ✅ Siempre | ❌ No | ❌ No | Solo confirmación |
-| Turno aprobado | Paciente | ✅ Si inactivo | ✅ Intenta | ✅ Siempre | Verifica IsUserActiveOnMobile |
-| Turno rechazado | Paciente | ✅ Si inactivo | ✅ Intenta | ✅ Siempre | Verifica IsUserActiveOnMobile |
-| Turno cancelado por paciente | Farmacéuticos/Admins | ❌ No | ✅ Intenta | ✅ Siempre | Solo notificación in-app |
-| Turno expirado (no presentación) | Paciente | ❌ No | ✅ Intenta | ✅ Siempre | Solo notificación in-app |
-| Turno expirado (no presentación) | Farmacéuticos/Admins | ❌ No | ✅ Intenta | ✅ Siempre | Solo notificación in-app |
-| **Notificación masiva (admin)** | **Solo `ViewerPublic`** (pacientes) | ✅ Solo a quienes NO tienen app activa (7 días) | ✅ A los que tienen app | ✅ Siempre | Admin/Farmaceutico/Viewer excluidos; tope email 450 (Gmail gratuito) |
+| Turno aprobado | Paciente | ✅ Si inactivo | ✅ Intenta | ✅ Siempre (catch-up) | Verifica IsUserActiveOnMobile |
+| Turno rechazado | Paciente | ✅ Si inactivo | ✅ Intenta | ✅ Siempre (catch-up) | Verifica IsUserActiveOnMobile |
+| Turno cancelado por paciente | Farmacéuticos/Admins | ❌ No | ✅ Intenta | ✅ Siempre (catch-up) | Solo notificación in-app |
+| Turno expirado (no presentación) | Paciente | ❌ No | ✅ Intenta | ✅ Siempre (catch-up) | Solo notificación in-app |
+| Turno expirado (no presentación) | Farmacéuticos/Admins | ❌ No | ✅ Intenta | ✅ Siempre (catch-up) | Solo notificación in-app |
+| **Notificación masiva (admin)** | **Solo `ViewerPublic`** (pacientes) | ✅ Solo a quienes NO tienen app activa (7 días) | ✅ A los que tienen app | ✅ Siempre (catch-up) | Admin/Farmaceutico/Viewer excluidos; tope email 450 (Gmail gratuito) |
+
+> Desde la Fase 6 el cliente **nunca hace `GET /pending`** (solo rollback de emergencia);
+> las pendientes las entrega el catch-up de SignalR (`OnConnectedAsync`, tope 50) y se
+> marcan leídas al recibir. Purga de pendientes >30 días cada 1h (`TurnoCleanupService`).
 
 ## 🔧 Archivos Clave del Sistema
 
@@ -509,7 +524,9 @@ public const int UserActiveTimeoutMinutes = 5;  // Para IsUserActiveOnMobileAsyn
 - [x] Email llegando a admins en ambos casos
 - [x] OneSignal funcionando FUERA de Cuba (confirmado: push directo al S25 entregado)
 - [x] OneSignal BLOQUEADO en Cuba por IP (confirmado: `Access denied... country we do not support`)
-- [x] Polling funcionando en Cuba (y con lógica push-first: solo-heartbeat si hay canal instantáneo)
+- [x] Polling: loop 100% heartbeat-only (Fase 6, sin GET /pending) — pendiente validar en
+      emulador/dispositivo: cero `GET /pending` en logs, notificación queda `IsRead=true` tras
+      entrega SignalR, catch-up sin duplicados tras reinicio
 - [x] Canal SignalR sobre 443 implementado y VALIDADO en Cuba (background) y fuera de Cuba
 - [x] Auto-login arranca notificaciones (fix Fase 1.4)
 - [x] Push real en background para Cuba (Foreground Service + SignalR)
@@ -711,6 +728,56 @@ las notificaciones que el polling entregó durante el hueco de desconexión.
 5. Matar la app desde el switcheo (OnTaskRemoved) → el FG service sobrevive → watchdog
    (`[FgService] Watchdog`) mantiene el canal.
 
+### ✅ Fase 6 — Eliminación del fetch de notificaciones (polling → heartbeat-only) (30 sep 2026)
+
+**Motivación (duplicados en Cuba)**: en la práctica salía SignalR **y también** el polling.
+Causa raíz: el cliente SignalR **nunca marcaba las notificaciones como leídas** en el
+backend (ni en vivo ni en el catch-up), el dedup era solo en memoria, y cada reinicio de
+proceso/caída de SignalR reactivaba el modo completo del polling → el `GET /pending`
+re-entregaba todo lo unread. Además las filas unread se acumulaban infinito
+(`CleanupOldNotificationsAsync` era dead code sin llamadores).
+
+**Investigación clave (qué más usaba el polling)**: el polling **solo** traía
+notificaciones (el único consumidor del evento era `TurnosPage`, ya doblemente suscrito
+al hub; sin badges ni dashboard). PERO el loop también manda `POST /heartbeat`, que es la
+**única** fuente de `LastActivityAt` → `IsUserActiveOnMobileAsync` (decisión de email en
+approve/reject) y la exclusión de email en broadcast. Por eso el heartbeat **se conserva**.
+
+**Cambios**:
+- **MAUI `NotificationsHubClient`**: al recibir una notificación (en vivo o catch-up),
+  marca leída en el backend fire-and-forget (`POST /pending/{id}/read`, con header propio
+  por request para no mutar `DefaultRequestHeaders` del HttpClient compartido). También
+  en el path dedup-skip. Elimina duplicados tras reinicios y la acumulación infinita.
+- **MAUI `PollingNotificationService`**: el loop queda 100% heartbeat-only
+  (60s). `CheckNowAsync` retorna 0 sin HTTP. Sin `GET /pending` en operación normal.
+- **MAUI `Constants`**: flag de rollback `EnableNotificationPolling = false`
+  (true = restaura el fetch adaptativo anterior).
+- **MAUI `App.xaml.cs` (Resumed)**: eliminada la llamada a `CheckNowAsync` —
+  `hubClient.StartAsync()` (ensure-connected) + catch-up del servidor cubren el retorno
+  a primer plano.
+- **Backend `PendingNotificationService.GetUnreadNotificationsAsync`**: tope `Take(50)`
+  (las más recientes) — evita que el catch-up del hub reviente con cientos de unread
+  acumuladas de un farmacéutico en la primera reconexión post-deploy.
+- **Backend `TurnoCleanupService`**: llama `CleanupOldNotificationsAsync(30)` cada hora
+  en su propio try/catch (antes era dead code) → purga de pendientes >30 días.
+- **Endpoints backend intactos** (`GET /pending`, `/read`, `/heartbeat`): las APKs viejas
+  en producción siguen funcionando hasta actualizarse.
+
+**UX**: el snackbar+sonido in-app del polling desaparece con el fetch; el hub client
+mantiene la notificación del sistema (heads-up, sonido `notfar.mp3` del canal,
+acción "Ver") en foreground y background — paridad cubierta.
+
+**Protocolo de verificación** (emulador/S25, `adb logcat -s FSC`):
+1. Login → `[HubClient] Conectado` → log del polling debe decir "heartbeat-only ...
+   fetch /pending eliminado" y NO aparecer ningún `GET /pending`.
+2. Enviar notificación → `[HubClient] Recibida notificación #N` + notificación del
+   sistema + heartbeat cada 60s. Verificar en BD: la notificación queda `IsRead=true`.
+3. Matar la app → FG service sobrevive → notificación en background → al reabrir y
+   reconectar, el catch-up NO reenvía lo ya entregado (quedó leída).
+4. Aprobar/rechazar turno con paciente con heartbeat reciente (<5 min) → **NO email**
+   (regresión del heartbeat cubierta).
+ 5. Tras 1h de backend arriba, log del TurnoCleanupService con la purga (si había filas >30 días).
+
 ## ✅ Estado de pruebas (25-26 ago 2026) — push real VALIDADO en Cuba y fuera
 
 ### Pruebas en Cuba (emulador + S25, IP cubana)
@@ -838,6 +905,6 @@ alimentar `LastActivityAt` y la lógica de "no email a pacientes activos". Evolu
 
 ---
 
-**Última actualización**: 27 de agosto de 2026 (mañana)  
-**Versión del sistema**: SignalR push-first + Foreground Service + bulk broadcast + AppLog (release logcat) + actividad desacoplada de OneSignal + sonido notfar.mp3 como sonido del canal + auto-sanación de SignalR (Fase 5: InfiniteRetryPolicy + supervisión + triggers de red/resume + watchdog)  
-**Commits clave**: `0067a7a` (plan), `2a74744` (fix push real bg), `7cd65d8` (docs), `93c622f` (docs exhaustivo), commit email-eliminado, `daf8c2c` (Fase 4: fix auto-login + AppLog + bulk broadcast), `34a59fd` (desacoplar actividad de OneSignal), commit sonido notfar, commit Fase 5 (auto-sanación SignalR)
+**Última actualización**: 30 de septiembre de 2026  
+**Versión del sistema**: SignalR push-first + Foreground Service + bulk broadcast + AppLog (release logcat) + actividad desacoplada de OneSignal + sonido notfar.mp3 como sonido del canal + auto-sanación de SignalR (Fase 5) + eliminación del fetch de notificaciones: polling 100% heartbeat + mark-as-read al recibir por SignalR + purga horaria de pendientes (Fase 6)  
+**Commits clave**: `0067a7a` (plan), `2a74744` (fix push real bg), `7cd65d8` (docs), `93c622f` (docs exhaustivo), commit email-eliminado, `daf8c2c` (Fase 4: fix auto-login + AppLog + bulk broadcast), `34a59fd` (desacoplar actividad de OneSignal), commit sonido notfar, commit Fase 5 (auto-sanación SignalR), commit Fase 6 (polling → heartbeat-only)

@@ -56,8 +56,20 @@ public static class Constants
     /// Activa la lógica "push-first": si hay canal instantáneo disponible,
     /// el polling baja a modo solo-heartbeat (sin GET /pending).
     /// false = el polling siempre consulta (comportamiento anterior, fallback).
+    /// Solo aplica si EnableNotificationPolling=true.
     /// </summary>
     public const bool EnablePushAwarePolling = true;
+
+    /// <summary>
+    /// Fetch de notificaciones por polling (GET /pending).
+    /// false (default): el loop del polling queda 100% heartbeat-only — SignalR
+    /// (con catch-up del servidor al reconectar) es el único canal de notificaciones.
+    /// true (rollback de emergencia): restaura el fetch adaptativo anterior
+    /// (GET /pending cada 30s cuando no hay canal instantáneo).
+    /// El heartbeat (POST /heartbeat) corre SIEMPRE en ambos modos: alimenta
+    /// LastActivityAt, que decide el no-envío de email a pacientes activos en la app.
+    /// </summary>
+    public const bool EnableNotificationPolling = false;
 
     /// <summary>
     /// Activa el canal SignalR sobre 443 (el "push real" para Cuba).
