@@ -39,7 +39,9 @@ public interface IPendingNotificationService
         object? additionalData = null);
 
     /// <summary>
-    /// Obtiene las notificaciones no leídas de un usuario
+    /// Obtiene las notificaciones no leídas de un usuario (tope de 50, las más recientes).
+    /// El tope evita bursts gigantes en el catch-up de SignalR para usuarios con muchas
+    /// acumuladas (farmacéuticos/admins); las más viejas las elimina la purga periódica.
     /// </summary>
     Task<List<PendingNotification>> GetUnreadNotificationsAsync(string userId);
 
@@ -242,9 +244,12 @@ public class PendingNotificationService : IPendingNotificationService
 
     public async Task<List<PendingNotification>> GetUnreadNotificationsAsync(string userId)
     {
+        // Tope de 50 (las más recientes): protege el catch-up de SignalR y el GET /pending
+        // de reenviar cientos de notificaciones acumuladas de golpe.
         return await _context.PendingNotifications
             .Where(n => n.UserId == userId && !n.IsRead)
             .OrderByDescending(n => n.CreatedAt)
+            .Take(50)
             .ToListAsync();
     }
 
