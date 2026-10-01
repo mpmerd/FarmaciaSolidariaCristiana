@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using FarmaciaSolidariaCristiana.Helpers;
 
 namespace FarmaciaSolidariaCristiana.Models
 {
@@ -84,7 +85,7 @@ namespace FarmaciaSolidariaCristiana.Models
 
         // Metadatos
         [Display(Name = "Fecha de Registro")]
-        public DateTime RegistrationDate { get; set; } = DateTime.Now;
+        public DateTime RegistrationDate { get; set; } = CubaTime.Now;
 
         [Display(Name = "Activo")]
         public bool IsActive { get; set; } = true;

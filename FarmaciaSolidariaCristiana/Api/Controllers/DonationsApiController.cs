@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using FarmaciaSolidariaCristiana.Data;
 using FarmaciaSolidariaCristiana.Models;
 using FarmaciaSolidariaCristiana.Api.Models;
+using FarmaciaSolidariaCristiana.Helpers;
 
 namespace FarmaciaSolidariaCristiana.Api.Controllers
 {
@@ -193,7 +194,7 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
                 MedicineId = model.MedicineId,
                 SupplyId = model.SupplyId,
                 Quantity = model.Quantity,
-                DonationDate = model.DonationDate ?? DateTime.Now,
+                DonationDate = model.DonationDate ?? CubaTime.Now,
                 DonorNote = model.DonorNote,
                 Comments = model.Comments
             };

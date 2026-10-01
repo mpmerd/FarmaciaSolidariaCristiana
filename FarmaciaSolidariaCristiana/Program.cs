@@ -7,6 +7,7 @@ using FarmaciaSolidariaCristiana.Data;
 using FarmaciaSolidariaCristiana.Services;
 using FarmaciaSolidariaCristiana.Hubs;
 using FarmaciaSolidariaCristiana.Filters;
+using FarmaciaSolidariaCristiana.Helpers;
 using System.Globalization;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -24,6 +25,23 @@ builder.WebHost.ConfigureKestrel(serverOptions =>
 var cultureInfo = new CultureInfo("es-ES");
 CultureInfo.DefaultThreadCurrentCulture = cultureInfo;
 CultureInfo.DefaultThreadCurrentUICulture = cultureInfo;
+
+// Validar zona horaria de negocio (America/Havana) al arranque
+var businessTimeZoneId = builder.Configuration["AppSettings:TimeZone"] ?? "America/Havana";
+if (businessTimeZoneId is not ("America/Havana" or "Cuba Standard Time"))
+{
+    throw new InvalidOperationException(
+        $"AppSettings:TimeZone '{businessTimeZoneId}' no es una zona válida para este sistema. Debe ser 'America/Havana' (o 'Cuba Standard Time' en hosts Windows sin ICU).");
+}
+try
+{
+    _ = CubaTime.Havana;
+}
+catch (InvalidOperationException ex)
+{
+    throw new InvalidOperationException(
+        "No se pudo resolver la zona horaria de Cuba (America/Havana) en este host. La aplicación no puede iniciar sin la zona de negocio.", ex);
+}
 
 // ========================================
 // CONFIGURACIÓN DE SEGURIDAD HTTPS/HSTS
@@ -45,6 +63,9 @@ builder.Services.AddHttpsRedirection(options =>
 
 // Agregar caché en memoria para optimización de API
 builder.Services.AddMemoryCache();
+
+// Reloj inyectable (única fuente de tiempo para el sistema, preparado para pruebas)
+builder.Services.AddSingleton(TimeProvider.System);
 
 // Add services to the container.
 builder.Services.AddControllersWithViews(options =>
@@ -242,6 +263,13 @@ builder.Services.AddHttpClient("CimaApi", client =>
 builder.Services.AddHttpClient();
 
 var app = builder.Build();
+
+var tzLogger = app.Services.GetRequiredService<ILogger<Program>>();
+var hostNow = DateTime.Now;
+var cubaNow = CubaTime.Now;
+tzLogger.LogInformation(
+    "[DIAGNOSTICO-TZ] HostZone: {HostZone} | HostNow: {HostNow:yyyy-MM-dd HH:mm:ss} | CubaNow: {CubaNow:yyyy-MM-dd HH:mm:ss} | DiferenciaHoras: {Diff:0.##}",
+    TimeZoneInfo.Local.Id, hostNow, cubaNow, (hostNow - cubaNow).TotalHours);
 
 // Initialize database and seed data
 using (var scope = app.Services.CreateScope())

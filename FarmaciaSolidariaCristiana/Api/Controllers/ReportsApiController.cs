@@ -10,6 +10,7 @@ using iText.Layout.Properties;
 using iText.Kernel.Font;
 using iText.IO.Font.Constants;
 using iText.IO.Image;
+using FarmaciaSolidariaCristiana.Helpers;
 
 namespace FarmaciaSolidariaCristiana.Api.Controllers
 {
@@ -95,7 +96,7 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
                 .SetTextAlignment(TextAlignment.CENTER));
 
             // Fecha
-            document.Add(new Paragraph($"Fecha: {DateTime.Now:dd/MM/yyyy HH:mm}")
+            document.Add(new Paragraph($"Fecha: {CubaTime.FormatDateTime(CubaTime.Now)}")
                 .SetFontSize(10)
                 .SetTextAlignment(TextAlignment.RIGHT));
 
@@ -194,13 +195,13 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
 
                 _logger.LogInformation("Deliveries PDF report generated via API");
                 
-                var fileName = $"Entregas_{DateTime.Now:yyyyMMdd}.pdf";
+                var fileName = $"Entregas_{CubaTime.Now:yyyyMMdd}.pdf";
                 return ApiOk(new ReportResultDto
                 {
                     FileName = fileName,
                     ContentType = "application/pdf",
                     PdfBase64 = Convert.ToBase64String(ms.ToArray()),
-                    GeneratedAt = DateTime.Now
+                    GeneratedAt = CubaTime.Now
                 });
             }
         }
@@ -295,13 +296,13 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
 
                 _logger.LogInformation("Donations PDF report generated via API");
                 
-                var fileName = $"Donaciones_{DateTime.Now:yyyyMMdd}.pdf";
+                var fileName = $"Donaciones_{CubaTime.Now:yyyyMMdd}.pdf";
                 return ApiOk(new ReportResultDto
                 {
                     FileName = fileName,
                     ContentType = "application/pdf",
                     PdfBase64 = Convert.ToBase64String(ms.ToArray()),
-                    GeneratedAt = DateTime.Now
+                    GeneratedAt = CubaTime.Now
                 });
             }
         }
@@ -393,7 +394,7 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
                     FileName = fileName,
                     ContentType = "application/pdf",
                     PdfBase64 = Convert.ToBase64String(ms.ToArray()),
-                    GeneratedAt = DateTime.Now
+                    GeneratedAt = CubaTime.Now
                 });
             }
         }
@@ -470,13 +471,13 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
 
                 _logger.LogInformation("Inventory PDF report generated via API");
                 
-                var fileName = $"Inventario_{DateTime.Now:yyyyMMdd}.pdf";
+                var fileName = $"Inventario_{CubaTime.Now:yyyyMMdd}.pdf";
                 return ApiOk(new ReportResultDto
                 {
                     FileName = fileName,
                     ContentType = "application/pdf",
                     PdfBase64 = Convert.ToBase64String(ms.ToArray()),
-                    GeneratedAt = DateTime.Now
+                    GeneratedAt = CubaTime.Now
                 });
             }
         }
@@ -489,7 +490,7 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
         [ProducesResponseType(typeof(ApiResponse<DashboardStatsDto>), 200)]
         public async Task<IActionResult> GetDashboardStats()
         {
-            var today = DateTime.Today;
+            var today = CubaTime.Today;
             var startOfMonth = new DateTime(today.Year, today.Month, 1);
             var startOfYear = new DateTime(today.Year, 1, 1);
 

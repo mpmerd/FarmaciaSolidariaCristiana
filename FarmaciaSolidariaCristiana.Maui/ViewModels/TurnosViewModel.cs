@@ -243,12 +243,12 @@ public partial class TurnosViewModel : BaseViewModel, IRecipient<TurnosReprogram
         {
             var sb = new StringBuilder();
             sb.AppendLine($"📧 Usuario: {turno.UserEmail}");
-            sb.AppendLine($"📅 Solicitado: {turno.FechaSolicitud:dd/MM/yyyy HH:mm}");
+            sb.AppendLine($"📅 Solicitado: {CubaTime.FormatDateTime(turno.FechaSolicitud)}");
             if (turno.FechaPreferida.HasValue)
                 sb.AppendLine($"📆 Fecha preferida: {turno.FechaPreferida:dd/MM/yyyy}");
             sb.AppendLine($"📊 Estado: {turno.Estado}");
             if (turno.FechaRevision.HasValue)
-                sb.AppendLine($"✅ Revisado: {turno.FechaRevision:dd/MM/yyyy HH:mm}");
+                sb.AppendLine($"✅ Revisado: {CubaTime.FormatDateTime(turno.FechaRevision)}");
             if (!string.IsNullOrEmpty(turno.NotasSolicitante))
                 sb.AppendLine($"\n📝 Notas:\n{turno.NotasSolicitante}");
             if (!string.IsNullOrEmpty(turno.ComentariosFarmaceutico))
@@ -428,7 +428,7 @@ public partial class TurnosViewModel : BaseViewModel, IRecipient<TurnosReprogram
             if (result.Success)
             {
                 success = true;
-                fechaAsignada = result.Data?.FechaPreferida?.ToString("dd/MM/yyyy HH:mm") ?? "próximo disponible";
+                fechaAsignada = CubaTime.FormatDateTime(result.Data?.FechaPreferida) ?? "próximo disponible";
             }
             else
             {
