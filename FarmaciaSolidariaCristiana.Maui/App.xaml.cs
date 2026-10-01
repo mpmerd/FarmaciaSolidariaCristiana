@@ -195,7 +195,9 @@ public partial class App : Application
             await _updateService.CheckForUpdatesAsync();
             
             // Revivir SignalR si la conexión murió mientras la app estuvo en background
-            // (ensure-connected: no-op si ya está viva).
+            // (ensure-connected: no-op si ya está viva). Al reconectar, el catch-up del
+            // servidor (OnConnectedAsync) entrega las notificaciones acumuladas —
+            // el CheckNowAsync del polling ya no hace falta (loop 100% heartbeat).
             try
             {
                 var hubClient = _serviceProvider.GetService<INotificationsHubClient>();
@@ -207,24 +209,6 @@ public partial class App : Application
             catch (Exception ex)
             {
                 AppLog.Info($"[App] Error reviviendo SignalR on resume: {ex.Message}");
-            }
-
-            try
-            {
-                var pollingService = _serviceProvider.GetService<IPollingNotificationService>();
-                if (pollingService != null && pollingService.IsRunning)
-                {
-                    // Verificar notificaciones inmediatamente al volver a primer plano
-                    var newCount = await pollingService.CheckNowAsync();
-                    if (newCount > 0)
-                    {
-                        AppLog.Info($"[App] Found {newCount} new notifications on resume");
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                AppLog.Info($"[App] Error checking notifications on resume: {ex.Message}");
             }
 
             // Navegar a ruta pendiente (desde acción "Ver" de una notificación del sistema).
