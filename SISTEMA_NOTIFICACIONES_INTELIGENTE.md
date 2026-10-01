@@ -133,9 +133,9 @@ Reglas implementadas (backend-only, sin APK):
 > ⚠️ **Cuota compartida**: la misma cuenta Gmail envía todo (códigos, resets, turnos y broadcast).
 > Un broadcast por email agota la cuota y puede bloquear el registro 1–24 h. Por eso el tope y la exclusión.
 
-> ⚠️ **Pendiente MAUI (próximo APK)**: `BroadcastPage.xaml:59` aún marca email por defecto.
-> No es crítico (solo el admin usa esa pantalla) pero conviene invertirlo en el próximo release.
-> No renombrar los campos de `BroadcastResult` (`EmailsSent`/`EmailsFailed`): la APK instalada los parsea.
+> ✅ **MAUI**: `BroadcastPage.xaml` ya trae el switch de email **desactivado por defecto** (solo la
+> notificación in-app queda activa). No renombrar los campos de `BroadcastResult`
+> (`EmailsSent`/`EmailsFailed`): la APK instalada los parsea.
 
 ## 🔔 Notificaciones a Pacientes
 
