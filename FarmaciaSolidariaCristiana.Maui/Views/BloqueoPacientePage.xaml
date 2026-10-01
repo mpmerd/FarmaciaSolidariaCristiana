@@ -6,7 +6,7 @@
              x:Class="FarmaciaSolidariaCristiana.Maui.Views.BloqueoPacientePage"
              x:DataType="viewmodels:BloqueoPacienteViewModel"
              Title="{Binding Title}"
-             BackgroundColor="{StaticResource BackgroundColor}">
+             BackgroundColor="{AppThemeBinding Light=#f5f5f5, Dark=#1a1a1a}">
 
     <ScrollView>
         <StackLayout Padding="15" Spacing="15">

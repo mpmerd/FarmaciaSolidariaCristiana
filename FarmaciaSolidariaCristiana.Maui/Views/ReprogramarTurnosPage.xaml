@@ -6,7 +6,7 @@
              x:Class="FarmaciaSolidariaCristiana.Maui.Views.ReprogramarTurnosPage"
              x:DataType="viewmodels:ReprogramarTurnosViewModel"
              Title="{Binding Title}"
-             BackgroundColor="{StaticResource BackgroundColor}">
+             BackgroundColor="{AppThemeBinding Light=#f5f5f5, Dark=#1a1a1a}">
 
     <ScrollView>
         <StackLayout Padding="15" Spacing="15">
@@ -99,7 +99,7 @@
                                                            FontSize="14" 
                                                            FontAttributes="Bold"
                                                            TextColor="{AppThemeBinding Light=#1a1a1a, Dark=#e0e0e0}"/>
-                                                    <Label Text="{Binding FechaPreferida, StringFormat='{0:dd/MM/yyyy HH:mm}'}" 
+                                                    <Label Text="{Binding FechaPreferida, Converter={StaticResource CubaTimeConverter}}"
                                                            FontSize="12" 
                                                            TextColor="{StaticResource Gray600}"/>
                                                 </StackLayout>

@@ -6,7 +6,7 @@
              x:Class="FarmaciaSolidariaCristiana.Maui.Views.RegisterPage"
              x:DataType="viewmodels:RegisterViewModel"
              Shell.NavBarIsVisible="False"
-             BackgroundColor="{StaticResource BackgroundColor}">
+             BackgroundColor="{AppThemeBinding Light=#f5f5f5, Dark=#1a1a1a}">
 
     <ScrollView>
         <VerticalStackLayout Spacing="15" Padding="30" VerticalOptions="Center">
