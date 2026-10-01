@@ -38,11 +38,36 @@ namespace FarmaciaSolidariaCristiana.Services
                     _logger.LogError(ex, "Error procesando turnos vencidos");
                 }
 
+                try
+                {
+                    await CleanupOldPendingNotifications();
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error limpiando notificaciones pendientes antiguas");
+                }
+
                 // Esperar hasta la próxima ejecución
                 await Task.Delay(_interval, stoppingToken);
             }
 
             _logger.LogInformation("TurnoCleanupService detenido");
+        }
+
+        /// <summary>
+        /// Purga de notificaciones pendientes antiguas (más de 30 días).
+        /// Evita que la tabla PendingNotifications crezca sin control para
+        /// farmacéuticos/admins (acumulan una fila por cada turno solicitado).
+        /// </summary>
+        private async Task CleanupOldPendingNotifications()
+        {
+            using var scope = _serviceProvider.CreateScope();
+            var pendingNotificationService = scope.ServiceProvider.GetRequiredService<IPendingNotificationService>();
+            var deleted = await pendingNotificationService.CleanupOldNotificationsAsync(daysToKeep: 30);
+            if (deleted > 0)
+            {
+                _logger.LogInformation("TurnoCleanupService: purgadas {Count} notificaciones pendientes antiguas", deleted);
+            }
         }
 
         private async Task ProcessExpiredTurnos()

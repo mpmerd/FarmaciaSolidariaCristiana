@@ -7,9 +7,13 @@ using Plugin.Maui.Audio;
 namespace FarmaciaSolidariaCristiana.Maui.Services;
 
 /// <summary>
-/// Implementación del servicio de polling para notificaciones.
-/// Consulta periódicamente al servidor para verificar nuevas notificaciones.
-/// Esta es la solución para Cuba donde FCM/Push no funciona.
+/// Implementación del servicio de polling.
+/// Desde la eliminación del fetch de notificaciones: este loop es 100% HEARTBEAT
+/// (POST /heartbeat cada 60s) — alimenta LastActivityAt en el backend, que decide
+/// el no-envío de email a pacientes activos en la app (IsUserActiveOnMobileAsync).
+/// Las notificaciones las entrega SignalR (push real sobre 443, con catch-up del
+/// servidor al reconectar); el GET /pending queda como rollback de emergencia
+/// (Constants.EnableNotificationPolling=true).
 /// </summary>
 public class PollingNotificationService : IPollingNotificationService, IDisposable
 {
@@ -54,7 +58,7 @@ public class PollingNotificationService : IPollingNotificationService, IDisposab
         _cancellationTokenSource = new CancellationTokenSource();
         IsRunning = true;
 
-        AppLog.Info($"[PollingService] Starting with interval of {PollingIntervalSeconds} seconds (heartbeat-only: {Constants.HeartbeatIntervalSeconds}s when canal instantáneo disponible)");
+        AppLog.Info($"[PollingService] Starting (heartbeat-only cada {Constants.HeartbeatIntervalSeconds}s; fetch /pending {(Constants.EnableNotificationPolling ? "HABILITADO (rollback)" : "eliminado — SignalR es el canal de notificaciones")})");
 
         _pollingTask = Task.Run(async () =>
         {
@@ -62,12 +66,14 @@ public class PollingNotificationService : IPollingNotificationService, IDisposab
             {
                 try
                 {
-                    // Fase 1: push-first / canal-instantáneo-first
-                    // Si hay un canal instantáneo disponible, NO consultamos /pending (modo solo-heartbeat).
-                    // Si no, modo completo (comportamiento anterior).
+                    // Fetch de notificaciones: ELIMINADO por defecto (EnableNotificationPolling=false).
+                    // SignalR (en vivo + catch-up del servidor al reconectar) entrega las notificaciones;
+                    // el GET /pending causaba duplicados en Cuba (re-entregaba lo no leído tras cada
+                    // reinicio/caída de SignalR). Solo corre como rollback de emergencia.
+                    var fetchEnabled = Constants.EnableNotificationPolling;
                     var instantAvailable = Constants.EnablePushAwarePolling && _pushHealth.IsInstantChannelAvailable;
 
-                    if (!instantAvailable)
+                    if (fetchEnabled && !instantAvailable)
                     {
                         await PollForNotificationsAsync();
                     }
@@ -76,7 +82,9 @@ public class PollingNotificationService : IPollingNotificationService, IDisposab
                     // para que la lógica de email (no spam a pacientes activos) siga correcta.
                     await SendHeartbeatAsync();
 
-                    var delaySeconds = instantAvailable ? Constants.HeartbeatIntervalSeconds : PollingIntervalSeconds;
+                    var delaySeconds = fetchEnabled && !instantAvailable
+                        ? PollingIntervalSeconds
+                        : Constants.HeartbeatIntervalSeconds;
                     await Task.Delay(TimeSpan.FromSeconds(delaySeconds), _cancellationTokenSource.Token);
                 }
                 catch (OperationCanceledException)
@@ -126,7 +134,15 @@ public class PollingNotificationService : IPollingNotificationService, IDisposab
 
     public async Task<int> CheckNowAsync()
     {
-        // Fase 1: si hay canal instantáneo disponible, el push/SignalR entrega; no forzamos poll.
+        // Fetch de notificaciones eliminado por defecto: SignalR entrega en vivo y el
+        // catch-up del servidor (OnConnectedAsync) recupera las pendientes al reconectar.
+        // Solo consulta como rollback de emergencia (EnableNotificationPolling=true)
+        // cuando además no hay canal instantáneo disponible.
+        if (!Constants.EnableNotificationPolling)
+        {
+            return 0;
+        }
+
         if (Constants.EnablePushAwarePolling && _pushHealth.IsInstantChannelAvailable)
         {
             AppLog.Info("[PollingService] CheckNowAsync: canal instantáneo disponible, skip poll");

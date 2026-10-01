@@ -1,3 +1,4 @@
+using System.Net.Http.Headers;
 using System.Threading;
 using FarmaciaSolidariaCristiana.Maui.Helpers;
 using Microsoft.AspNetCore.SignalR.Client;
@@ -21,6 +22,7 @@ public class NotificationsHubClient : INotificationsHubClient, IDisposable
     private readonly IAuthService _authService;
     private readonly IPushHealthService _pushHealth;
     private readonly ISystemNotificationService _systemNotification;
+    private readonly HttpClient _httpClient;
     private readonly ILogger<NotificationsHubClient>? _logger;
     private HubConnection? _connection;
     private readonly SemaphoreSlim _startLock = new(1, 1);
@@ -37,11 +39,13 @@ public class NotificationsHubClient : INotificationsHubClient, IDisposable
         IAuthService authService,
         IPushHealthService pushHealth,
         ISystemNotificationService systemNotification,
+        HttpClient httpClient,
         ILogger<NotificationsHubClient>? logger = null)
     {
         _authService = authService;
         _pushHealth = pushHealth;
         _systemNotification = systemNotification;
+        _httpClient = httpClient;
         _logger = logger;
 
         // Al volver la red (ej. madrugada sin internet → amanecer con internet):
@@ -303,6 +307,8 @@ public class NotificationsHubClient : INotificationsHubClient, IDisposable
             if (_pushHealth.WasDeliveredInstantly(payload.Id))
             {
                 AppLog.Info($"[HubClient] Notificación #{payload.Id} ya entregada, skip (dedup)");
+                // Asegurar que quede leída en el backend (no la vuelva a enviar el catch-up).
+                _ = MarkAsReadOnServerAsync(payload.Id);
                 return;
             }
 
@@ -329,10 +335,45 @@ public class NotificationsHubClient : INotificationsHubClient, IDisposable
             // Notificación del sistema (visible en background y foreground).
             try { await _systemNotification.ShowAsync(payload.Title, payload.Message, payload.NotificationType, payload.ReferenceId); }
             catch (Exception ex) { AppLog.Info($"[HubClient] Error mostrando notificación del sistema: {ex.Message}"); }
+
+            // Marcar como leída en el backend (fire-and-forget): evita que el catch-up
+            // reenvíe esta notificación en reconexiones futuras y frena la acumulación
+            // de filas unread (SignalR es ahora el único canal de fetch).
+            _ = MarkAsReadOnServerAsync(payload.Id);
         }
         catch (Exception ex)
         {
             AppLog.Info($"[HubClient] Error procesando notificación recibida: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Marca la notificación como leída en el backend vía POST /api/notifications/pending/{id}/read.
+    /// Usa HttpRequestMessage con header propio (no muta DefaultRequestHeaders del
+    /// HttpClient compartido, que no es thread-safe para escritura concurrente).
+    /// </summary>
+    private async Task MarkAsReadOnServerAsync(int notificationId)
+    {
+        try
+        {
+            var token = await _authService.GetTokenAsync();
+            if (string.IsNullOrEmpty(token))
+                return;
+
+            using var request = new HttpRequestMessage(
+                HttpMethod.Post,
+                $"/api/notifications/pending/{notificationId}/read");
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+            var response = await _httpClient.SendAsync(request);
+            if (!response.IsSuccessStatusCode)
+            {
+                AppLog.Info($"[HubClient] MarkAsRead #{notificationId} respondió {response.StatusCode}");
+            }
+        }
+        catch (Exception ex)
+        {
+            AppLog.Info($"[HubClient] Error marcando notificación #{notificationId} como leída: {ex.Message}");
         }
     }
 
