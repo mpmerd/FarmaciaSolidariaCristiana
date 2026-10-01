@@ -65,29 +65,29 @@
                                IsVisible="{Binding DocumentoError, Converter={StaticResource StringToBoolConverter}}"/>
                         
                         <Label Text="✓ Documento válido"
-                               TextColor="Green"
+                                TextColor="{AppThemeBinding Light=Green, Dark=#4CAF50}"
                                FontSize="12"
                                IsVisible="{Binding IsDocumentoValid}"/>
                     </VerticalStackLayout>
                 </Frame>
 
                 <!-- Información del Paciente (visible cuando se encuentra) -->
-                <Frame BackgroundColor="#E8F5E9" Padding="16" CornerRadius="10" HasShadow="True"
+                <Frame BackgroundColor="{AppThemeBinding Light=#E8F5E9, Dark=#1a2e1a}" Padding="16" CornerRadius="10" HasShadow="True"
                        IsVisible="{Binding PacienteEncontrado}">
                     <VerticalStackLayout Spacing="4">
-                        <Label Text="👤 Paciente Encontrado" FontAttributes="Bold" TextColor="#2E7D32"/>
+                        <Label Text="👤 Paciente Encontrado" FontAttributes="Bold" TextColor="{AppThemeBinding Light=#2E7D32, Dark=#81C784}"/>
                         <Label Text="{Binding PacienteNombre}" FontSize="16" FontAttributes="Bold"/>
                         <Label Text="{Binding PacienteEdad, StringFormat='Edad: {0} años'}" FontSize="13" TextColor="{StaticResource Gray600}"/>
                     </VerticalStackLayout>
                 </Frame>
 
                 <!-- Paciente No Encontrado -->
-                <Frame BackgroundColor="#FFF3CD" Padding="16" CornerRadius="10" HasShadow="True"
+                <Frame BackgroundColor="{AppThemeBinding Light=#FFF3CD, Dark=#3a3210}" Padding="16" CornerRadius="10" HasShadow="True"
                        IsVisible="{Binding PacienteNoEncontrado}">
                     <VerticalStackLayout Spacing="4">
-                        <Label Text="⚠️ Paciente No Registrado" FontAttributes="Bold" TextColor="#856404"/>
+                        <Label Text="⚠️ Paciente No Registrado" FontAttributes="Bold" TextColor="{AppThemeBinding Light=#856404, Dark=#FFE082}"/>
                         <Label Text="Puede continuar con una entrega sin turno, o registre primero al paciente."
-                               FontSize="13" TextColor="#856404" LineBreakMode="WordWrap"/>
+                               FontSize="13" TextColor="{AppThemeBinding Light=#856404, Dark=#FFE082}" LineBreakMode="WordWrap"/>
                     </VerticalStackLayout>
                 </Frame>
 
@@ -106,8 +106,8 @@
                             <CollectionView.ItemTemplate>
                                 <DataTemplate x:DataType="models:TurnoForDelivery">
                                     <Frame Padding="12" Margin="0,4" CornerRadius="8" 
-                                           BackgroundColor="#F0F7FF"
-                                           BorderColor="{StaticResource Primary}">
+                                            BackgroundColor="{AppThemeBinding Light=#F0F7FF, Dark=#1e2a40}"
+                                            BorderColor="{StaticResource Primary}">
                                         <Frame.GestureRecognizers>
                                             <TapGestureRecognizer 
                                                 Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:NuevaEntregaViewModel}}, Path=SeleccionarTurnoCommand}"
@@ -116,20 +116,20 @@
                                         <VerticalStackLayout Spacing="4">
                                             <Label Text="{Binding Display}" FontAttributes="Bold" FontSize="14"/>
                                             <Label Text="{Binding Estado, StringFormat='Estado: {0}'}" 
-                                                   FontSize="12" TextColor="Green"/>
+                                                   FontSize="12" TextColor="{AppThemeBinding Light=Green, Dark=#4CAF50}"/>
                                             <!-- Mostrar items del turno -->
-                                            <Label Text="Items:" FontSize="11" TextColor="{StaticResource Gray600}" Margin="0,4,0,0"/>
+                                            <Label Text="Items:" FontSize="11" TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray500}}" Margin="0,4,0,0"/>
                                             <StackLayout BindableLayout.ItemsSource="{Binding Medicamentos}">
                                                 <BindableLayout.ItemTemplate>
                                                     <DataTemplate x:DataType="models:TurnoItemForDelivery">
-                                                        <Label Text="{Binding Display}" FontSize="11" TextColor="{StaticResource Gray700}"/>
+                                                        <Label Text="{Binding Display}" FontSize="11" TextColor="{AppThemeBinding Light={StaticResource Gray700}, Dark={StaticResource Gray500}}"/>
                                                     </DataTemplate>
                                                 </BindableLayout.ItemTemplate>
                                             </StackLayout>
                                             <StackLayout BindableLayout.ItemsSource="{Binding Insumos}">
                                                 <BindableLayout.ItemTemplate>
                                                     <DataTemplate x:DataType="models:TurnoItemForDelivery">
-                                                        <Label Text="{Binding Display}" FontSize="11" TextColor="{StaticResource Gray700}"/>
+                                                        <Label Text="{Binding Display}" FontSize="11" TextColor="{AppThemeBinding Light={StaticResource Gray700}, Dark={StaticResource Gray500}}"/>
                                                     </DataTemplate>
                                                 </BindableLayout.ItemTemplate>
                                             </StackLayout>
@@ -182,7 +182,7 @@
                                         SelectionMode="None">
                             <CollectionView.ItemTemplate>
                                 <DataTemplate x:DataType="viewmodels:ItemBusquedaEntrega">
-                                    <Frame Padding="10" Margin="0,2" CornerRadius="6" BackgroundColor="#F8F9FA">
+                                    <Frame Padding="10" Margin="0,2" CornerRadius="6" BackgroundColor="{AppThemeBinding Light=#F8F9FA, Dark=#2a2a2a}">
                                         <Frame.GestureRecognizers>
                                             <TapGestureRecognizer 
                                                 Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:NuevaEntregaViewModel}}, Path=AgregarItemCommand}"
@@ -204,7 +204,7 @@
                         <CollectionView ItemsSource="{Binding ItemsAEntregar}"
                                         SelectionMode="None">
                             <CollectionView.EmptyView>
-                                <Frame BackgroundColor="#FFF8E1" Padding="16" CornerRadius="8">
+                                <Frame BackgroundColor="{AppThemeBinding Light=#FFF8E1, Dark=#33290f}" Padding="16" CornerRadius="8">
                                     <Label Text="No hay items seleccionados. Seleccione del turno o busque manualmente." 
                                            HorizontalTextAlignment="Center" 
                                            TextColor="#F57C00"
@@ -213,11 +213,11 @@
                             </CollectionView.EmptyView>
                             <CollectionView.ItemTemplate>
                                 <DataTemplate x:DataType="viewmodels:ItemEntrega">
-                                    <Frame Padding="12" Margin="0,4" CornerRadius="8" BackgroundColor="#E8F5E9">
+                                    <Frame Padding="12" Margin="0,4" CornerRadius="8" BackgroundColor="{AppThemeBinding Light=#E8F5E9, Dark=#1a2e1a}">
                                         <Grid ColumnDefinitions="*,100,Auto" ColumnSpacing="10">
                                             <VerticalStackLayout Grid.Column="0" VerticalOptions="Center">
                                                 <Label Text="{Binding Nombre}" FontAttributes="Bold" LineBreakMode="TailTruncation"/>
-                                                <Label FontSize="11" TextColor="{StaticResource Gray600}">
+                                                <Label FontSize="11" TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray500}}">
                                                     <Label.FormattedText>
                                                         <FormattedString>
                                                             <Span Text="Aprobado: "/>
