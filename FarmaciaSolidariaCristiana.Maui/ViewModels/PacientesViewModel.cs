@@ -612,7 +612,7 @@ public partial class PacientesViewModel : BaseViewModel
             {
                 var docs = response.Data;
                 // Incluir fecha de subida para distinguir documentos con mismo nombre
-                var opciones = docs.Select((d, i) => $"📄 {d.DocumentType}: {d.FileName} ({d.UploadedAt:dd/MM HH:mm})").ToArray();
+                var opciones = docs.Select((d, i) => $"📄 {d.DocumentType}: {d.FileName} ({CubaTime.FormatShortDateTime(d.UploadedAt)})").ToArray();
                 
                 var seleccion = await Shell.Current.DisplayActionSheetAsync(
                     $"Documentos de {paciente.FullName} ({docs.Count})",

@@ -137,7 +137,7 @@
                                         <table class="table table-sm">
                                             <tr>
                                                 <td><strong>Fecha Turno:</strong></td>
-                                                <td>@(Model.FechaPreferida?.ToString("dd/MM/yyyy HH:mm") ?? "Por asignar")</td>
+                                                <td>@(CubaTime.FormatDateTime(Model.FechaPreferida) ?? "Por asignar")</td>
                                             </tr>
                                             <tr>
                                                 <td><strong>Fecha Solicitud:</strong></td>
@@ -275,7 +275,7 @@
                                     <div class="alert alert-info mb-0">
                                         <i class="bi bi-check-all"></i> 
                                         <strong>Turno Completado</strong><br/>
-                                        Este turno fue completado el @Model.FechaEntrega?.ToString("dd/MM/yyyy HH:mm")
+                                        Este turno fue completado el @CubaTime.FormatDateTime(Model.FechaEntrega)
                                     </div>
                                 }
                                 else if (Model.Estado == "Pendiente")

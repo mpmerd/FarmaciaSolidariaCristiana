@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Identity;
+using FarmaciaSolidariaCristiana.Helpers;
 
 namespace FarmaciaSolidariaCristiana.Models
 {
@@ -51,7 +52,7 @@ namespace FarmaciaSolidariaCristiana.Models
         /// Fecha y hora de creación de la solicitud
         /// </summary>
         [Required]
-        public DateTime FechaSolicitud { get; set; } = DateTime.Now;
+        public DateTime FechaSolicitud { get; set; } = CubaTime.Now;
 
         /// <summary>
         /// Estado actual del turno: Pendiente, Aprobado, Rechazado, Completado, Cancelado

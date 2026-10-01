@@ -2,7 +2,7 @@
 
 @{
     ViewData["Title"] = "Gestión de Fechas Bloqueadas";
-    var hoy = DateTime.Now.Date;
+    var hoy = CubaTime.Now.Date;
     var fechasFuturas = Model.Where(f => f.Fecha >= hoy).OrderBy(f => f.Fecha).ToList();
     var fechasPasadas = Model.Where(f => f.Fecha < hoy).OrderByDescending(f => f.Fecha).ToList();
 }
@@ -54,7 +54,7 @@
                         <div class="mb-3">
                             <label class="form-label">Fecha a Bloquear</label>
                             <input type="date" name="fecha" class="form-control" 
-                                   min="@DateTime.Now.ToString("yyyy-MM-dd")" required />
+                                   min="@CubaTime.Now.ToString("yyyy-MM-dd")" required />
                             <small class="text-muted">Solo se pueden bloquear fechas futuras</small>
                         </div>
                         <div class="mb-3">
@@ -81,12 +81,12 @@
                         <div class="mb-3">
                             <label class="form-label">Fecha Inicio</label>
                             <input type="date" name="fechaInicio" class="form-control" 
-                                   min="@DateTime.Now.ToString("yyyy-MM-dd")" required />
+                                   min="@CubaTime.Now.ToString("yyyy-MM-dd")" required />
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Fecha Fin</label>
                             <input type="date" name="fechaFin" class="form-control" 
-                                   min="@DateTime.Now.ToString("yyyy-MM-dd")" required />
+                                   min="@CubaTime.Now.ToString("yyyy-MM-dd")" required />
                             <small class="text-muted">Máximo 30 días</small>
                         </div>
                         <div class="mb-3">
@@ -139,7 +139,7 @@
                                     <td>@fecha.Fecha.ToString("dddd", new System.Globalization.CultureInfo("es-ES"))</td>
                                     <td>@fecha.Motivo</td>
                                     <td>@(fecha.Usuario?.UserName ?? "Sistema")</td>
-                                    <td>@fecha.FechaCreacion.ToString("dd/MM/yyyy HH:mm")</td>
+                                    <td>@CubaTime.FormatDateTime(fecha.FechaCreacion)</td>
                                     <td>
                                         <form asp-action="Delete" method="post" class="d-inline"
                                               onsubmit="return confirm('¿Está seguro de desbloquear esta fecha?');">

@@ -12,6 +12,7 @@ using iText.Kernel.Colors;
 using iText.IO.Image;
 using iText.Kernel.Font;
 using iText.IO.Font.Constants;
+using FarmaciaSolidariaCristiana.Helpers;
 
 namespace FarmaciaSolidariaCristiana.Services
 {
@@ -53,7 +54,7 @@ namespace FarmaciaSolidariaCristiana.Services
         /// </summary>
         public async Task<(bool CanRequest, string? Reason)> CanUserRequestTurnoAsync(string userId)
         {
-            var now = DateTime.Now;
+            var now = CubaTime.Now;
             var startOfMonth = new DateTime(now.Year, now.Month, 1);
             var startOfNextMonth = startOfMonth.AddMonths(1);
 
@@ -82,7 +83,7 @@ namespace FarmaciaSolidariaCristiana.Services
         /// </summary>
         public async Task<(bool CanRequest, string? Reason, int TurnosCount)> CanPatientRequestTurnoAsync(string documentoIdentidad)
         {
-            var now = DateTime.Now;
+            var now = CubaTime.Now;
             var startOfMonth = new DateTime(now.Year, now.Month, 1);
             var startOfNextMonth = startOfMonth.AddMonths(1);
             
@@ -126,7 +127,7 @@ namespace FarmaciaSolidariaCristiana.Services
         /// </summary>
         public async Task<List<int>> GetPatientMedicineIdsThisMonthAsync(string documentoIdentidad)
         {
-            var now = DateTime.Now;
+            var now = CubaTime.Now;
             var startOfMonth = new DateTime(now.Year, now.Month, 1);
             var startOfNextMonth = startOfMonth.AddMonths(1);
             var documentHash = HashDocument(documentoIdentidad);
@@ -179,7 +180,7 @@ namespace FarmaciaSolidariaCristiana.Services
         /// </summary>
         public async Task<DateTime> GetNextAvailableSlotAsync()
         {
-            var now = DateTime.Now;
+            var now = CubaTime.Now;
             var startDate = now.Date.AddDays(1); // Empezar desde mañana
             
             // Slots por día: De 1 PM (13:00) a 4 PM (16:00) = 3 horas = 180 minutos
@@ -447,7 +448,7 @@ namespace FarmaciaSolidariaCristiana.Services
                 }
 
                 // Guardar turno
-                turno.FechaSolicitud = DateTime.Now;
+                turno.FechaSolicitud = CubaTime.Now;
                 turno.Estado = EstadoTurno.Pendiente;
                 
                 _context.Turnos.Add(turno);
@@ -541,7 +542,7 @@ namespace FarmaciaSolidariaCristiana.Services
                 }
 
                 // Guardar turno primero para obtener el ID
-                turno.FechaSolicitud = DateTime.Now;
+                turno.FechaSolicitud = CubaTime.Now;
                 turno.Estado = EstadoTurno.Pendiente;
                 
                 _context.Turnos.Add(turno);
@@ -610,7 +611,7 @@ namespace FarmaciaSolidariaCristiana.Services
                                 FileSize = fileSize,
                                 ContentType = file.ContentType,
                                 Description = documentDescriptions != null && i < documentDescriptions.Count ? documentDescriptions[i] : null,
-                                UploadDate = DateTime.Now
+                                UploadDate = CubaTime.Now
                             };
 
                             _context.TurnoDocumentos.Add(documento);
@@ -868,7 +869,7 @@ namespace FarmaciaSolidariaCristiana.Services
                 // Actualizar estado del turno
                 turno.Estado = EstadoTurno.Aprobado;
                 turno.RevisadoPorId = farmaceuticoId;
-                turno.FechaRevision = DateTime.Now;
+                turno.FechaRevision = CubaTime.Now;
                 turno.ComentariosFarmaceutico = comentarios;
 
                 await _context.SaveChangesAsync();
@@ -891,7 +892,7 @@ namespace FarmaciaSolidariaCristiana.Services
                     
                     // Crear notificación pendiente para polling (funciona siempre)
                     var notificationTitle = "🎉 ¡Turno Aprobado!";
-                    var notificationMessage = $"Tu turno #{turno.NumeroTurno.Value} ha sido aprobado para el {turno.FechaPreferida.Value:dd/MM/yyyy} a las {turno.FechaPreferida.Value:HH:mm}";
+                    var notificationMessage = $"Tu turno #{turno.NumeroTurno.Value} ha sido aprobado para el {turno.FechaPreferida.Value:dd/MM/yyyy} a las {CubaTime.FormatTime(turno.FechaPreferida.Value)}";
                     
                     await _pendingNotificationService.CreateNotificationAsync(
                         turno.UserId,
@@ -986,7 +987,7 @@ namespace FarmaciaSolidariaCristiana.Services
 
                 turno.Estado = EstadoTurno.Rechazado;
                 turno.RevisadoPorId = farmaceuticoId;
-                turno.FechaRevision = DateTime.Now;
+                turno.FechaRevision = CubaTime.Now;
                 turno.ComentariosFarmaceutico = motivo;
 
                 await _context.SaveChangesAsync();
@@ -1073,7 +1074,7 @@ namespace FarmaciaSolidariaCristiana.Services
                 }
 
                 turno.Estado = EstadoTurno.Completado;
-                turno.FechaEntrega = DateTime.Now;
+                turno.FechaEntrega = CubaTime.Now;
 
                 await _context.SaveChangesAsync();
 
@@ -1273,8 +1274,8 @@ namespace FarmaciaSolidariaCristiana.Services
                     AddInfoRow(infoTable, "Usuario:", turno.User?.UserName ?? "N/A", boldFont, normalFont);
                     AddInfoRow(infoTable, "Email:", turno.User?.Email ?? "N/A", boldFont, normalFont);
                     AddInfoRow(infoTable, "Fecha del Turno:", turno.FechaPreferida?.ToString("dddd, dd 'de' MMMM 'de' yyyy") ?? "N/A", boldFont, normalFont);
-                    AddInfoRow(infoTable, "Hora del Turno:", turno.FechaPreferida?.ToString("HH:mm") ?? "N/A", boldFont, normalFont);
-                    AddInfoRow(infoTable, "Fecha de Aprobación:", turno.FechaRevision?.ToString("dd/MM/yyyy HH:mm") ?? "N/A", boldFont, normalFont);
+                    AddInfoRow(infoTable, "Hora del Turno:", CubaTime.FormatTime(turno.FechaPreferida) ?? "N/A", boldFont, normalFont);
+                    AddInfoRow(infoTable, "Fecha de Aprobación:", CubaTime.FormatDateTime(turno.FechaRevision) ?? "N/A", boldFont, normalFont);
 
                     document.Add(infoTable);
 
@@ -1366,7 +1367,7 @@ namespace FarmaciaSolidariaCristiana.Services
 
                     // === PIE DE PÁGINA ===
                     document.Add(new Paragraph("\n"));
-                    var footer = new Paragraph("Generado el: " + DateTime.Now.ToString("dd/MM/yyyy HH:mm"))
+                    var footer = new Paragraph("Generado el: " + CubaTime.FormatDateTime(CubaTime.Now))
                         .SetFont(normalFont)
                         .SetFontSize(8)
                         .SetTextAlignment(TextAlignment.CENTER)
@@ -1410,7 +1411,7 @@ namespace FarmaciaSolidariaCristiana.Services
                 return false;
             
             // Calcular días restantes
-            var diasRestantes = (turno.FechaPreferida.Value.Date - DateTime.Now.Date).Days;
+            var diasRestantes = (turno.FechaPreferida.Value.Date - CubaTime.Now.Date).Days;
             
             // Permitir cancelar solo si faltan más de 7 días
             return diasRestantes > 7;
@@ -1427,7 +1428,7 @@ namespace FarmaciaSolidariaCristiana.Services
             if (!turno.FechaPreferida.HasValue)
                 return "El turno no tiene fecha asignada.";
             
-            var diasRestantes = (turno.FechaPreferida.Value.Date - DateTime.Now.Date).Days;
+            var diasRestantes = (turno.FechaPreferida.Value.Date - CubaTime.Now.Date).Days;
             
             if (diasRestantes <= 7)
                 return $"No se puede cancelar. Faltan solo {diasRestantes} día(s). Debe cancelar con al menos 7 días de anticipación.";
@@ -1482,8 +1483,8 @@ namespace FarmaciaSolidariaCristiana.Services
             
             // Cambiar estado a Rechazado (usamos este estado para cancelaciones)
             turno.Estado = EstadoTurno.Rechazado;
-            turno.FechaRevision = DateTime.Now;
-            turno.ComentariosFarmaceutico += $"\n[CANCELADO POR USUARIO - {DateTime.Now:dd/MM/yyyy HH:mm}]";
+            turno.FechaRevision = CubaTime.Now;
+            turno.ComentariosFarmaceutico += $"\n[CANCELADO POR USUARIO - {CubaTime.FormatDateTime(CubaTime.Now)}]";
             turno.ComentariosFarmaceutico += $"\nMotivo: {motivoCancelacion}";
             
             await _context.SaveChangesAsync();
@@ -1748,7 +1749,7 @@ namespace FarmaciaSolidariaCristiana.Services
                         .SetVerticalAlignment(VerticalAlignment.MIDDLE).SetTextAlignment(TextAlignment.CENTER));
 
                     turnoHeaderTable.AddCell(new Cell()
-                        .Add(new Paragraph(item.FechaPreferida?.ToString("HH:mm") ?? "").SetFont(boldFont).SetFontSize(14).SetTextAlignment(TextAlignment.RIGHT))
+                        .Add(new Paragraph(CubaTime.FormatTime(item.FechaPreferida) ?? "").SetFont(boldFont).SetFontSize(14).SetTextAlignment(TextAlignment.RIGHT))
                         .Add(new Paragraph(item.FechaPreferida?.ToString("dd/MM/yyyy") ?? "").SetFont(normalFont).SetFontSize(9).SetTextAlignment(TextAlignment.RIGHT))
                         .SetBackgroundColor(bgHeader).SetBorder(iText.Layout.Borders.Border.NO_BORDER)
                         .SetVerticalAlignment(VerticalAlignment.MIDDLE).SetPaddingRight(5));
@@ -1838,7 +1839,7 @@ namespace FarmaciaSolidariaCristiana.Services
 
                 // === PIE DE PÁGINA ===
                 document.Add(new Paragraph("\n"));
-                document.Add(new Paragraph($"Generado el: {DateTime.Now.ToString("dd/MM/yyyy HH:mm")}")
+                document.Add(new Paragraph($"Generado el: {CubaTime.FormatDateTime(CubaTime.Now)}")
                     .SetFont(normalFont).SetFontSize(8)
                     .SetTextAlignment(TextAlignment.CENTER)
                     .SetFontColor(ColorConstants.GRAY));

@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
 using FarmaciaSolidariaCristiana.Data;
 using FarmaciaSolidariaCristiana.Models;
+using FarmaciaSolidariaCristiana.Helpers;
 
 namespace FarmaciaSolidariaCristiana.Services
 {
@@ -79,7 +80,7 @@ namespace FarmaciaSolidariaCristiana.Services
             var pendingNotificationService = scope.ServiceProvider.GetRequiredService<IPendingNotificationService>();
             var userManager = scope.ServiceProvider.GetRequiredService<UserManager<IdentityUser>>();
 
-            var now = DateTime.Now;
+            var now = CubaTime.Now;
             var today = now.Date;
             
             _logger.LogInformation("TurnoCleanupService: Ejecutando verificación. Hora actual: {Hora}", now.ToString("yyyy-MM-dd HH:mm:ss"));
@@ -179,11 +180,11 @@ namespace FarmaciaSolidariaCristiana.Services
             // 3. Marcar turno como cancelado (por no asistencia)
             turno.Estado = EstadoTurno.Cancelado;
             turno.CanceladoPorNoPresentacion = true; // ✅ Marca para penalización - cuenta contra límite mensual
-            turno.ComentariosFarmaceutico += $"\n[CANCELADO AUTOMÁTICAMENTE - {DateTime.Now:dd/MM/yyyy HH:mm}]";
+            turno.ComentariosFarmaceutico += $"\n[CANCELADO AUTOMÁTICAMENTE - {CubaTime.FormatDateTime(CubaTime.Now)}]";
             turno.ComentariosFarmaceutico += "\nMotivo: Usuario no asistió a la farmacia en la fecha programada";
 
             var nombrePaciente = turno.User?.UserName ?? "Paciente";
-            var fechaTurno = turno.FechaPreferida ?? DateTime.Now;
+            var fechaTurno = turno.FechaPreferida ?? CubaTime.Now;
             var numeroTurno = turno.NumeroTurno ?? 0;
 
             // 4. Crear notificación pendiente para el paciente (polling - funciona siempre)

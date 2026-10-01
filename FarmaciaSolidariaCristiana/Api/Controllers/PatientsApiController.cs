@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using FarmaciaSolidariaCristiana.Data;
 using FarmaciaSolidariaCristiana.Models;
 using FarmaciaSolidariaCristiana.Api.Models;
+using FarmaciaSolidariaCristiana.Helpers;
 
 namespace FarmaciaSolidariaCristiana.Api.Controllers
 {
@@ -293,7 +294,7 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
                 Directory.CreateDirectory(uploadsPath);
 
                 // Generar nombre único
-                var fileName = $"{patientId}_{DateTime.Now:yyyyMMddHHmmss}_{Guid.NewGuid():N}{extension}";
+                var fileName = $"{patientId}_{CubaTime.Now:yyyyMMddHHmmss}_{Guid.NewGuid():N}{extension}";
                 var filePath = Path.Combine(uploadsPath, fileName);
                 var relativePath = $"/uploads/patient-documents/{fileName}";  // Con / inicial para ruta absoluta
 
@@ -313,7 +314,7 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
                     FileSize = document.Length,
                     ContentType = document.ContentType,
                     Description = notes,
-                    UploadDate = DateTime.Now
+                    UploadDate = CubaTime.Now
                 };
 
                 _context.PatientDocuments.Add(patientDocument);
@@ -381,7 +382,7 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
                 CurrentTreatments = model.CurrentTreatments,
                 Observations = model.Observations,
                 IsActive = true,
-                RegistrationDate = DateTime.Now
+                RegistrationDate = CubaTime.Now
             };
 
             _context.Patients.Add(patient);
@@ -526,8 +527,8 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
                 TotalPatients = await _context.Patients.CountAsync(p => p.IsActive),
                 TotalInactive = await _context.Patients.CountAsync(p => !p.IsActive),
                 NewThisMonth = await _context.Patients
-                    .CountAsync(p => p.RegistrationDate.Month == DateTime.Now.Month && 
-                                    p.RegistrationDate.Year == DateTime.Now.Year)
+                    .CountAsync(p => p.RegistrationDate.Month == CubaTime.Now.Month && 
+                                    p.RegistrationDate.Year == CubaTime.Now.Year)
             };
 
             return ApiOk(stats);
@@ -702,7 +703,7 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
                         FileSize = fileInfo.Length,
                         ContentType = contentType,
                         Description = $"Importado de turno #{docInfo.NumeroTurno} ({docInfo.FechaSolicitud:dd/MM/yyyy})",
-                        UploadDate = DateTime.Now
+                        UploadDate = CubaTime.Now
                     };
 
                     _context.PatientDocuments.Add(patientDoc);
@@ -876,7 +877,7 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
             }
 
             patient.IsBlockedByLoan = true;
-            patient.LoanBlockDate = DateTime.Now;
+            patient.LoanBlockDate = CubaTime.Now;
             patient.LoanBlockDescription = request.Description;
             patient.LoanUnblockDate = null;
             patient.LoanUnblockedByUserId = null;
@@ -925,7 +926,7 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
             var currentUserId = _userManager.GetUserId(User);
 
             patient.IsBlockedByLoan = false;
-            patient.LoanUnblockDate = DateTime.Now;
+            patient.LoanUnblockDate = CubaTime.Now;
             patient.LoanUnblockedByUserId = currentUserId;
 
             await _context.SaveChangesAsync();

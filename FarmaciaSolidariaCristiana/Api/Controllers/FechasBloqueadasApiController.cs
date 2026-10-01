@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using FarmaciaSolidariaCristiana.Data;
 using FarmaciaSolidariaCristiana.Models;
 using System.Security.Claims;
+using FarmaciaSolidariaCristiana.Helpers;
 
 namespace FarmaciaSolidariaCristiana.Api.Controllers
 {
@@ -60,7 +61,7 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
                 return ApiError("Fecha inválida");
             }
 
-            if (fecha.Date <= DateTime.Today)
+            if (fecha.Date <= CubaTime.Today)
             {
                 return ApiError("La fecha debe ser posterior a hoy");
             }
@@ -81,7 +82,7 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
                 Fecha = fecha.Date,
                 Motivo = request.Motivo ?? "Fecha bloqueada",
                 UsuarioId = userId,
-                FechaCreacion = DateTime.Now
+                FechaCreacion = CubaTime.Now
             };
 
             _context.FechasBloqueadas.Add(fechaBloqueada);

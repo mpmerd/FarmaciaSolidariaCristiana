@@ -427,3 +427,24 @@ public class BoolToCodeStatusColorConverter : IValueConverter
         throw new NotImplementedException();
     }
 }
+
+/// <summary>
+/// Formatea DateTime como "dd/MM/yyyy h:mm tt" en hora de Cuba (AM/PM),
+/// independiente de la cultura del dispositivo.
+/// </summary>
+public class CubaTimeConverter : IValueConverter
+{
+    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        return value switch
+        {
+            DateTime dt => Helpers.CubaTime.FormatDateTime(dt),
+            _ => value?.ToString()
+        };
+    }
+
+    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        throw new NotImplementedException();
+    }
+}

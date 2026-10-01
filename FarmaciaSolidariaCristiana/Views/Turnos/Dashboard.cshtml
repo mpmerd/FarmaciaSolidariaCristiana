@@ -216,10 +216,10 @@
                                             }
                                         </td>
                                         <td data-order="@turno.FechaSolicitud.ToString("yyyy-MM-dd HH:mm:ss")">
-                                            <small>@turno.FechaSolicitud.ToString("dd/MM/yyyy HH:mm")</small>
+                                            <small>@CubaTime.FormatDateTime(turno.FechaSolicitud)</small>
                                         </td>
                                         <td>
-                                            <small>@(turno.FechaPreferida?.ToString("dd/MM/yyyy HH:mm") ?? "Por asignar")</small>
+                                            <small>@(CubaTime.FormatDateTime(turno.FechaPreferida) ?? "Por asignar")</small>
                                         </td>
                                         <td>
                                             @if (hasMedicines)

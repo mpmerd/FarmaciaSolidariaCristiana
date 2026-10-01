@@ -1,3 +1,5 @@
+using FarmaciaSolidariaCristiana.Helpers;
+
 namespace FarmaciaSolidariaCristiana.Models
 {
     /// <summary>
@@ -65,7 +67,7 @@ namespace FarmaciaSolidariaCristiana.Models
         /// <summary>
         /// Fecha de creación del registro
         /// </summary>
-        public DateTime CreatedAt { get; set; } = DateTime.Now;
+        public DateTime CreatedAt { get; set; } = CubaTime.Now;
     }
     
     public enum DecorationType

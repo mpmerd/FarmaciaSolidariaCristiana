@@ -70,7 +70,7 @@
                         {
                             // Si CreatedAt es null (registros antiguos), usar DeliveryDate como referencia
                             var createdDate = item.CreatedAt ?? item.DeliveryDate;
-                            var hoursSinceCreation = (DateTime.Now - createdDate).TotalHours;
+                            var hoursSinceCreation = (CubaTime.Now - createdDate).TotalHours;
                             var canDelete = hoursSinceCreation <= 2;
                             
                             var itemName = item.Medicine != null ? item.Medicine.Name : (item.Supply != null ? item.Supply.Name : "N/A");
