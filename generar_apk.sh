@@ -9,6 +9,11 @@ echo "🏗️  Generador de APK - Farmacia Solidaria Cristiana"
 echo "=================================================="
 echo ""
 
+# Guard de hora de Cuba: abortar si hay DateTime.Now/Today fuera de whitelist
+echo "Guard anti-regresión de hora de Cuba..."
+./check-no-datetime-now.sh
+echo ""
+
 # Rutas
 PROJECT_FILE="FarmaciaSolidariaCristiana.Maui/FarmaciaSolidariaCristiana.Maui.csproj"
 OUTPUT_DIR="FarmaciaSolidariaCristiana.Maui/bin/Release/net10.0-android"

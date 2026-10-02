@@ -4,13 +4,14 @@ using CommunityToolkit.Mvvm.Messaging;
 using FarmaciaSolidariaCristiana.Maui.Messages;
 using FarmaciaSolidariaCristiana.Maui.Services;
 using System.Collections.ObjectModel;
+using FarmaciaSolidariaCristiana.Maui.Helpers;
 
 namespace FarmaciaSolidariaCristiana.Maui.ViewModels;
 
 public partial class ReprogramarTurnosViewModel : BaseViewModel
 {
     [ObservableProperty]
-    private DateTime fechaSeleccionada = DateTime.Today;
+    private DateTime fechaSeleccionada = CubaTime.Today;
 
     [ObservableProperty]
     private string motivo = string.Empty;
