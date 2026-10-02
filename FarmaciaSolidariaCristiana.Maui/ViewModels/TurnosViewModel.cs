@@ -513,7 +513,7 @@ public partial class TurnosViewModel : BaseViewModel, IRecipient<TurnosReprogram
         var nuevaFechaStr = await Shell.Current.DisplayPromptAsync(
             "Reprogramar Turno",
             $"Fecha actual: {fechaActual}\n\nIngrese la nueva fecha (dd/MM/yyyy):",
-            placeholder: DateTime.Today.AddDays(1).ToString("dd/MM/yyyy"));
+            placeholder: CubaTime.Today.AddDays(1).ToString("dd/MM/yyyy"));
 
         if (string.IsNullOrEmpty(nuevaFechaStr)) return;
 
@@ -524,7 +524,7 @@ public partial class TurnosViewModel : BaseViewModel, IRecipient<TurnosReprogram
             return;
         }
 
-        if (nuevaFecha.Date <= DateTime.Today)
+        if (nuevaFecha.Date <= CubaTime.Today)
         {
             await ShowErrorAsync("La fecha debe ser posterior a hoy");
             return;
