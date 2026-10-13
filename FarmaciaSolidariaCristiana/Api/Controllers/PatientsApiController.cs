@@ -357,38 +357,70 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
                 return ApiError("Datos inválidos");
             }
 
-            // Verificar si ya existe un paciente con ese documento
+            // Verificar si ya existe un paciente con ese documento (activo o desactivado)
             var existing = await _context.Patients
-                .AnyAsync(p => p.IdentificationDocument == model.IdentificationDocument);
-            
-            if (existing)
+                .FirstOrDefaultAsync(p => p.IdentificationDocument == model.IdentificationDocument);
+
+            if (existing != null && existing.IsActive)
             {
                 return ApiError("Ya existe un paciente con ese número de identificación");
             }
 
-            var patient = new Patient
+            Patient patient;
+            string message;
+
+            if (existing != null)
             {
-                IdentificationDocument = model.IdentificationDocument,
-                FullName = model.FullName,
-                Age = model.Age,
-                Gender = model.Gender,
-                Address = model.Address,
-                Phone = model.Phone,
-                Municipality = model.Municipality,
-                Province = model.Province,
-                MainDiagnosis = model.MainDiagnosis,
-                AssociatedPathologies = model.AssociatedPathologies,
-                KnownAllergies = model.KnownAllergies,
-                CurrentTreatments = model.CurrentTreatments,
-                Observations = model.Observations,
-                IsActive = true,
-                RegistrationDate = CubaTime.Now
-            };
+                // El paciente existe pero está desactivado (fue eliminado lógicamente).
+                // Reactivar y actualizar sus datos en lugar de bloquear el alta:
+                // así no queda "invisible" para las listas/búsquedas.
+                existing.FullName = model.FullName;
+                existing.Age = model.Age;
+                existing.Gender = model.Gender;
+                existing.Address = model.Address;
+                existing.Phone = model.Phone;
+                existing.Municipality = model.Municipality;
+                existing.Province = model.Province;
+                existing.MainDiagnosis = model.MainDiagnosis;
+                existing.AssociatedPathologies = model.AssociatedPathologies;
+                existing.KnownAllergies = model.KnownAllergies;
+                existing.CurrentTreatments = model.CurrentTreatments;
+                existing.Observations = model.Observations;
+                existing.IsActive = true;
 
-            _context.Patients.Add(patient);
+                patient = existing;
+                message = "Paciente reactivado y actualizado exitosamente";
+
+                _logger.LogInformation("Paciente reactivado vía API (existía desactivado): {Name} (ID: {Id})", patient.FullName, patient.Id);
+            }
+            else
+            {
+                patient = new Patient
+                {
+                    IdentificationDocument = model.IdentificationDocument,
+                    FullName = model.FullName,
+                    Age = model.Age,
+                    Gender = model.Gender,
+                    Address = model.Address,
+                    Phone = model.Phone,
+                    Municipality = model.Municipality,
+                    Province = model.Province,
+                    MainDiagnosis = model.MainDiagnosis,
+                    AssociatedPathologies = model.AssociatedPathologies,
+                    KnownAllergies = model.KnownAllergies,
+                    CurrentTreatments = model.CurrentTreatments,
+                    Observations = model.Observations,
+                    IsActive = true,
+                    RegistrationDate = CubaTime.Now
+                };
+
+                _context.Patients.Add(patient);
+                message = "Paciente registrado exitosamente";
+
+                _logger.LogInformation("Paciente nuevo vía API: {Name}", patient.FullName);
+            }
+
             await _context.SaveChangesAsync();
-
-            _logger.LogInformation("Paciente creado vía API: {Name} (ID: {Id})", patient.FullName, patient.Id);
 
             var result = new PatientDto
             {
@@ -410,7 +442,7 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
                 new ApiResponse<PatientDto>
                 {
                     Success = true,
-                    Message = "Paciente registrado exitosamente",
+                    Message = message,
                     Data = result
                 });
         }

@@ -1,10 +1,10 @@
 {
-  "version": "1.0.9",
-  "versionCode": 9,
-  "releaseDate": "2026-10-01",
+  "version": "1.1.0",
+  "versionCode": 10,
+  "releaseDate": "2026-10-13",
   "downloadUrl": "https://farmaciasolidaria.somee.com/android/farmaciasolidaria.apk",
   "fileSize": "36M",
   "minAndroidVersion": "24",
   "minimumVersion": "1.0.9",
-  "releaseNotes": "1. Ahora usará el uso horario de cuba y la hora de los turnos será en el formato de 12 horas.  2. Después de un de probar exitosamente el nuevo sistema de notificaciones eliminamos el sistema de pooling que nos sirvió al principio pero es menos eficiente que el moderno de onesignal con el respaldo de signalr.  3. Cambios menores en algunas vistas de la app para adaptarse a las configuraciones de claro/oscuro. "
+  "releaseNotes": "Se corrige paginacion de cantidad de pacientes en vista de pacientes. Esta versión solo afecta a los usuarios con privilegios de edición. "
 }

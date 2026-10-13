@@ -409,6 +409,55 @@ namespace FarmaciaSolidariaCristiana.Controllers
         {
             if (ModelState.IsValid)
             {
+                // Verificar duplicados en el servidor (el chequeo del cliente solo ve pacientes activos)
+                var existing = await _context.Patients
+                    .FirstOrDefaultAsync(p => p.IdentificationDocument == patient.IdentificationDocument);
+
+                if (existing != null && existing.IsActive)
+                {
+                    ModelState.AddModelError(string.Empty,
+                        "Ya existe un paciente activo con ese Carnet de Identidad o Pasaporte.");
+                    return View(patient);
+                }
+
+                if (existing != null)
+                {
+                    // El paciente existe pero está desactivado (eliminado lógicamente):
+                    // reactivar y actualizar sus datos en lugar de bloquear el alta
+                    existing.FullName = patient.FullName;
+                    existing.Age = patient.Age;
+                    existing.Gender = patient.Gender;
+                    existing.Address = patient.Address;
+                    existing.Phone = patient.Phone;
+                    existing.Municipality = patient.Municipality;
+                    existing.Province = patient.Province;
+                    existing.MainDiagnosis = patient.MainDiagnosis;
+                    existing.AssociatedPathologies = patient.AssociatedPathologies;
+                    existing.KnownAllergies = patient.KnownAllergies;
+                    existing.CurrentTreatments = patient.CurrentTreatments;
+                    existing.BloodPressureSystolic = patient.BloodPressureSystolic;
+                    existing.BloodPressureDiastolic = patient.BloodPressureDiastolic;
+                    existing.Weight = patient.Weight;
+                    existing.Height = patient.Height;
+                    existing.Observations = patient.Observations;
+                    existing.IsActive = true;
+
+                    await _context.SaveChangesAsync();
+
+                    if (documents != null && documents.Count > 0)
+                    {
+                        await UploadDocuments(existing.Id, documents, documentTypes, documentDescriptions);
+                    }
+
+                    if (importedDocumentPaths != null && importedDocumentPaths.Count > 0)
+                    {
+                        await SaveImportedDocuments(existing.Id, importedDocumentPaths, importedDocumentTypes, importedDocumentNames);
+                    }
+
+                    TempData["SuccessMessage"] = "El paciente ya estaba registrado como inactivo. Fue reactivado y actualizado exitosamente.";
+                    return RedirectToAction(nameof(Details), new { id = existing.Id });
+                }
+
                 patient.RegistrationDate = CubaTime.Now;
                 patient.IsActive = true;
 
@@ -420,7 +469,7 @@ namespace FarmaciaSolidariaCristiana.Controllers
                 {
                     await UploadDocuments(patient.Id, documents, documentTypes, documentDescriptions);
                 }
-                
+
                 // Handle imported documents from turnos (ya copiados al servidor)
                 if (importedDocumentPaths != null && importedDocumentPaths.Count > 0)
                 {
