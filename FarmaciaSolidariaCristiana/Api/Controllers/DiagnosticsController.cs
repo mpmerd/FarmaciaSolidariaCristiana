@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using FarmaciaSolidariaCristiana.Data;
 using FarmaciaSolidariaCristiana.Services;
+using FarmaciaSolidariaCristiana.Helpers;
 
 namespace FarmaciaSolidariaCristiana.Api.Controllers
 {
@@ -48,9 +49,15 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
         [AllowAnonymous]
         public IActionResult Ping()
         {
+            var hostNow = DateTime.Now;
+            var cubaNow = CubaTime.Now;
             return Ok(new { 
                 status = "OK", 
-                timestamp = DateTime.UtcNow
+                timestamp = DateTime.UtcNow,
+                hostZone = TimeZoneInfo.Local.Id,
+                hostNow,
+                cubaNow,
+                hostMinusCubaHours = Math.Round((hostNow - cubaNow).TotalHours, 2)
             });
         }
 

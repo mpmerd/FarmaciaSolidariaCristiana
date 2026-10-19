@@ -1,4 +1,5 @@
 using FarmaciaSolidariaCristiana.Models;
+using FarmaciaSolidariaCristiana.Helpers;
 
 namespace FarmaciaSolidariaCristiana.Data
 {
@@ -123,7 +124,7 @@ namespace FarmaciaSolidariaCristiana.Data
                 {
                     MedicineId = 1,
                     Quantity = 100,
-                    DonationDate = DateTime.Now.AddMonths(-2).AddDays(-5),
+                    DonationDate = CubaTime.Now.AddMonths(-2).AddDays(-5),
                     DonorNote = "Farmacia El Salvador",
                     Comments = "Donación mensual regular"
                 },
@@ -131,7 +132,7 @@ namespace FarmaciaSolidariaCristiana.Data
                 {
                     MedicineId = 2,
                     Quantity = 150,
-                    DonationDate = DateTime.Now.AddMonths(-2).AddDays(-3),
+                    DonationDate = CubaTime.Now.AddMonths(-2).AddDays(-3),
                     DonorNote = "Laboratorios Médicos Unidos",
                     Comments = "Excedente de inventario"
                 },
@@ -139,7 +140,7 @@ namespace FarmaciaSolidariaCristiana.Data
                 {
                     MedicineId = 3,
                     Quantity = 50,
-                    DonationDate = DateTime.Now.AddMonths(-1).AddDays(-15),
+                    DonationDate = CubaTime.Now.AddMonths(-1).AddDays(-15),
                     DonorNote = "Hospital Regional",
                     Comments = "Medicamentos próximos a vencer pero en buen estado"
                 },
@@ -147,7 +148,7 @@ namespace FarmaciaSolidariaCristiana.Data
                 {
                     MedicineId = 4,
                     Quantity = 80,
-                    DonationDate = DateTime.Now.AddMonths(-1).AddDays(-10),
+                    DonationDate = CubaTime.Now.AddMonths(-1).AddDays(-10),
                     DonorNote = "Farmacia San Juan",
                     Comments = "Donación de la comunidad"
                 },
@@ -155,7 +156,7 @@ namespace FarmaciaSolidariaCristiana.Data
                 {
                     MedicineId = 5,
                     Quantity = 60,
-                    DonationDate = DateTime.Now.AddDays(-20),
+                    DonationDate = CubaTime.Now.AddDays(-20),
                     DonorNote = "Donante Anónimo",
                     Comments = "Entregado en la iglesia"
                 },
@@ -163,7 +164,7 @@ namespace FarmaciaSolidariaCristiana.Data
                 {
                     MedicineId = 6,
                     Quantity = 70,
-                    DonationDate = DateTime.Now.AddDays(-15),
+                    DonationDate = CubaTime.Now.AddDays(-15),
                     DonorNote = "Asociación de Diabéticos",
                     Comments = "Campaña solidaria"
                 },
@@ -171,7 +172,7 @@ namespace FarmaciaSolidariaCristiana.Data
                 {
                     MedicineId = 9,
                     Quantity = 20,
-                    DonationDate = DateTime.Now.AddDays(-8),
+                    DonationDate = CubaTime.Now.AddDays(-8),
                     DonorNote = "Clínica Respiratoria",
                     Comments = "Apoyo a pacientes asmáticos"
                 },
@@ -179,7 +180,7 @@ namespace FarmaciaSolidariaCristiana.Data
                 {
                     MedicineId = 10,
                     Quantity = 10,
-                    DonationDate = DateTime.Now.AddDays(-5),
+                    DonationDate = CubaTime.Now.AddDays(-5),
                     DonorNote = "Fundación Diabetes",
                     Comments = "Donación especial para diabéticos"
                 }
@@ -195,7 +196,7 @@ namespace FarmaciaSolidariaCristiana.Data
                 {
                     MedicineId = 1,
                     Quantity = 20,
-                    DeliveryDate = DateTime.Now.AddMonths(-1).AddDays(-25),
+                    DeliveryDate = CubaTime.Now.AddMonths(-1).AddDays(-25),
                     PatientNote = "María González - DNI 12345678A",
                     Comments = "Para dolor de cabeza crónico"
                 },
@@ -203,7 +204,7 @@ namespace FarmaciaSolidariaCristiana.Data
                 {
                     MedicineId = 2,
                     Quantity = 30,
-                    DeliveryDate = DateTime.Now.AddMonths(-1).AddDays(-22),
+                    DeliveryDate = CubaTime.Now.AddMonths(-1).AddDays(-22),
                     PatientNote = "Juan Pérez - DNI 87654321B",
                     Comments = "Artritis reumatoide"
                 },
@@ -211,7 +212,7 @@ namespace FarmaciaSolidariaCristiana.Data
                 {
                     MedicineId = 3,
                     Quantity = 15,
-                    DeliveryDate = DateTime.Now.AddMonths(-1).AddDays(-18),
+                    DeliveryDate = CubaTime.Now.AddMonths(-1).AddDays(-18),
                     PatientNote = "Ana Martínez - DNI 11223344C",
                     Comments = "Infección respiratoria"
                 },
@@ -219,7 +220,7 @@ namespace FarmaciaSolidariaCristiana.Data
                 {
                     MedicineId = 4,
                     Quantity = 25,
-                    DeliveryDate = DateTime.Now.AddDays(-30),
+                    DeliveryDate = CubaTime.Now.AddDays(-30),
                     PatientNote = "Carlos Rodríguez - DNI 55667788D",
                     Comments = "Gastritis crónica"
                 },
@@ -227,7 +228,7 @@ namespace FarmaciaSolidariaCristiana.Data
                 {
                     MedicineId = 6,
                     Quantity = 15,
-                    DeliveryDate = DateTime.Now.AddDays(-25),
+                    DeliveryDate = CubaTime.Now.AddDays(-25),
                     PatientNote = "Isabel Torres - DNI 99887766E",
                     Comments = "Diabetes tipo 2"
                 },
@@ -235,7 +236,7 @@ namespace FarmaciaSolidariaCristiana.Data
                 {
                     MedicineId = 7,
                     Quantity = 10,
-                    DeliveryDate = DateTime.Now.AddDays(-20),
+                    DeliveryDate = CubaTime.Now.AddDays(-20),
                     PatientNote = "Pedro Sánchez - DNI 44332211F",
                     Comments = "Hipertensión arterial"
                 },
@@ -243,7 +244,7 @@ namespace FarmaciaSolidariaCristiana.Data
                 {
                     MedicineId = 1,
                     Quantity = 15,
-                    DeliveryDate = DateTime.Now.AddDays(-15),
+                    DeliveryDate = CubaTime.Now.AddDays(-15),
                     PatientNote = "Lucía Fernández - DNI 66778899G",
                     Comments = "Fiebre y malestar"
                 },
@@ -251,7 +252,7 @@ namespace FarmaciaSolidariaCristiana.Data
                 {
                     MedicineId = 5,
                     Quantity = 10,
-                    DeliveryDate = DateTime.Now.AddDays(-12),
+                    DeliveryDate = CubaTime.Now.AddDays(-12),
                     PatientNote = "Miguel Ángel López - DNI 22334455H",
                     Comments = "Alergia estacional"
                 },
@@ -259,7 +260,7 @@ namespace FarmaciaSolidariaCristiana.Data
                 {
                     MedicineId = 8,
                     Quantity = 15,
-                    DeliveryDate = DateTime.Now.AddDays(-10),
+                    DeliveryDate = CubaTime.Now.AddDays(-10),
                     PatientNote = "Carmen Ruiz - DNI 77889900I",
                     Comments = "Colesterol alto"
                 },
@@ -267,7 +268,7 @@ namespace FarmaciaSolidariaCristiana.Data
                 {
                     MedicineId = 9,
                     Quantity = 5,
-                    DeliveryDate = DateTime.Now.AddDays(-7),
+                    DeliveryDate = CubaTime.Now.AddDays(-7),
                     PatientNote = "Javier Morales - DNI 33445566J",
                     Comments = "Crisis asmática"
                 },
@@ -275,7 +276,7 @@ namespace FarmaciaSolidariaCristiana.Data
                 {
                     MedicineId = 10,
                     Quantity = 3,
-                    DeliveryDate = DateTime.Now.AddDays(-5),
+                    DeliveryDate = CubaTime.Now.AddDays(-5),
                     PatientNote = "Rosa García - DNI 88990011K",
                     Comments = "Diabetes tipo 1 - Urgente"
                 },
@@ -283,7 +284,7 @@ namespace FarmaciaSolidariaCristiana.Data
                 {
                     MedicineId = 11,
                     Quantity = 10,
-                    DeliveryDate = DateTime.Now.AddDays(-3),
+                    DeliveryDate = CubaTime.Now.AddDays(-3),
                     PatientNote = "Antonio Jiménez - DNI 11223355L",
                     Comments = "Presión arterial elevada"
                 },
@@ -291,7 +292,7 @@ namespace FarmaciaSolidariaCristiana.Data
                 {
                     MedicineId = 2,
                     Quantity = 20,
-                    DeliveryDate = DateTime.Now.AddDays(-2),
+                    DeliveryDate = CubaTime.Now.AddDays(-2),
                     PatientNote = "Elena Díaz - DNI 66554433M",
                     Comments = "Dolor muscular"
                 },
@@ -299,7 +300,7 @@ namespace FarmaciaSolidariaCristiana.Data
                 {
                     MedicineId = 12,
                     Quantity = 8,
-                    DeliveryDate = DateTime.Now.AddDays(-1),
+                    DeliveryDate = CubaTime.Now.AddDays(-1),
                     PatientNote = "Francisco Vega - DNI 99887755N",
                     Comments = "Acidez estomacal"
                 }

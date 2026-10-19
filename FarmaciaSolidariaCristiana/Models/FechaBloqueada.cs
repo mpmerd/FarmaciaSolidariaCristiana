@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Identity;
+using FarmaciaSolidariaCristiana.Helpers;
 
 namespace FarmaciaSolidariaCristiana.Models
 {
@@ -27,6 +28,6 @@ namespace FarmaciaSolidariaCristiana.Models
         public IdentityUser? Usuario { get; set; }
 
         [Display(Name = "Fecha de Creación")]
-        public DateTime FechaCreacion { get; set; } = DateTime.Now;
+        public DateTime FechaCreacion { get; set; } = CubaTime.Now;
     }
 }

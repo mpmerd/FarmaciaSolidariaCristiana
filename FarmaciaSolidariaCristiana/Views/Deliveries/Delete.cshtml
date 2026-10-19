@@ -71,13 +71,13 @@
                     </dd>
 
                     <dt class="col-sm-3">Fecha de Entrega</dt>
-                    <dd class="col-sm-9">@Model.DeliveryDate.ToString("dd/MM/yyyy HH:mm")</dd>
+                    <dd class="col-sm-9">@CubaTime.FormatDateTime(Model.DeliveryDate)</dd>
 
                     <dt class="col-sm-3">Fecha de Registro</dt>
                     <dd class="col-sm-9">
                         @if (Model.CreatedAt.HasValue)
                         {
-                            @Model.CreatedAt.Value.ToString("dd/MM/yyyy HH:mm")
+                            @CubaTime.FormatDateTime(Model.CreatedAt)
                         }
                         else
                         {

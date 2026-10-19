@@ -132,7 +132,7 @@ public partial class DashboardViewModel : BaseViewModel
 
             var deliveriesResult = await deliveriesTask;
             if (deliveriesResult.Success && deliveriesResult.Data != null)
-                EntregasHoy = deliveriesResult.Data.Count(d => d.DeliveryDate.Date == DateTime.Today);
+                EntregasHoy = deliveriesResult.Data.Count(d => d.DeliveryDate.Date == CubaTime.Today);
         }
         else
         {

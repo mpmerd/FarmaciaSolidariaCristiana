@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using FarmaciaSolidariaCristiana.Helpers;
 
 namespace FarmaciaSolidariaCristiana.Models
 {
@@ -37,7 +38,7 @@ namespace FarmaciaSolidariaCristiana.Models
         public string? Description { get; set; }
 
         [Display(Name = "Fecha de Carga")]
-        public DateTime UploadDate { get; set; } = DateTime.Now;
+        public DateTime UploadDate { get; set; } = CubaTime.Now;
 
         // Relación
         public Patient Patient { get; set; } = null!;

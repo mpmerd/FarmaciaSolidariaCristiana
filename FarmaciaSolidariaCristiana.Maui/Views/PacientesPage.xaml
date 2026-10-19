@@ -6,7 +6,7 @@
              x:Class="FarmaciaSolidariaCristiana.Maui.Views.PacientesPage"
              x:DataType="viewmodels:PacientesViewModel"
              Title="{Binding Title}"
-             BackgroundColor="{StaticResource BackgroundColor}">
+             BackgroundColor="{AppThemeBinding Light=#f5f5f5, Dark=#1a1a1a}">
 
     <Grid RowDefinitions="Auto,*">
         <!-- Search Bar -->

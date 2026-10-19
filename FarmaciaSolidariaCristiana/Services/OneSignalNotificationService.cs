@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using FarmaciaSolidariaCristiana.Api.Models;
 using FarmaciaSolidariaCristiana.Data;
 using FarmaciaSolidariaCristiana.Models;
+using FarmaciaSolidariaCristiana.Helpers;
 
 namespace FarmaciaSolidariaCristiana.Services
 {
@@ -384,7 +385,7 @@ namespace FarmaciaSolidariaCristiana.Services
             string userId, int turnoId, int numeroTurno, DateTime fechaTurno, string? pdfUrl = null)
         {
             var title = "✅ Turno Aprobado";
-            var message = $"¡Tu turno #{numeroTurno} ha sido aprobado! Fecha: {fechaTurno:dd/MM/yyyy} a las {fechaTurno:HH:mm}";
+            var message = $"¡Tu turno #{numeroTurno} ha sido aprobado! Fecha: {fechaTurno:dd/MM/yyyy} a las {CubaTime.FormatTime(fechaTurno)}";
             
             var data = new Dictionary<string, string>
             {
@@ -441,7 +442,7 @@ namespace FarmaciaSolidariaCristiana.Services
             string userId, int turnoId, int numeroTurno, DateTime fechaTurno)
         {
             var title = "⏰ Recordatorio de Turno";
-            var message = $"Recuerda: Tu turno #{numeroTurno} es {fechaTurno:dddd dd/MM} a las {fechaTurno:HH:mm}";
+            var message = $"Recuerda: Tu turno #{numeroTurno} es {fechaTurno:dddd dd/MM} a las {CubaTime.FormatTime(fechaTurno)}";
             
             var data = new Dictionary<string, string>
             {
@@ -475,7 +476,7 @@ namespace FarmaciaSolidariaCristiana.Services
             string userId, int turnoId, int numeroTurno, DateTime fechaOriginal, DateTime fechaNueva, string motivo)
         {
             var title = "📅 Turno Reprogramado";
-            var message = $"Tu turno #{numeroTurno} ha sido reprogramado de {fechaOriginal:dd/MM HH:mm} a {fechaNueva:dd/MM HH:mm}";
+            var message = $"Tu turno #{numeroTurno} ha sido reprogramado de {CubaTime.FormatShortDateTime(fechaOriginal)} a {CubaTime.FormatShortDateTime(fechaNueva)}";
             
             var data = new Dictionary<string, string>
             {

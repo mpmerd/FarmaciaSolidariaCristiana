@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using FarmaciaSolidariaCristiana.Helpers;
 
 namespace FarmaciaSolidariaCristiana.Models
 {
@@ -18,7 +19,7 @@ namespace FarmaciaSolidariaCristiana.Models
         public int Quantity { get; set; }
 
         [Display(Name = "Fecha de Donación")]
-        public DateTime DonationDate { get; set; } = DateTime.Now;
+        public DateTime DonationDate { get; set; } = CubaTime.Now;
 
         [Display(Name = "Nota del Donante")]
         public string? DonorNote { get; set; }

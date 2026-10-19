@@ -447,7 +447,7 @@ public partial class NuevaEntregaViewModel : BaseViewModel
                     PatientId = PacienteId,
                     TurnoId = TurnoSeleccionado?.Id,
                     Quantity = item.CantidadAEntregar,
-                    DeliveryDate = DateTime.Now,
+                    DeliveryDate = CubaTime.Now,
                     Comments = Comentarios
                 };
 

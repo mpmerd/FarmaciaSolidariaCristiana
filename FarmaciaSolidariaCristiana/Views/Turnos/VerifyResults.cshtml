@@ -45,7 +45,7 @@
                                         <p><strong>Email:</strong> @turno.User?.Email</p>
                                     </div>
                                     <div class="col-md-6">
-                                        <p><strong>Fecha Turno:</strong> @(turno.FechaPreferida?.ToString("dd/MM/yyyy HH:mm") ?? "Por asignar")</p>
+                                        <p><strong>Fecha Turno:</strong> @(CubaTime.FormatDateTime(turno.FechaPreferida) ?? "Por asignar")</p>
                                         <p><strong>Fecha Solicitud:</strong> @turno.FechaSolicitud.ToString("dd/MM/yyyy")</p>
                                     </div>
                                 </div>

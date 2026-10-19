@@ -15,7 +15,7 @@ public partial class FechasBloqueadasViewModel : BaseViewModel
     private bool isRefreshing;
 
     [ObservableProperty]
-    private DateTime nuevaFecha = DateTime.Today.AddDays(1);
+    private DateTime nuevaFecha = CubaTime.Today.AddDays(1);
 
     [ObservableProperty]
     private string motivo = string.Empty;
@@ -72,7 +72,7 @@ public partial class FechasBloqueadasViewModel : BaseViewModel
     [RelayCommand]
     private async Task AddFechaBloqueadaAsync()
     {
-        if (NuevaFecha <= DateTime.Today)
+        if (NuevaFecha <= CubaTime.Today)
         {
             await ShowErrorAsync("La fecha debe ser posterior a hoy");
             return;
@@ -93,7 +93,7 @@ public partial class FechasBloqueadasViewModel : BaseViewModel
             if (response.Success)
             {
                 Motivo = string.Empty;
-                NuevaFecha = DateTime.Today.AddDays(1);
+                NuevaFecha = CubaTime.Today.AddDays(1);
                 await LoadFechasAsync();
                 await Shell.Current.DisplayAlertAsync("Éxito", "Fecha bloqueada agregada correctamente", "OK");
             }

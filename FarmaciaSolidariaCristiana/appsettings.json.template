@@ -39,6 +39,7 @@
   },
   "AppSettings": {
     "EnablePublicRegistration": false,
+    "TimeZone": "America/Havana",
     "SiteName": "Farmacia Solidaria Cristiana",
     "SiteUrl": "https://tu_sitio.com"
   }

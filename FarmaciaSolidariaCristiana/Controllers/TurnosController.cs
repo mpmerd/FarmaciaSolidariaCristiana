@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using FarmaciaSolidariaCristiana.Data;
 using FarmaciaSolidariaCristiana.Models;
 using FarmaciaSolidariaCristiana.Services;
+using FarmaciaSolidariaCristiana.Helpers;
 
 namespace FarmaciaSolidariaCristiana.Controllers
 {
@@ -726,7 +727,7 @@ namespace FarmaciaSolidariaCristiana.Controllers
                             user.Email, 
                             user.UserName ?? "Usuario",
                             turno.NumeroTurno ?? 0,
-                            turno.FechaPreferida ?? DateTime.Now,
+                            turno.FechaPreferida ?? CubaTime.Now,
                             motivoCancelacion);
                     }
                     catch (Exception ex)
@@ -765,7 +766,7 @@ namespace FarmaciaSolidariaCristiana.Controllers
                         user.Email!,
                         user.UserName ?? "Farmacéutico",
                         turno.NumeroTurno ?? 0,
-                        turno.FechaPreferida ?? DateTime.Now,
+                        turno.FechaPreferida ?? CubaTime.Now,
                         motivo);
                 }
                 catch (Exception ex)
@@ -861,8 +862,8 @@ namespace FarmaciaSolidariaCristiana.Controllers
                     var fechaAnterior = turno.FechaPreferida;
                     turno.FechaPreferida = nuevoSlot.Value;
                     slotsAsignados.Add(nuevoSlot.Value);
-                    turno.ComentariosFarmaceutico += $"\n[REPROGRAMADO - {DateTime.Now:dd/MM/yyyy HH:mm}]";
-                    turno.ComentariosFarmaceutico += $"\nFecha original: {fechaAnterior:dd/MM/yyyy HH:mm}";
+                    turno.ComentariosFarmaceutico += $"\n[REPROGRAMADO - {CubaTime.FormatDateTime(CubaTime.Now)}]";
+                    turno.ComentariosFarmaceutico += $"\nFecha original: {CubaTime.FormatDateTime(fechaAnterior)}";
                     turno.ComentariosFarmaceutico += $"\nMotivo: {motivo}";
                     
                     _logger.LogInformation("Turno {TurnoId} reprogramado de {FechaAnterior} a {FechaNueva}",

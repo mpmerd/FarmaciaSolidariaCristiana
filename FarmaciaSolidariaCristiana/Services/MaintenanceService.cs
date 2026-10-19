@@ -1,3 +1,5 @@
+using FarmaciaSolidariaCristiana.Helpers;
+
 namespace FarmaciaSolidariaCristiana.Services
 {
     /// <summary>
@@ -51,7 +53,7 @@ namespace FarmaciaSolidariaCristiana.Services
                     {
                         IsActive = true,
                         Reason = reason,
-                        ActivatedAt = DateTime.Now
+                        ActivatedAt = CubaTime.Now
                     };
 
                     var json = System.Text.Json.JsonSerializer.Serialize(data, new System.Text.Json.JsonSerializerOptions

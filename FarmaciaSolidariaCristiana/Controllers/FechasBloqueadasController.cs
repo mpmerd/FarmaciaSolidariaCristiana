@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using FarmaciaSolidariaCristiana.Data;
 using FarmaciaSolidariaCristiana.Models;
+using FarmaciaSolidariaCristiana.Helpers;
 
 namespace FarmaciaSolidariaCristiana.Controllers
 {
@@ -34,7 +35,7 @@ namespace FarmaciaSolidariaCristiana.Controllers
         /// </summary>
         public async Task<IActionResult> Index()
         {
-            var hoy = DateTime.Now.Date;
+            var hoy = CubaTime.Now.Date;
             var fechasBloqueadas = await _context.FechasBloqueadas
                 .Include(f => f.Usuario)
                 .OrderBy(f => f.Fecha)
@@ -58,7 +59,7 @@ namespace FarmaciaSolidariaCristiana.Controllers
             }
 
             // Validar que la fecha sea futura
-            if (fecha.Date < DateTime.Now.Date)
+            if (fecha.Date < CubaTime.Now.Date)
             {
                 TempData["ErrorMessage"] = "Solo se pueden bloquear fechas futuras.";
                 return RedirectToAction(nameof(Index));
@@ -80,7 +81,7 @@ namespace FarmaciaSolidariaCristiana.Controllers
                 Fecha = fecha.Date,
                 Motivo = motivo,
                 UsuarioId = userId!,
-                FechaCreacion = DateTime.Now
+                FechaCreacion = CubaTime.Now
             };
 
             _context.FechasBloqueadas.Add(fechaBloqueada);
@@ -108,7 +109,7 @@ namespace FarmaciaSolidariaCristiana.Controllers
             }
 
             // Validar que ambas fechas sean futuras
-            if (fechaInicio.Date < DateTime.Now.Date || fechaFin.Date < DateTime.Now.Date)
+            if (fechaInicio.Date < CubaTime.Now.Date || fechaFin.Date < CubaTime.Now.Date)
             {
                 TempData["ErrorMessage"] = "Solo se pueden bloquear fechas futuras.";
                 return RedirectToAction(nameof(Index));
@@ -147,7 +148,7 @@ namespace FarmaciaSolidariaCristiana.Controllers
                         Fecha = fecha,
                         Motivo = motivo,
                         UsuarioId = userId!,
-                        FechaCreacion = DateTime.Now
+                        FechaCreacion = CubaTime.Now
                     };
 
                     _context.FechasBloqueadas.Add(fechaBloqueada);
@@ -216,7 +217,7 @@ namespace FarmaciaSolidariaCristiana.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeletePast()
         {
-            var hoy = DateTime.Now.Date;
+            var hoy = CubaTime.Now.Date;
             var fechasPasadas = await _context.FechasBloqueadas
                 .Where(f => f.Fecha < hoy)
                 .ToListAsync();

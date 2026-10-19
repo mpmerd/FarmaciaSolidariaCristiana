@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using FarmaciaSolidariaCristiana.Data;
 using FarmaciaSolidariaCristiana.Models;
 using FarmaciaSolidariaCristiana.Api.Models;
+using FarmaciaSolidariaCristiana.Helpers;
 
 namespace FarmaciaSolidariaCristiana.Api.Controllers
 {
@@ -314,8 +315,8 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
                 SupplyId = model.SupplyId,
                 TurnoId = model.TurnoId,
                 Quantity = model.Quantity,
-                DeliveryDate = model.DeliveryDate ?? DateTime.Now,
-                CreatedAt = DateTime.Now,
+                DeliveryDate = model.DeliveryDate ?? CubaTime.Now,
+                CreatedAt = CubaTime.Now,
                 Dosage = model.Dosage,
                 TreatmentDuration = model.TreatmentDuration,
                 BatchNumber = model.BatchNumber,
@@ -335,7 +336,7 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
             if (model.TurnoId.HasValue && turnoAprobado != null)
             {
                 turnoAprobado.Estado = "Completado";
-                turnoAprobado.FechaEntrega = DateTime.Now;
+                turnoAprobado.FechaEntrega = CubaTime.Now;
                 await _context.SaveChangesAsync();
                 _logger.LogInformation("✅ Turno #{TurnoId} marcado como Completado", model.TurnoId);
             }
@@ -483,7 +484,7 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
                 if (turnoCoincidente != null)
                 {
                     turnoCoincidente.Estado = "Completado";
-                    turnoCoincidente.FechaEntrega = DateTime.Now;
+                    turnoCoincidente.FechaEntrega = CubaTime.Now;
                     await _context.SaveChangesAsync();
                     
                     _logger.LogInformation("API: ✅ Turno #{TurnoId} marcado como Completado automáticamente", turnoCoincidente.Id);

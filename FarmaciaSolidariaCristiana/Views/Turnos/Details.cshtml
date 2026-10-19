@@ -71,24 +71,24 @@
                                         </tr>
                                         <tr>
                                             <td><strong>Fecha Solicitud:</strong></td>
-                                            <td>@Model.FechaSolicitud.ToString("dd/MM/yyyy HH:mm")</td>
+                                            <td>@CubaTime.FormatDateTime(Model.FechaSolicitud)</td>
                                         </tr>
                                         <tr>
                                             <td><strong>Fecha Preferida:</strong></td>
-                                            <td>@(Model.FechaPreferida?.ToString("dd/MM/yyyy HH:mm") ?? "Por asignar (se asigna al aprobar)")</td>
+                                            <td>@(CubaTime.FormatDateTime(Model.FechaPreferida) ?? "Por asignar (se asigna al aprobar)")</td>
                                         </tr>
                                         @if (Model.FechaRevision.HasValue)
                                         {
                                             <tr>
                                                 <td><strong>Fecha Revisión:</strong></td>
-                                                <td>@Model.FechaRevision.Value.ToString("dd/MM/yyyy HH:mm")</td>
+                                                <td>@CubaTime.FormatDateTime(Model.FechaRevision.Value)</td>
                                             </tr>
                                         }
                                         @if (Model.FechaEntrega.HasValue)
                                         {
                                             <tr>
                                                 <td><strong>Fecha Entrega:</strong></td>
-                                                <td>@Model.FechaEntrega.Value.ToString("dd/MM/yyyy HH:mm")</td>
+                                                <td>@CubaTime.FormatDateTime(Model.FechaEntrega.Value)</td>
                                             </tr>
                                         }
                                     </table>

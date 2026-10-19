@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using FarmaciaSolidariaCristiana.Data;
 using FarmaciaSolidariaCristiana.Models;
 using FarmaciaSolidariaCristiana.Services;
+using FarmaciaSolidariaCristiana.Helpers;
 
 namespace FarmaciaSolidariaCristiana.Controllers
 {
@@ -125,7 +126,7 @@ namespace FarmaciaSolidariaCristiana.Controllers
                     return View(sponsor);
                 }
 
-                sponsor.CreatedDate = DateTime.Now;
+                sponsor.CreatedDate = CubaTime.Now;
                 _context.Add(sponsor);
                 await _context.SaveChangesAsync();
 

@@ -5,6 +5,7 @@ using Microsoft.Extensions.Caching.Memory;
 using FarmaciaSolidariaCristiana.Data;
 using FarmaciaSolidariaCristiana.Models;
 using System.Security.Claims;
+using FarmaciaSolidariaCristiana.Helpers;
 
 namespace FarmaciaSolidariaCristiana.Controllers
 {
@@ -117,7 +118,7 @@ namespace FarmaciaSolidariaCristiana.Controllers
                 existingDecoration.TextColor = preset.TextColor;
                 existingDecoration.IconClass = preset.IconClass;
                 existingDecoration.IconColor = preset.IconColor;
-                existingDecoration.ActivatedAt = DateTime.Now;
+                existingDecoration.ActivatedAt = CubaTime.Now;
                 existingDecoration.ActivatedBy = userName;
             }
             else
@@ -135,9 +136,9 @@ namespace FarmaciaSolidariaCristiana.Controllers
                     IconClass = preset.IconClass,
                     IconColor = preset.IconColor,
                     IsActive = true,
-                    ActivatedAt = DateTime.Now,
+                    ActivatedAt = CubaTime.Now,
                     ActivatedBy = userName,
-                    CreatedAt = DateTime.Now
+                    CreatedAt = CubaTime.Now
                 };
 
                 _context.NavbarDecorations.Add(decoration);
@@ -222,9 +223,9 @@ namespace FarmaciaSolidariaCristiana.Controllers
                 IconColor = iconColor ?? "#FFFFFF",
                 CustomIconPath = iconPath,
                 IsActive = true,
-                ActivatedAt = DateTime.Now,
+                ActivatedAt = CubaTime.Now,
                 ActivatedBy = userName,
-                CreatedAt = DateTime.Now
+                CreatedAt = CubaTime.Now
             };
 
             _context.NavbarDecorations.Add(decoration);

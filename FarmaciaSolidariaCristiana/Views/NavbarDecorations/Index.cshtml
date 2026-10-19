@@ -61,7 +61,7 @@
                                     </p>
                                 }
                                 <small class="text-muted">
-                                    Activada por @activeDecoration.ActivatedBy el @activeDecoration.ActivatedAt?.ToString("dd/MM/yyyy HH:mm")
+                                    Activada por @activeDecoration.ActivatedBy el @CubaTime.FormatDateTime(activeDecoration.ActivatedAt)
                                 </small>
                             </div>
                             <div>
@@ -340,7 +340,7 @@
                                             <td>
                                                 @if (decoration.ActivatedAt.HasValue)
                                                 {
-                                                    @decoration.ActivatedAt.Value.ToString("dd/MM/yyyy HH:mm")
+                                                    @CubaTime.FormatDateTime(decoration.ActivatedAt)
                                                 }
                                                 else
                                                 {

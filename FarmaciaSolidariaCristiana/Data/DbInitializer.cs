@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using FarmaciaSolidariaCristiana.Models;
+using FarmaciaSolidariaCristiana.Helpers;
 
 namespace FarmaciaSolidariaCristiana.Data
 {
@@ -57,12 +58,12 @@ namespace FarmaciaSolidariaCristiana.Data
             {
                 var sponsors = new List<Sponsor>
                 {
-                    new Sponsor { Name = "ACAA", Description = "Asociación Cubana de Artesanos Artistas", LogoPath = "/images/sponsors/acaa.png", IsActive = true, DisplayOrder = 1, CreatedDate = DateTime.Now },
-                    new Sponsor { Name = "Adriano Solidaire", Description = "Adriano Solidario", LogoPath = "/images/sponsors/adranosolidaire.png", IsActive = true, DisplayOrder = 2, CreatedDate = DateTime.Now },
-                    new Sponsor { Name = "Apotheek", Description = "Apotheek Peeters Herent, Bélgica", LogoPath = "/images/sponsors/apotheek.png", IsActive = true, DisplayOrder = 3, CreatedDate = DateTime.Now },
-                    new Sponsor { Name = "HSF", Description = "Hospital Sans Frontière", LogoPath = "/images/sponsors/hsf.JPG", IsActive = true, DisplayOrder = 4, CreatedDate = DateTime.Now },
-                    new Sponsor { Name = "Farmacia Janeiro", Description = "Farmacia Janeiro, Portugal", LogoPath = "/images/sponsors/janeiro.png", IsActive = true, DisplayOrder = 5, CreatedDate = DateTime.Now },
-                    new Sponsor { Name = "Sutures Medical", Description = "Aip Medical, Bélgica", LogoPath = "/images/sponsors/suturesmedical.png", IsActive = true, DisplayOrder = 6, CreatedDate = DateTime.Now }
+                    new Sponsor { Name = "ACAA", Description = "Asociación Cubana de Artesanos Artistas", LogoPath = "/images/sponsors/acaa.png", IsActive = true, DisplayOrder = 1, CreatedDate = CubaTime.Now },
+                    new Sponsor { Name = "Adriano Solidaire", Description = "Adriano Solidario", LogoPath = "/images/sponsors/adranosolidaire.png", IsActive = true, DisplayOrder = 2, CreatedDate = CubaTime.Now },
+                    new Sponsor { Name = "Apotheek", Description = "Apotheek Peeters Herent, Bélgica", LogoPath = "/images/sponsors/apotheek.png", IsActive = true, DisplayOrder = 3, CreatedDate = CubaTime.Now },
+                    new Sponsor { Name = "HSF", Description = "Hospital Sans Frontière", LogoPath = "/images/sponsors/hsf.JPG", IsActive = true, DisplayOrder = 4, CreatedDate = CubaTime.Now },
+                    new Sponsor { Name = "Farmacia Janeiro", Description = "Farmacia Janeiro, Portugal", LogoPath = "/images/sponsors/janeiro.png", IsActive = true, DisplayOrder = 5, CreatedDate = CubaTime.Now },
+                    new Sponsor { Name = "Sutures Medical", Description = "Aip Medical, Bélgica", LogoPath = "/images/sponsors/suturesmedical.png", IsActive = true, DisplayOrder = 6, CreatedDate = CubaTime.Now }
                 };
                 
                 context.Sponsors.AddRange(sponsors);

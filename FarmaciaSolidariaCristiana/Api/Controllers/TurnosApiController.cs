@@ -7,6 +7,7 @@ using FarmaciaSolidariaCristiana.Data;
 using FarmaciaSolidariaCristiana.Models;
 using FarmaciaSolidariaCristiana.Services;
 using FarmaciaSolidariaCristiana.Api.Models;
+using FarmaciaSolidariaCristiana.Helpers;
 
 namespace FarmaciaSolidariaCristiana.Api.Controllers
 {
@@ -564,7 +565,7 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
                     FileSize = fileSize,
                     ContentType = file.ContentType,
                     Description = description,
-                    UploadDate = DateTime.Now
+                    UploadDate = CubaTime.Now
                 };
 
                 _context.TurnoDocumentos.Add(documento);
@@ -784,7 +785,7 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
                 CanCancel = canCancel,
                 Reason = reason,
                 DiasRestantes = turno.FechaPreferida.HasValue 
-                    ? (int)(turno.FechaPreferida.Value.Date - DateTime.Now.Date).TotalDays 
+                    ? (int)(turno.FechaPreferida.Value.Date - CubaTime.Now.Date).TotalDays 
                     : 0
             });
         }
@@ -877,7 +878,7 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
 
             turno.FechaPreferida = nuevoSlot.Value;
             turno.ComentariosFarmaceutico = model.Motivo ?? $"Reprogramado desde {fechaAnterior:dd/MM/yyyy}";
-            turno.FechaRevision = DateTime.Now;
+            turno.FechaRevision = CubaTime.Now;
 
             await _context.SaveChangesAsync();
 
@@ -901,7 +902,7 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
                         await _pendingNotificationService.CreateNotificationAsync(
                             afectadoId,
                             "📅 Turno Reprogramado",
-                            $"Tu turno #{numero} fue reprogramado del {fechaAnteriorValue:dd/MM} al {nuevoSlot.Value:dd/MM HH:mm}",
+                            $"Tu turno #{numero} fue reprogramado del {fechaAnteriorValue:dd/MM} al {CubaTime.FormatShortDateTime(nuevoSlot.Value)}",
                             NotificationTypes.TurnoReprogramado,
                             turno.Id,
                             "Turno");
@@ -955,7 +956,7 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
         [ProducesResponseType(typeof(ApiResponse<TurnoStatsDto>), 200)]
         public async Task<IActionResult> GetStats()
         {
-            var hoy = DateTime.Today;
+            var hoy = CubaTime.Today;
             var inicioMes = new DateTime(hoy.Year, hoy.Month, 1);
 
             var stats = new TurnoStatsDto
@@ -1131,8 +1132,8 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
                     // Actualizar turno
                     turno.FechaPreferida = nuevoSlot.Value;
                     slotsAsignados.Add(nuevoSlot.Value);
-                    turno.ComentariosFarmaceutico += $"\n[REPROGRAMADO - {DateTime.Now:dd/MM/yyyy HH:mm}]";
-                    turno.ComentariosFarmaceutico += $"\nFecha original: {fechaOriginal:dd/MM/yyyy HH:mm}";
+                    turno.ComentariosFarmaceutico += $"\n[REPROGRAMADO - {CubaTime.FormatDateTime(CubaTime.Now)}]";
+                    turno.ComentariosFarmaceutico += $"\nFecha original: {CubaTime.FormatDateTime(fechaOriginal)}";
                     turno.ComentariosFarmaceutico += $"\nMotivo: {request.Motivo}";
                     
                     turnosReprogramados.Add(new TurnoReprogramadoDto
@@ -1182,7 +1183,7 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
                             await _pendingNotificationService.CreateNotificationAsync(
                                 userId,
                                 "📅 Turno Reprogramado",
-                                $"Tu turno #{numero} fue reprogramado del {dto.FechaOriginal:dd/MM} al {dto.FechaNueva:dd/MM HH:mm}",
+                                $"Tu turno #{numero} fue reprogramado del {dto.FechaOriginal:dd/MM} al {CubaTime.FormatShortDateTime(dto.FechaNueva)}",
                                 NotificationTypes.TurnoReprogramado,
                                 turnoObj.Id,
                                 "Turno");

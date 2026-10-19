@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using FarmaciaSolidariaCristiana.Maui.Models;
 using FarmaciaSolidariaCristiana.Maui.Services;
+using FarmaciaSolidariaCristiana.Maui.Helpers;
 
 namespace FarmaciaSolidariaCristiana.Maui.ViewModels;
 
@@ -35,10 +36,10 @@ public partial class NuevaDonacionViewModel : BaseViewModel
     private string _cantidadError = string.Empty;
 
     [ObservableProperty]
-    private DateTime _fechaDonacion = DateTime.Today;
+    private DateTime _fechaDonacion = CubaTime.Today;
 
     [ObservableProperty]
-    private DateTime _maxDate = DateTime.Today;
+    private DateTime _maxDate = CubaTime.Today;
 
     [ObservableProperty]
     private string _notaDonante = string.Empty;

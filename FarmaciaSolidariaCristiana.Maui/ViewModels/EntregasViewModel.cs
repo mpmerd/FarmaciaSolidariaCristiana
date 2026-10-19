@@ -124,7 +124,7 @@ public partial class EntregasViewModel : BaseViewModel
         if (!CanEdit || entrega == null) return;
 
         // Verificar regla de 2 horas
-        var horasTranscurridas = (DateTime.Now - entrega.DeliveryDate).TotalHours;
+        var horasTranscurridas = (CubaTime.Now - entrega.DeliveryDate).TotalHours;
         if (horasTranscurridas > 2)
         {
             await Shell.Current.DisplayAlertAsync(

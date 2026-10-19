@@ -183,8 +183,8 @@
                                                             break;
                                                     }
                                                 </td>
-                                                <td>@turno.FechaSolicitud.ToString("dd/MM/yyyy HH:mm")</td>
-                                                <td>@(turno.FechaPreferida?.ToString("dd/MM/yyyy HH:mm") ?? "Por asignar")</td>
+                                                <td>@CubaTime.FormatDateTime(turno.FechaSolicitud)</td>
+                                                <td>@(CubaTime.FormatDateTime(turno.FechaPreferida) ?? "Por asignar")</td>
                                                 <td>
                                                     <small>
                                                         @if (hasMedicines)
@@ -214,7 +214,7 @@
                                                 <td>
                                                     @if (turno.Estado == "Aprobado" && turno.FechaPreferida.HasValue)
                                                     {
-                                                        var diasRestantes = (turno.FechaPreferida.Value.Date - DateTime.Now.Date).Days;
+                                                        var diasRestantes = (turno.FechaPreferida.Value.Date - CubaTime.Now.Date).Days;
                                                         
                                                         if (diasRestantes > 7)
                                                         {
@@ -223,7 +223,7 @@
                                                                     data-bs-target="#cancelModal"
                                                                     data-turno-id="@turno.Id"
                                                                     data-turno-numero="@turno.NumeroTurno"
-                                                                    data-turno-fecha="@turno.FechaPreferida?.ToString("dd/MM/yyyy HH:mm")">
+                                                                    data-turno-fecha="@CubaTime.FormatDateTime(turno.FechaPreferida)">
                                                                 <i class="bi bi-x-circle"></i> Cancelar
                                                             </button>
                                                             <small class="text-muted d-block mt-1">Faltan @diasRestantes días</small>
