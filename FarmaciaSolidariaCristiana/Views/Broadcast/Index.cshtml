@@ -40,8 +40,8 @@
                         <small class="text-muted">
                             La notificación va solo a pacientes. Admin, Farmacéutico y Viewer quedan excluidos.
                             El email solo se envía a pacientes sin app activa (los demás ya lo reciben en la app).
-                            Ritmo de envío: 1 email cada 5 minutos (no urgente, máximo ~290/día) para cuidar la cuota gratuita de Gmail (500/día).
-                            Tope por envío: @ViewBag.BroadcastEmailMax.
+                            Entrega gradual: 1 email cada minuto con tope de @ViewBag.BroadcastEmailDailyMax/día (cuota Gmail: 500/día compartidos con correos del sistema).
+                            Sin tope de destinatarios: si hay cientos, la entrega tarda 2-3 días.
                         </small>
                     </div>
 
@@ -76,7 +76,7 @@
                                     <input class="form-check-input" type="checkbox" id="sendEmail" name="sendEmail" value="true">
                                     <label class="form-check-label" for="sendEmail">
                                         <i class="bi bi-envelope-fill text-primary"></i> <strong>Email</strong>
-                                        <small class="text-muted d-block">Solo a pacientes SIN app activa. Ritmo 1 cada 5 min (~290/día). Tope @ViewBag.BroadcastEmailMax.</small>
+                                        <small class="text-muted d-block">Solo a pacientes SIN app activa. Entrega gradual: 1 email/min, tope @ViewBag.BroadcastEmailDailyMax/día.</small>
                                     </label>
                                 </div>
                                 

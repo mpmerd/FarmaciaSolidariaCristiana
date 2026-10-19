@@ -41,6 +41,9 @@
     "EnablePublicRegistration": false,
     "TimeZone": "America/Havana",
     "SiteName": "Farmacia Solidaria Cristiana",
-    "SiteUrl": "https://tu_sitio.com"
+    "SiteUrl": "https://tu_sitio.com",
+    "BroadcastEmailActivityDays": 7,
+    "BroadcastEmailDailyMax": 350,
+    "BroadcastEmailIntervalSeconds": 60
   }
 }

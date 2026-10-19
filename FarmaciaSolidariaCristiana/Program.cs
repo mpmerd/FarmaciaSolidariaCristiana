@@ -199,6 +199,9 @@ builder.Services.AddSingleton<INotificationBroadcaster, SignalRNotificationBroad
 // Register Background Services
 builder.Services.AddHostedService<TurnoCleanupService>();
 
+// Cola persistente de emails de broadcast (1 cada 60s, tope diario 350 para Gmail)
+builder.Services.AddHostedService<BroadcastEmailProcessor>();
+
 // Configure Identity
 builder.Services.AddIdentity<IdentityUser, IdentityRole>(options =>
 {

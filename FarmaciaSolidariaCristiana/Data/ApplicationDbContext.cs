@@ -26,6 +26,7 @@ namespace FarmaciaSolidariaCristiana.Data
         public DbSet<NavbarDecoration> NavbarDecorations { get; set; }
         public DbSet<UserDeviceToken> UserDeviceTokens { get; set; }
         public DbSet<PendingNotification> PendingNotifications { get; set; }
+        public DbSet<BroadcastEmailQueueItem> BroadcastEmailQueueItems { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -138,6 +139,15 @@ namespace FarmaciaSolidariaCristiana.Data
             modelBuilder.Entity<UserDeviceToken>()
                 .HasIndex(t => new { t.UserId, t.OneSignalPlayerId })
                 .IsUnique();
+
+            // Configure BroadcastEmailQueueItem (cola persistente de emails de broadcast)
+            // Índice del picker del processor: ítem pendiente más antiguo (TOP 1)
+            modelBuilder.Entity<BroadcastEmailQueueItem>()
+                .HasIndex(i => new { i.Status, i.Id });
+
+            // Conteo diario de enviados (tope BroadcastEmailDailyMax)
+            modelBuilder.Entity<BroadcastEmailQueueItem>()
+                .HasIndex(i => i.SentAtUtc);
 
             modelBuilder.Entity<UserDeviceToken>()
                 .HasIndex(t => t.OneSignalPlayerId);
