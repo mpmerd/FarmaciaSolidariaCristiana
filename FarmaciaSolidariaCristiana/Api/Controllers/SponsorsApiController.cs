@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using FarmaciaSolidariaCristiana.Data;
 using FarmaciaSolidariaCristiana.Models;
 using FarmaciaSolidariaCristiana.Api.Models;
+using FarmaciaSolidariaCristiana.Helpers;
 
 namespace FarmaciaSolidariaCristiana.Api.Controllers
 {
@@ -108,7 +109,7 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
                 Description = model.Description,
                 IsActive = model.IsActive,
                 DisplayOrder = model.DisplayOrder,
-                CreatedDate = DateTime.Now
+                CreatedDate = CubaTime.Now
             };
 
             _context.Sponsors.Add(sponsor);

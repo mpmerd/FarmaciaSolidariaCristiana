@@ -626,10 +626,28 @@ public class ApiService : IApiService
     {
         if (_cache.TryGet<List<Patient>>(CacheKeyPacientes, out var cached) && cached != null)
             return new ApiResponse<List<Patient>> { Success = true, Data = cached };
-        var result = await GetPagedAsync<Patient>("/api/patients?pageSize=500");
-        if (result.Success && result.Data != null)
-            _cache.Set(CacheKeyPacientes, result.Data);
-        return result;
+
+        // Cargar TODAS las páginas: antes solo se pedía 1 página de 500 y con
+        // más de 500 pacientes los más antiguos quedaban fuera de la lista
+        const int pageSize = 500;
+        var allPatients = new List<Patient>();
+        int page = 1;
+
+        while (true)
+        {
+            var result = await GetPagedAsync<Patient>($"/api/patients?page={page}&pageSize={pageSize}");
+            if (!result.Success || result.Data == null)
+                return result;
+
+            allPatients.AddRange(result.Data);
+
+            if (result.Data.Count < pageSize)
+                break;
+            page++;
+        }
+
+        _cache.Set(CacheKeyPacientes, allPatients);
+        return new ApiResponse<List<Patient>> { Success = true, Data = allPatients };
     }
 
     public Task<ApiResponse<Patient>> GetPacienteAsync(int id)

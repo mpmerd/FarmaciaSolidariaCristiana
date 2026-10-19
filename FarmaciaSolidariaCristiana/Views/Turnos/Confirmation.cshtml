@@ -38,7 +38,7 @@
                                     </div>
                                     <div class="col-md-6 mb-3">
                                         <strong><i class="bi bi-clock"></i> Hora:</strong><br/>
-                                        <span class="text-muted">@Model.FechaPreferida.Value.ToString("HH:mm")</span>
+                                        <span class="text-muted">@CubaTime.FormatTime(Model.FechaPreferida.Value)</span>
                                     </div>
                                 }
                                 else
@@ -57,7 +57,7 @@
                                 </div>
                                 <div class="col-md-6 mb-3">
                                     <strong><i class="bi bi-calendar-event"></i> Fecha de Solicitud:</strong><br/>
-                                    <span class="text-muted">@Model.FechaSolicitud.ToString("dd/MM/yyyy HH:mm")</span>
+                                    <span class="text-muted">@CubaTime.FormatDateTime(Model.FechaSolicitud)</span>
                                 </div>
                             </div>
                         </div>

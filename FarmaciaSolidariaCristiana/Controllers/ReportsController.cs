@@ -10,6 +10,7 @@ using iText.Layout.Properties;
 using iText.Kernel.Font;
 using iText.IO.Font.Constants;
 using iText.IO.Image;
+using FarmaciaSolidariaCristiana.Helpers;
 
 namespace FarmaciaSolidariaCristiana.Controllers
 {
@@ -88,7 +89,7 @@ namespace FarmaciaSolidariaCristiana.Controllers
                 .SetTextAlignment(TextAlignment.CENTER));
 
             // Fecha
-            document.Add(new Paragraph($"Fecha: {DateTime.Now:dd/MM/yyyy HH:mm}")
+            document.Add(new Paragraph($"Fecha: {CubaTime.FormatDateTime(CubaTime.Now)}")
                 .SetFontSize(10)
                 .SetTextAlignment(TextAlignment.RIGHT));
 
@@ -192,7 +193,7 @@ namespace FarmaciaSolidariaCristiana.Controllers
                 document.Close();
 
                 _logger.LogInformation("Deliveries PDF report generated");
-                return File(ms.ToArray(), "application/pdf", $"Entregas_{DateTime.Now:yyyyMMdd}.pdf");
+                return File(ms.ToArray(), "application/pdf", $"Entregas_{CubaTime.Now:yyyyMMdd}.pdf");
             }
         }
 
@@ -285,7 +286,7 @@ namespace FarmaciaSolidariaCristiana.Controllers
                 document.Close();
 
                 _logger.LogInformation("Donations PDF report generated");
-                return File(ms.ToArray(), "application/pdf", $"Donaciones_{DateTime.Now:yyyyMMdd}.pdf");
+                return File(ms.ToArray(), "application/pdf", $"Donaciones_{CubaTime.Now:yyyyMMdd}.pdf");
             }
         }
 

@@ -1,10 +1,10 @@
 {
-  "version": "1.0.8",
-  "versionCode": 8,
-  "releaseDate": "2026-09-07",
+  "version": "1.1.0",
+  "versionCode": 10,
+  "releaseDate": "2026-10-13",
   "downloadUrl": "https://farmaciasolidaria.somee.com/android/farmaciasolidaria.apk",
   "fileSize": "36M",
   "minAndroidVersion": "24",
-  "minimumVersion": "1.0.8",
-  "releaseNotes": "Soporte para teléfonos Android de 32 bits (Redmi 9A/9C, POCO C3 y similares): la app ahora incluye librerías nativas ARM de 32 bits (armeabi-v7a) además de 64 bits. "
+  "minimumVersion": "1.0.9",
+  "releaseNotes": "Se corrige paginacion de cantidad de pacientes en vista de pacientes. Esta versión solo afecta a los usuarios con privilegios de edición. "
 }

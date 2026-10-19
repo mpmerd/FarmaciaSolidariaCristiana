@@ -11,7 +11,7 @@
                 <i class="bi bi-person-circle"></i> @Model.FullName
             </h2>
             <p class="text-muted">
-                <i class="bi bi-calendar-check"></i> Registrado: @Model.RegistrationDate.ToString("dd/MM/yyyy HH:mm")
+                <i class="bi bi-calendar-check"></i> Registrado: @CubaTime.FormatDateTime(Model.RegistrationDate)
             </p>
         </div>
         <div class="col-md-4 text-end">
@@ -186,7 +186,7 @@
                                     <p class="card-text small text-muted">
                                         @doc.FileName<br />
                                         @((doc.FileSize / 1024).ToString("N0")) KB<br />
-                                        @doc.UploadDate.ToString("dd/MM/yyyy HH:mm")
+                                        @CubaTime.FormatDateTime(doc.UploadDate)
                                     </p>
                                     @if (!string.IsNullOrEmpty(doc.Description))
                                     {

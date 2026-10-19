@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using FarmaciaSolidariaCristiana.Data;
 using FarmaciaSolidariaCristiana.Models;
 using FarmaciaSolidariaCristiana.Services;
+using FarmaciaSolidariaCristiana.Helpers;
 
 namespace FarmaciaSolidariaCristiana.Controllers
 {
@@ -151,7 +152,7 @@ namespace FarmaciaSolidariaCristiana.Controllers
                     id = t.Id,
                     estado = t.Estado,
                     fechaTurno = t.FechaPreferida,
-                    horaTurno = t.FechaPreferida != null ? t.FechaPreferida.Value.ToString("HH:mm") : null,
+                    horaTurno = CubaTime.FormatTime(t.FechaPreferida),
                     medicamentos = t.Medicamentos.Select(tm => new
                     {
                         id = tm.MedicineId,
@@ -408,7 +409,56 @@ namespace FarmaciaSolidariaCristiana.Controllers
         {
             if (ModelState.IsValid)
             {
-                patient.RegistrationDate = DateTime.Now;
+                // Verificar duplicados en el servidor (el chequeo del cliente solo ve pacientes activos)
+                var existing = await _context.Patients
+                    .FirstOrDefaultAsync(p => p.IdentificationDocument == patient.IdentificationDocument);
+
+                if (existing != null && existing.IsActive)
+                {
+                    ModelState.AddModelError(string.Empty,
+                        "Ya existe un paciente activo con ese Carnet de Identidad o Pasaporte.");
+                    return View(patient);
+                }
+
+                if (existing != null)
+                {
+                    // El paciente existe pero está desactivado (eliminado lógicamente):
+                    // reactivar y actualizar sus datos en lugar de bloquear el alta
+                    existing.FullName = patient.FullName;
+                    existing.Age = patient.Age;
+                    existing.Gender = patient.Gender;
+                    existing.Address = patient.Address;
+                    existing.Phone = patient.Phone;
+                    existing.Municipality = patient.Municipality;
+                    existing.Province = patient.Province;
+                    existing.MainDiagnosis = patient.MainDiagnosis;
+                    existing.AssociatedPathologies = patient.AssociatedPathologies;
+                    existing.KnownAllergies = patient.KnownAllergies;
+                    existing.CurrentTreatments = patient.CurrentTreatments;
+                    existing.BloodPressureSystolic = patient.BloodPressureSystolic;
+                    existing.BloodPressureDiastolic = patient.BloodPressureDiastolic;
+                    existing.Weight = patient.Weight;
+                    existing.Height = patient.Height;
+                    existing.Observations = patient.Observations;
+                    existing.IsActive = true;
+
+                    await _context.SaveChangesAsync();
+
+                    if (documents != null && documents.Count > 0)
+                    {
+                        await UploadDocuments(existing.Id, documents, documentTypes, documentDescriptions);
+                    }
+
+                    if (importedDocumentPaths != null && importedDocumentPaths.Count > 0)
+                    {
+                        await SaveImportedDocuments(existing.Id, importedDocumentPaths, importedDocumentTypes, importedDocumentNames);
+                    }
+
+                    TempData["SuccessMessage"] = "El paciente ya estaba registrado como inactivo. Fue reactivado y actualizado exitosamente.";
+                    return RedirectToAction(nameof(Details), new { id = existing.Id });
+                }
+
+                patient.RegistrationDate = CubaTime.Now;
                 patient.IsActive = true;
 
                 _context.Add(patient);
@@ -419,7 +469,7 @@ namespace FarmaciaSolidariaCristiana.Controllers
                 {
                     await UploadDocuments(patient.Id, documents, documentTypes, documentDescriptions);
                 }
-                
+
                 // Handle imported documents from turnos (ya copiados al servidor)
                 if (importedDocumentPaths != null && importedDocumentPaths.Count > 0)
                 {
@@ -703,7 +753,7 @@ namespace FarmaciaSolidariaCristiana.Controllers
                         FileSize = fileSize,
                         ContentType = contentType,
                         Description = documentDescriptions != null && i < documentDescriptions.Count ? documentDescriptions[i] : null,
-                        UploadDate = DateTime.Now
+                        UploadDate = CubaTime.Now
                     };
 
                     _context.PatientDocuments.Add(document);
@@ -756,7 +806,7 @@ namespace FarmaciaSolidariaCristiana.Controllers
                         FileSize = fileInfo.Length,
                         ContentType = contentType,
                         Description = "Documento importado de solicitud de turno",
-                        UploadDate = DateTime.Now
+                        UploadDate = CubaTime.Now
                     };
 
                     _context.PatientDocuments.Add(document);
@@ -880,7 +930,7 @@ namespace FarmaciaSolidariaCristiana.Controllers
             }
 
             patient.IsBlockedByLoan = true;
-            patient.LoanBlockDate = DateTime.Now;
+            patient.LoanBlockDate = CubaTime.Now;
             patient.LoanBlockDescription = description;
             patient.LoanUnblockDate = null;
             patient.LoanUnblockedByUserId = null;
@@ -894,7 +944,7 @@ namespace FarmaciaSolidariaCristiana.Controllers
             {
                 success = true,
                 message = $"El paciente {patient.FullName} ha sido bloqueado por préstamo de insumo.",
-                blockDate = patient.LoanBlockDate?.ToString("dd/MM/yyyy HH:mm")
+                blockDate = CubaTime.FormatDateTime(patient.LoanBlockDate)
             });
         }
 
@@ -920,7 +970,7 @@ namespace FarmaciaSolidariaCristiana.Controllers
             var currentUser = await _userManager.GetUserAsync(User);
 
             patient.IsBlockedByLoan = false;
-            patient.LoanUnblockDate = DateTime.Now;
+            patient.LoanUnblockDate = CubaTime.Now;
             patient.LoanUnblockedByUserId = currentUser?.Id;
 
             await _context.SaveChangesAsync();
@@ -932,7 +982,7 @@ namespace FarmaciaSolidariaCristiana.Controllers
             {
                 success = true,
                 message = $"El paciente {patient.FullName} ha sido desbloqueado.",
-                unblockDate = patient.LoanUnblockDate?.ToString("dd/MM/yyyy HH:mm"),
+                unblockDate = CubaTime.FormatDateTime(patient.LoanUnblockDate),
                 unblockedBy = currentUser?.UserName
             });
         }

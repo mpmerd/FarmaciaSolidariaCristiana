@@ -22,6 +22,11 @@ echo "DESPLIEGUE COMPLETO a Somee.com"
 echo "==========================================${NC}"
 echo ""
 
+# Guard de hora de Cuba: abortar si hay DateTime.Now/Today fuera de whitelist
+echo -e "${YELLOW}Guard anti-regresión de hora de Cuba...${NC}"
+./check-no-datetime-now.sh
+echo ""
+
 # Verificar que estamos en la rama developerConApi (comparación insensible a mayúsculas)
 CURRENT_BRANCH=$(git branch --show-current)
 EXPECTED_BRANCH="developerconapi"

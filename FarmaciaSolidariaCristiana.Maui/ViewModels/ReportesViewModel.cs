@@ -8,16 +8,16 @@ namespace FarmaciaSolidariaCristiana.Maui.ViewModels;
 public partial class ReportesViewModel : BaseViewModel
 {
     [ObservableProperty]
-    private DateTime fechaInicio = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
+    private DateTime fechaInicio = new DateTime(CubaTime.Today.Year, CubaTime.Today.Month, 1);
 
     [ObservableProperty]
-    private DateTime fechaFin = DateTime.Today;
+    private DateTime fechaFin = CubaTime.Today;
 
     [ObservableProperty]
-    private int selectedYear = DateTime.Today.Year;
+    private int selectedYear = CubaTime.Today.Year;
 
     [ObservableProperty]
-    private int selectedMonth = DateTime.Today.Month;
+    private int selectedMonth = CubaTime.Today.Month;
 
     [ObservableProperty]
     private bool canGenerateReports;
@@ -25,7 +25,7 @@ public partial class ReportesViewModel : BaseViewModel
     [ObservableProperty]
     private string statusMessage = string.Empty;
 
-    public List<int> AvailableYears { get; } = Enumerable.Range(2020, DateTime.Today.Year - 2020 + 2).ToList();
+    public List<int> AvailableYears { get; } = Enumerable.Range(2020, CubaTime.Today.Year - 2020 + 2).ToList();
     public List<string> AvailableMonths { get; } = new()
     {
         "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",

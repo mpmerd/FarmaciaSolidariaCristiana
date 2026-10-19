@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using FarmaciaSolidariaCristiana.Data;
 using FarmaciaSolidariaCristiana.Models;
+using FarmaciaSolidariaCristiana.Helpers;
 
 namespace FarmaciaSolidariaCristiana.Controllers
 {
@@ -87,7 +88,7 @@ namespace FarmaciaSolidariaCristiana.Controllers
             }
 
             // Validar fecha de entrega
-            var today = DateTime.Today;
+            var today = CubaTime.Today;
             var deliveryDateOnly = DeliveryDate.Date;
             var minAllowedDate = today.AddDays(-5);
 
@@ -119,7 +120,7 @@ namespace FarmaciaSolidariaCristiana.Controllers
             try
             {
                 var deliveredBy = User.Identity?.Name ?? "Sistema";
-                var createdAt = DateTime.Now;
+                var createdAt = CubaTime.Now;
                 int deliveriesCount = 0;
 
                 // ✅ FIX: El turnoId se busca individualmente por cada medicamento/insumo dentro del loop
@@ -495,7 +496,7 @@ namespace FarmaciaSolidariaCristiana.Controllers
             // Calcular el tiempo transcurrido desde la creación
             // Si CreatedAt es null (registros antiguos), usar DeliveryDate como referencia
             var createdDate = delivery.CreatedAt ?? delivery.DeliveryDate;
-            var hoursSinceCreation = (DateTime.Now - createdDate).TotalHours;
+            var hoursSinceCreation = (CubaTime.Now - createdDate).TotalHours;
             ViewData["HoursSinceCreation"] = hoursSinceCreation;
             ViewData["CanDelete"] = hoursSinceCreation <= 2;
 
@@ -521,7 +522,7 @@ namespace FarmaciaSolidariaCristiana.Controllers
             // Verificar que no hayan pasado más de 2 horas desde la creación
             // Si CreatedAt es null (registros antiguos), usar DeliveryDate como referencia
             var createdDate = delivery.CreatedAt ?? delivery.DeliveryDate;
-            var hoursSinceCreation = (DateTime.Now - createdDate).TotalHours;
+            var hoursSinceCreation = (CubaTime.Now - createdDate).TotalHours;
             
             if (hoursSinceCreation > 2)
             {
@@ -853,7 +854,7 @@ namespace FarmaciaSolidariaCristiana.Controllers
                     // Si no tienen CantidadAprobada, significa que fueron eliminadas/corregidas
                     
                     turno.Estado = "Completado";
-                    turno.FechaEntrega = DateTime.Now;
+                    turno.FechaEntrega = CubaTime.Now;
                     await _context.SaveChangesAsync();
                     
                     string itemType = medicineId.HasValue ? "Medicamento" : "Insumo";

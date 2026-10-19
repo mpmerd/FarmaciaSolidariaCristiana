@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Mail;
 using Microsoft.AspNetCore.Identity;
+using FarmaciaSolidariaCristiana.Helpers;
 
 namespace FarmaciaSolidariaCristiana.Services
 {
@@ -195,7 +196,7 @@ namespace FarmaciaSolidariaCristiana.Services
                                 </div>
 
                                 <p><strong>📅 Fecha del turno:</strong> {fechaTurno:dddd, dd MMMM yyyy}</p>
-                                <p><strong>🕐 Hora:</strong> {fechaTurno:HH:mm}</p>
+                                <p><strong>🕐 Hora:</strong> {CubaTime.FormatTime(fechaTurno)}</p>
                                 
                                 <h3>Instrucciones importantes:</h3>
                                 <ul>
@@ -396,7 +397,7 @@ namespace FarmaciaSolidariaCristiana.Services
                                     • <strong>Usuario:</strong> {userName}<br/>
                                     • <strong>Tipo:</strong> {tipoIcono} {tipoSolicitud}<br/>
                                     • <strong>ID de Turno:</strong> #{turnoId}<br/>
-                                    • <strong>Fecha de Solicitud:</strong> {DateTime.Now:dd/MM/yyyy HH:mm}<br/>
+                                    • <strong>Fecha de Solicitud:</strong> {CubaTime.FormatDateTime(CubaTime.Now)}<br/>
                                 </div>
 
                                 <p>Por favor, revisa la solicitud cuando tengas un momento disponible. Recuerda que esto es voluntario y puedes revisar según tu disponibilidad.</p>
@@ -538,9 +539,9 @@ namespace FarmaciaSolidariaCristiana.Services
                             
                             <div class='info-box'>
                                 <p><strong>Número de Turno:</strong> #{numeroTurno:000}</p>
-                                <p><strong>Fecha del Turno:</strong> {fechaTurno:dd/MM/yyyy HH:mm}</p>
+                                <p><strong>Fecha del Turno:</strong> {CubaTime.FormatDateTime(fechaTurno)}</p>
                                 <p><strong>Motivo:</strong> {motivo}</p>
-                                <p><strong>Cancelado el:</strong> {DateTime.Now:dd/MM/yyyy HH:mm}</p>
+                                <p><strong>Cancelado el:</strong> {CubaTime.FormatDateTime(CubaTime.Now)}</p>
                             </div>
                             
                             <p>Si necesitas solicitar un nuevo turno, puedes hacerlo desde nuestra plataforma.</p>
@@ -595,9 +596,9 @@ namespace FarmaciaSolidariaCristiana.Services
                             
                             <div class='info-box'>
                                 <p><strong>Número de Turno:</strong> #{numeroTurno:000}</p>
-                                <p><strong>Fecha del Turno:</strong> {fechaTurno:dd/MM/yyyy HH:mm}</p>
+                                <p><strong>Fecha del Turno:</strong> {CubaTime.FormatDateTime(fechaTurno)}</p>
                                 <p><strong>Motivo de cancelación:</strong> {motivo}</p>
-                                <p><strong>Cancelado el:</strong> {DateTime.Now:dd/MM/yyyy HH:mm}</p>
+                                <p><strong>Cancelado el:</strong> {CubaTime.FormatDateTime(CubaTime.Now)}</p>
                             </div>
                             
                             <p>✅ El slot de tiempo ha quedado disponible para otros usuarios.</p>
@@ -654,8 +655,8 @@ namespace FarmaciaSolidariaCristiana.Services
                             
                             <div class='info-box'>
                                 <p><strong>Número de Turno:</strong> #{numeroTurno:000}</p>
-                                <p><strong>Fecha Original:</strong> <s>{fechaOriginal:dd/MM/yyyy HH:mm}</s></p>
-                                <p><strong>Nueva Fecha:</strong> <span style='color: #0d6efd; font-size: 1.2em;'>{fechaNueva:dd/MM/yyyy HH:mm}</span></p>
+                                <p><strong>Fecha Original:</strong> <s>{CubaTime.FormatDateTime(fechaOriginal)}</s></p>
+                                <p><strong>Nueva Fecha:</strong> <span style='color: #0d6efd; font-size: 1.2em;'>{CubaTime.FormatDateTime(fechaNueva)}</span></p>
                                 <p><strong>Día:</strong> {fechaNueva:dddd, dd 'de' MMMM 'de' yyyy}</p>
                             </div>
                             
@@ -726,7 +727,7 @@ namespace FarmaciaSolidariaCristiana.Services
                             
                             <div class='info-box'>
                                 <p><strong>Número de Turno:</strong> #{numeroTurno:000}</p>
-                                <p><strong>Fecha Programada:</strong> {fechaTurno:dd/MM/yyyy HH:mm}</p>
+                                <p><strong>Fecha Programada:</strong> {CubaTime.FormatDateTime(fechaTurno)}</p>
                                 <p><strong>Estado:</strong> <span style='color: #dc3545;'>CANCELADO</span></p>
                             </div>
                             
@@ -801,8 +802,8 @@ namespace FarmaciaSolidariaCristiana.Services
                             <div class='info-box'>
                                 <p><strong>Número de Turno:</strong> #{numeroTurno:000}</p>
                                 <p><strong>Usuario:</strong> {nombreUsuario}</p>
-                                <p><strong>Fecha Programada:</strong> {fechaTurno:dd/MM/yyyy HH:mm}</p>
-                                <p><strong>Procesado:</strong> {DateTime.Now:dd/MM/yyyy HH:mm}</p>
+                                <p><strong>Fecha Programada:</strong> {CubaTime.FormatDateTime(fechaTurno)}</p>
+                                <p><strong>Procesado:</strong> {CubaTime.FormatDateTime(CubaTime.Now)}</p>
                             </div>
                             
                             <div class='items'>
