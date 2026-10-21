@@ -29,13 +29,13 @@
     }
   },
   "SmtpSettings": {
-    "Host": "smtp.tu_proveedor.com",
-    "Port": "587",
-    "Username": "tu_email@ejemplo.com",
-    "Password": "TU_APP_PASSWORD_SMTP",
+    "Host": "smtp.tu_sitio.com",
+    "Port": "26",
+    "Username": "noreply@tu_sitio.com",
+    "Password": "TU_PASSWORD_SMTP",
     "FromEmail": "noreply@tu_sitio.com",
     "FromName": "Farmacia Solidaria Cristiana",
-    "EnableSsl": "true"
+    "EnableSsl": "false"
   },
   "AppSettings": {
     "EnablePublicRegistration": false,
