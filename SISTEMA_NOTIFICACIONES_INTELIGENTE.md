@@ -490,8 +490,13 @@ Fuera de Cuba (IP no cubana, ej. Starlink USA):
     "ExpirationMinutes": 43200  // 30 días
   },
   "SmtpSettings": {
-    "Host": "smtp.gmail.com",
-    "Port": "587",
+    // ✅ Cambiado (21 oct 2026): la cuenta Gmail agotó su cuota diaria (550 5.4.5
+    // Daily user sending limit exceeded) y bloqueó los códigos de registro.
+    // Ahora se usa el SMTP propio de Somee (noreply@farmaciasolidaria.somee.com,
+    // puerto 26, sin SSL). Los topes de BroadcastEmail se conservan como resguardo.
+    "Host": "smtp.farmaciasolidaria.somee.com",
+    "Port": "26",
+    "EnableSsl": "false"
     // ... otras configuraciones
   },
   "AppSettings": {

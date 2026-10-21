@@ -51,7 +51,27 @@ El registro público se controla mediante el archivo `appsettings.json`:
 
 Para que funcionen las notificaciones y recuperación de contraseña, configura el SMTP en `appsettings.json`:
 
-#### Opción 1: Gmail (Recomendado para desarrollo)
+#### Opción 1: Servidor SMTP de Somee (✅ Configuración actual de producción)
+
+```json
+{
+  "SmtpSettings": {
+    "Host": "smtp.farmaciasolidaria.somee.com",
+    "Port": "26",
+    "Username": "noreply@farmaciasolidaria.somee.com",
+    "Password": "tu-contraseña-email",
+    "FromEmail": "noreply@farmaciasolidaria.somee.com",
+    "FromName": "Farmacia Solidaria Cristiana",
+    "EnableSsl": "false"
+  }
+}
+```
+
+> Cambiado el 21 oct 2026: la cuenta Gmail compartida agotaba su cuota diaria
+> (500/día, error `550 5.4.5`) y bloqueaba los códigos de registro. El SMTP propio
+> de Somee no tiene ese tope.
+
+#### Opción 2: Gmail (alternativa, solo desarrollo)
 
 ```json
 {
@@ -73,22 +93,6 @@ Para que funcionen las notificaciones y recuperación de contraseña, configura 
 3. Ve a "Contraseñas de aplicaciones"
 4. Genera una contraseña para "Correo"
 5. Usa esa contraseña en el campo `Password`
-
-#### Opción 2: Servidor SMTP de Somee (Si está disponible)
-
-```json
-{
-  "SmtpSettings": {
-    "Host": "mail.farmaciasolidaria.somee.com",
-    "Port": "587",
-    "Username": "tu-usuario@farmaciasolidaria.somee.com",
-    "Password": "tu-contraseña-email",
-    "FromEmail": "noreply@farmaciasolidaria.somee.com",
-    "FromName": "Farmacia Solidaria Cristiana",
-    "EnableSsl": "true"
-  }
-}
-```
 
 ## 🚀 Proceso de Despliegue a Producción
 
