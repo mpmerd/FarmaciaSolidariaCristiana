@@ -494,6 +494,8 @@ Fuera de Cuba (IP no cubana, ej. Starlink USA):
     // Daily user sending limit exceeded) y bloqueó los códigos de registro.
     // Ahora se usa el SMTP propio de Somee (noreply@farmaciasolidaria.somee.com,
     // puerto 26, sin SSL). Los topes de BroadcastEmail se conservan como resguardo.
+    // ⚠️ RESPALDO: las credenciales de la cuenta Gmail anterior están documentadas
+    // en REGISTRO_CONFIG.md (Opción 2) para volver atrás si el SMTP de Somee falla.
     "Host": "smtp.farmaciasolidaria.somee.com",
     "Port": "26",
     "EnableSsl": "false"

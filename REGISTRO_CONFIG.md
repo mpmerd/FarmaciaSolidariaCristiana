@@ -71,28 +71,31 @@ Para que funcionen las notificaciones y recuperación de contraseña, configura 
 > (500/día, error `550 5.4.5`) y bloqueaba los códigos de registro. El SMTP propio
 > de Somee no tiene ese tope.
 
-#### Opción 2: Gmail (alternativa, solo desarrollo)
+#### Opción 2: Gmail (respaldo si el SMTP de Somee falla)
+
+> ⚠️ **Respaldo documentado (21 oct 2026)**: esta cuenta es la alternativa para
+> volver atrás si `noreply@farmaciasolidaria.somee.com` falla. Cambiar los campos
+> `SmtpSettings` en `appsettings.json` (producción y Development), redeployar y
+> reiniciar la app. Limitación: Gmail gratuito tiene cuota de **500 emails/día**
+> compartida (códigos, resets, turnos y broadcasts) — el error `550 5.4.5` que
+> motivó el cambio a Somee.
+>
+> 🔒 Las credenciales reales NO se publican en GitHub. Están en el archivo local
+> `CREDENCIALES_RESPALDO_GMAIL.local.md` (gitignoreado, solo en el equipo del admin).
 
 ```json
 {
   "SmtpSettings": {
     "Host": "smtp.gmail.com",
     "Port": "587",
-    "Username": "tu-email@gmail.com",
-    "Password": "tu-app-password",  // ⚠️ Usar "App Password" de Gmail
-    "FromEmail": "tu-email@gmail.com",
+    "Username": "<gmail-con-app-password>",
+    "Password": "<app-password-de-16-caracteres>",
+    "FromEmail": "<gmail-con-app-password>",
     "FromName": "Farmacia Solidaria Cristiana",
     "EnableSsl": "true"
   }
 }
 ```
-
-**Cómo obtener App Password de Gmail:**
-1. Ve a tu cuenta de Google → Seguridad
-2. Activa "Verificación en 2 pasos"
-3. Ve a "Contraseñas de aplicaciones"
-4. Genera una contraseña para "Correo"
-5. Usa esa contraseña en el campo `Password`
 
 ## 🚀 Proceso de Despliegue a Producción
 
