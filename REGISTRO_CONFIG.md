@@ -51,39 +51,46 @@ El registro público se controla mediante el archivo `appsettings.json`:
 
 Para que funcionen las notificaciones y recuperación de contraseña, configura el SMTP en `appsettings.json`:
 
-#### Opción 1: Gmail (Recomendado para desarrollo)
+#### Opción 1: Servidor SMTP de Somee (✅ Configuración actual de producción)
+
+```json
+{
+  "SmtpSettings": {
+    "Host": "smtp.farmaciasolidaria.somee.com",
+    "Port": "26",
+    "Username": "noreply@farmaciasolidaria.somee.com",
+    "Password": "tu-contraseña-email",
+    "FromEmail": "noreply@farmaciasolidaria.somee.com",
+    "FromName": "Farmacia Solidaria Cristiana",
+    "EnableSsl": "false"
+  }
+}
+```
+
+> Cambiado el 21 oct 2026: la cuenta Gmail compartida agotaba su cuota diaria
+> (500/día, error `550 5.4.5`) y bloqueaba los códigos de registro. El SMTP propio
+> de Somee no tiene ese tope.
+
+#### Opción 2: Gmail (respaldo si el SMTP de Somee falla)
+
+> ⚠️ **Respaldo documentado (21 oct 2026)**: esta cuenta es la alternativa para
+> volver atrás si `noreply@farmaciasolidaria.somee.com` falla. Cambiar los campos
+> `SmtpSettings` en `appsettings.json` (producción y Development), redeployar y
+> reiniciar la app. Limitación: Gmail gratuito tiene cuota de **500 emails/día**
+> compartida (códigos, resets, turnos y broadcasts) — el error `550 5.4.5` que
+> motivó el cambio a Somee.
+>
+> 🔒 Las credenciales reales NO se publican en GitHub. Están en el archivo local
+> `CREDENCIALES_RESPALDO_GMAIL.local.md` (gitignoreado, solo en el equipo del admin).
 
 ```json
 {
   "SmtpSettings": {
     "Host": "smtp.gmail.com",
     "Port": "587",
-    "Username": "tu-email@gmail.com",
-    "Password": "tu-app-password",  // ⚠️ Usar "App Password" de Gmail
-    "FromEmail": "tu-email@gmail.com",
-    "FromName": "Farmacia Solidaria Cristiana",
-    "EnableSsl": "true"
-  }
-}
-```
-
-**Cómo obtener App Password de Gmail:**
-1. Ve a tu cuenta de Google → Seguridad
-2. Activa "Verificación en 2 pasos"
-3. Ve a "Contraseñas de aplicaciones"
-4. Genera una contraseña para "Correo"
-5. Usa esa contraseña en el campo `Password`
-
-#### Opción 2: Servidor SMTP de Somee (Si está disponible)
-
-```json
-{
-  "SmtpSettings": {
-    "Host": "mail.farmaciasolidaria.somee.com",
-    "Port": "587",
-    "Username": "tu-usuario@farmaciasolidaria.somee.com",
-    "Password": "tu-contraseña-email",
-    "FromEmail": "noreply@farmaciasolidaria.somee.com",
+    "Username": "<gmail-con-app-password>",
+    "Password": "<app-password-de-16-caracteres>",
+    "FromEmail": "<gmail-con-app-password>",
     "FromName": "Farmacia Solidaria Cristiana",
     "EnableSsl": "true"
   }

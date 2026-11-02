@@ -11,12 +11,12 @@ namespace FarmaciaSolidariaCristiana.Controllers
     /// <summary>
     /// Controlador MVC para enviar notificaciones masivas desde la web.
     /// Solo accesible por administradores.
+    /// Email vía cola persistente (BroadcastEmailProcessor); notificación in-app vía SignalR.
     /// </summary>
     [Authorize(Roles = "Admin")]
     public class BroadcastController : Controller
     {
         private readonly UserManager<IdentityUser> _userManager;
-        private readonly IEmailService _emailService;
         private readonly IPendingNotificationService _pendingNotificationService;
         private readonly ApplicationDbContext _context;
         private readonly IConfiguration _configuration;
@@ -24,14 +24,12 @@ namespace FarmaciaSolidariaCristiana.Controllers
 
         public BroadcastController(
             UserManager<IdentityUser> userManager,
-            IEmailService emailService,
             IPendingNotificationService pendingNotificationService,
             ApplicationDbContext context,
             IConfiguration configuration,
             ILogger<BroadcastController> logger)
         {
             _userManager = userManager;
-            _emailService = emailService;
             _pendingNotificationService = pendingNotificationService;
             _context = context;
             _configuration = configuration;
@@ -54,7 +52,7 @@ namespace FarmaciaSolidariaCristiana.Controllers
             ViewBag.UserCount = patients.Count;
             ViewBag.AppActiveCount = patients.Count(u => activeAppIds.Contains(u.Id));
             ViewBag.EmailTargetCount = patients.Count(u => !string.IsNullOrEmpty(u.Email) && !activeAppIds.Contains(u.Id));
-            ViewBag.BroadcastEmailMax = _configuration.GetValue<int?>("AppSettings:BroadcastEmailMax") ?? 450;
+            ViewBag.BroadcastEmailDailyMax = _configuration.GetValue<int?>("AppSettings:BroadcastEmailDailyMax") ?? 350;
             return View();
         }
 
@@ -90,8 +88,8 @@ namespace FarmaciaSolidariaCristiana.Controllers
                 : new List<string>();
 
             // IDs de pacientes con app REALMENTE activa (heartbeat reciente): ya reciben la
-            // notificación in-app, por lo que se excluyen del email para no agotar la cuota
-            // diaria de Gmail (500/día) ni duplicar el aviso.
+            // notificación in-app, por lo que se excluyen del email para no duplicar el aviso
+            // ni gastar cuota de Gmail en quien ya está informado.
             var recentAppUserIds = (sendEmail && sendNotification)
                 ? await _context.UserDeviceTokens
                     .Where(d => d.IsActive && d.LastActivityAt != null && d.LastActivityAt >= activityCutoff)
@@ -101,31 +99,23 @@ namespace FarmaciaSolidariaCristiana.Controllers
                 : new List<string>();
             var recentAppSet = recentAppUserIds.ToHashSet();
 
-            var maxEmails = _configuration.GetValue<int?>("AppSettings:BroadcastEmailMax") ?? 450;
-            var emailIntervalMinutes = _configuration.GetValue<int?>("AppSettings:BroadcastEmailIntervalMinutes") ?? 5;
+            var dailyMax = _configuration.GetValue<int?>("AppSettings:BroadcastEmailDailyMax") ?? 350;
+            var intervalSeconds = _configuration.GetValue<int?>("AppSettings:BroadcastEmailIntervalSeconds") ?? 60;
 
-            var emailTargets = sendEmail
+            // Pacientes sin app activa → email. Sin tope: la cola persistente entrega a
+            // ritmo seguro (1 cada N segundos, tope diario) y tarda días si hay cientos.
+            var emailTargetUsers = sendEmail
                 ? users
                     .Where(u => !string.IsNullOrEmpty(u.Email) && !recentAppSet.Contains(u.Id))
-                    .Select(u => u.Email!)
                     .ToList()
-                : new List<string>();
-
-            if (sendEmail && emailTargets.Count > maxEmails)
-            {
-                TempData["ErrorMessage"] =
-                    $"El email se enviaría a {emailTargets.Count} pacientes, superando el tope seguro de {maxEmails} " +
-                    "(Gmail gratuito: 500/día compartidos con códigos de registro). " +
-                    "Desactive el canal email para enviar solo la notificación in-app.";
-                return RedirectToAction("Index");
-            }
+                : new List<IdentityUser>();
 
             int notificationsCreated = 0;
 
             var adminUser = User.Identity?.Name ?? "Admin";
             _logger.LogInformation(
                 "[Broadcast] {Admin} iniciando broadcast: '{Title}' a {Count} pacientes ({MobileCount} con app, {EmailCount} por email). Email={SendEmail}, App={SendApp}",
-                adminUser, title, users.Count, mobileUserIds.Count, emailTargets.Count, sendEmail, sendNotification);
+                adminUser, title, users.Count, mobileUserIds.Count, emailTargetUsers.Count, sendEmail, sendNotification);
 
             // Canal 2: Notificaciones in-app - bulk (1 SaveChanges + fan-out SignalR en paralelo).
             // Antes era un foreach con 1 SaveChanges por usuario → timeout de Somee para N grande.
@@ -145,92 +135,56 @@ namespace FarmaciaSolidariaCristiana.Controllers
                 }
             }
 
-            // Canal 1: Emails - se envían en segundo plano (1 cada N minutos, puede tardar más de un día)
-            int totalEmailTargets = emailTargets.Count;
-            if (sendEmail && emailTargets.Count > 0)
+            // Canal 1: Emails - encolados en BD (tabla BroadcastEmailQueueItems). Los envía
+            // BroadcastEmailProcessor (BackgroundService) a 1 cada intervalSeconds con tope
+            // diario dailyMax. La cola persistente sobrevive reciclados del hosting y no
+            // tiene tope de destinatarios (Gmail: 500/día compartidos con transaccionales).
+            int totalEmailTargets = emailTargetUsers.Count;
+            if (sendEmail && emailTargetUsers.Count > 0)
             {
-                var emailTitle = title;
-                var emailMessage = message;
-
-                _ = Task.Run(async () =>
+                try
                 {
-                    int sent = 0;
-                    int failed = 0;
-                    int consecutiveFailures = 0;
-                    foreach (var email in emailTargets)
-                    {
-                        try
+                    var broadcastId = Guid.NewGuid();
+                    var now = DateTime.UtcNow;
+                    var items = emailTargetUsers
+                        .GroupBy(u => u.Id) // 1 ítem por usuario (evita duplicados)
+                        .Select(g => g.First())
+                        .Select(u => new BroadcastEmailQueueItem
                         {
-                            if (sent > 0 || failed > 0)
-                                await Task.Delay(TimeSpan.FromMinutes(emailIntervalMinutes));
+                            BroadcastId = broadcastId,
+                            UserId = u.Id,
+                            Email = u.Email!,
+                            Title = title,
+                            Message = message,
+                            Status = BroadcastEmailStatus.Pending,
+                            Attempts = 0,
+                            CreatedAtUtc = now
+                        })
+                        .ToList();
 
-                            var emailBody = BuildEmailBody(emailTitle, emailMessage);
-                            await _emailService.SendEmailAsync(email, $"📢 {emailTitle}", emailBody);
-                            sent++;
-                            consecutiveFailures = 0;
+                    await _context.BroadcastEmailQueueItems.AddRangeAsync(items);
+                    await _context.SaveChangesAsync();
 
-                            if (sent % 10 == 0)
-                                _logger.LogInformation("[Broadcast] Progreso emails: {Sent} enviados, {Failed} fallidos de {Total}",
-                                    sent, failed, emailTargets.Count);
-                        }
-                        catch (Exception ex)
-                        {
-                            failed++;
-                            consecutiveFailures++;
-                            _logger.LogWarning(ex, "[Broadcast] Error enviando email a {Email}", email);
-
-                            if (consecutiveFailures >= 5)
-                            {
-                                _logger.LogError(
-                                    "[Broadcast] Envío de emails abortado: {ConsecutiveFailures} fallos consecutivos. " +
-                                    "Posible bloqueo de cuota Gmail. Restantes sin intentar: {Remaining}",
-                                    consecutiveFailures, emailTargets.Count - sent - failed);
-                                break;
-                            }
-
-                            await Task.Delay(TimeSpan.FromMinutes(emailIntervalMinutes * 2));
-                        }
-                    }
                     _logger.LogInformation(
-                        "[Broadcast] Emails finalizados: {Sent} enviados, {Failed} fallidos de {Total}",
-                        sent, failed, emailTargets.Count);
-                });
+                        "[Broadcast] {Count} emails encolados (broadcast {BroadcastId}). Entrega: 1 cada {Seconds}s, tope {DailyMax}/día (~{Days} días)",
+                        items.Count, broadcastId, intervalSeconds, dailyMax,
+                        Math.Max(1, (int)Math.Ceiling(items.Count / (double)dailyMax)));
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "[Broadcast] Error encolando emails");
+                    totalEmailTargets = 0;
+                }
             }
 
             var summary = new List<string>();
             if (sendNotification)
                 summary.Add($"{notificationsCreated} notificaciones in-app creadas");
             if (sendEmail)
-                summary.Add($"{totalEmailTargets} emails en cola a pacientes sin app activa (1 cada {emailIntervalMinutes} minutos, en segundo plano)");
+                summary.Add($"{totalEmailTargets} emails en cola a pacientes sin app activa (entrega gradual: ~{dailyMax}/día)");
 
             TempData["SuccessMessage"] = $"¡Notificación masiva iniciada! {string.Join(". ", summary)}.";
             return RedirectToAction("Index");
-        }
-
-        private static string BuildEmailBody(string title, string message)
-        {
-            return $@"
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset='utf-8'>
-    <meta name='viewport' content='width=device-width, initial-scale=1.0'>
-</head>
-<body style='font-family: -apple-system, BlinkMacSystemFont, ""Segoe UI"", Roboto, sans-serif; margin: 0; padding: 0; background-color: #f5f5f5;'>
-    <div style='max-width: 600px; margin: 20px auto; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);'>
-        <div style='background: linear-gradient(135deg, #0d6efd, #0a58ca); padding: 30px; text-align: center;'>
-            <h1 style='color: white; margin: 0; font-size: 22px;'>📢 {System.Net.WebUtility.HtmlEncode(title)}</h1>
-        </div>
-        <div style='padding: 30px;'>
-            <p style='color: #333; font-size: 16px; line-height: 1.6; white-space: pre-wrap;'>{System.Net.WebUtility.HtmlEncode(message)}</p>
-        </div>
-        <div style='background: #f8f9fa; padding: 20px; text-align: center; border-top: 1px solid #e9ecef;'>
-            <p style='color: #6c757d; font-size: 13px; margin: 0;'>Farmacia Solidaria Cristiana</p>
-            <p style='color: #adb5bd; font-size: 11px; margin: 5px 0 0;'>Este mensaje fue enviado a todos los usuarios registrados.</p>
-        </div>
-    </div>
-</body>
-</html>";
         }
     }
 }

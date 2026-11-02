@@ -48,6 +48,15 @@ namespace FarmaciaSolidariaCristiana.Services
                     _logger.LogError(ex, "Error limpiando notificaciones pendientes antiguas");
                 }
 
+                try
+                {
+                    await CleanupOldBroadcastEmailQueue();
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error limpiando cola de emails de broadcast antigua");
+                }
+
                 // Esperar hasta la próxima ejecución
                 await Task.Delay(_interval, stoppingToken);
             }
@@ -68,6 +77,27 @@ namespace FarmaciaSolidariaCristiana.Services
             if (deleted > 0)
             {
                 _logger.LogInformation("TurnoCleanupService: purgadas {Count} notificaciones pendientes antiguas", deleted);
+            }
+        }
+
+        /// <summary>
+        /// Purga de ítems de la cola de emails de broadcast (Sent/Failed) con más de 30 días.
+        /// Evita que la tabla BroadcastEmailQueueItems crezca sin control.
+        /// Los Pending nunca se purgan: los procesa BroadcastEmailProcessor.
+        /// </summary>
+        private async Task CleanupOldBroadcastEmailQueue()
+        {
+            using var scope = _serviceProvider.CreateScope();
+            var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            var cutoff = DateTime.UtcNow.AddDays(-30);
+
+            var deleted = await context.BroadcastEmailQueueItems
+                .Where(i => i.Status != BroadcastEmailStatus.Pending && i.CreatedAtUtc < cutoff)
+                .ExecuteDeleteAsync();
+
+            if (deleted > 0)
+            {
+                _logger.LogInformation("TurnoCleanupService: purgados {Count} ítems de la cola de emails de broadcast (más de 30 días)", deleted);
             }
         }
 

@@ -17,10 +17,68 @@ namespace FarmaciaSolidariaCristiana.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "8.0.11")
+                .HasAnnotation("ProductVersion", "10.0.7")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
+
+            modelBuilder.Entity("FarmaciaSolidariaCristiana.Models.BroadcastEmailQueueItem", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("Attempts")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("BroadcastId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("LastError")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<DateTime?>("SentAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SentAtUtc");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("Status", "Id");
+
+                    b.ToTable("BroadcastEmailQueueItems");
+                });
 
             modelBuilder.Entity("FarmaciaSolidariaCristiana.Models.Delivery", b =>
                 {
@@ -298,6 +356,10 @@ namespace FarmaciaSolidariaCristiana.Migrations
                     b.Property<bool>("IsBlockedByLoan")
                         .HasColumnType("bit");
 
+                    b.Property<string>("KnownAllergies")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
                     b.Property<DateTime?>("LoanBlockDate")
                         .HasColumnType("datetime2");
 
@@ -311,10 +373,6 @@ namespace FarmaciaSolidariaCristiana.Migrations
                     b.Property<string>("LoanUnblockedByUserId")
                         .HasMaxLength(450)
                         .HasColumnType("nvarchar(450)");
-
-                    b.Property<string>("KnownAllergies")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
 
                     b.Property<string>("MainDiagnosis")
                         .HasMaxLength(500)
@@ -397,6 +455,60 @@ namespace FarmaciaSolidariaCristiana.Migrations
                     b.ToTable("PatientDocuments");
                 });
 
+            modelBuilder.Entity("FarmaciaSolidariaCristiana.Models.PendingNotification", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("AdditionalData")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsRead")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("NotificationType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime?>("ReadAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("ReferenceId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ReferenceType")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("PendingNotifications");
+                });
+
             modelBuilder.Entity("FarmaciaSolidariaCristiana.Models.Sponsor", b =>
                 {
                     b.Property<int>("Id")
@@ -466,6 +578,9 @@ namespace FarmaciaSolidariaCristiana.Migrations
                         .HasColumnType("int");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("CanceladoPorNoPresentacion")
+                        .HasColumnType("bit");
 
                     b.Property<string>("ComentariosFarmaceutico")
                         .HasMaxLength(1000)
@@ -649,6 +764,62 @@ namespace FarmaciaSolidariaCristiana.Migrations
                     b.HasIndex("TurnoId");
 
                     b.ToTable("TurnoMedicamentos");
+                });
+
+            modelBuilder.Entity("FarmaciaSolidariaCristiana.Models.UserDeviceToken", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DeviceName")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("DeviceToken")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("DeviceType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("LastActivityAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("LastUsedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("OneSignalPlayerId")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OneSignalPlayerId");
+
+                    b.HasIndex("UserId", "OneSignalPlayerId")
+                        .IsUnique();
+
+                    b.ToTable("UserDeviceTokens");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
@@ -849,6 +1020,17 @@ namespace FarmaciaSolidariaCristiana.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
+            modelBuilder.Entity("FarmaciaSolidariaCristiana.Models.BroadcastEmailQueueItem", b =>
+                {
+                    b.HasOne("Microsoft.AspNetCore.Identity.IdentityUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("FarmaciaSolidariaCristiana.Models.Delivery", b =>
                 {
                     b.HasOne("FarmaciaSolidariaCristiana.Models.Medicine", "Medicine")
@@ -905,6 +1087,16 @@ namespace FarmaciaSolidariaCristiana.Migrations
                     b.Navigation("Usuario");
                 });
 
+            modelBuilder.Entity("FarmaciaSolidariaCristiana.Models.Patient", b =>
+                {
+                    b.HasOne("Microsoft.AspNetCore.Identity.IdentityUser", "LoanUnblockedByUser")
+                        .WithMany()
+                        .HasForeignKey("LoanUnblockedByUserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("LoanUnblockedByUser");
+                });
+
             modelBuilder.Entity("FarmaciaSolidariaCristiana.Models.PatientDocument", b =>
                 {
                     b.HasOne("FarmaciaSolidariaCristiana.Models.Patient", "Patient")
@@ -916,14 +1108,15 @@ namespace FarmaciaSolidariaCristiana.Migrations
                     b.Navigation("Patient");
                 });
 
-            modelBuilder.Entity("FarmaciaSolidariaCristiana.Models.Patient", b =>
+            modelBuilder.Entity("FarmaciaSolidariaCristiana.Models.PendingNotification", b =>
                 {
-                    b.HasOne("Microsoft.AspNetCore.Identity.IdentityUser", "LoanUnblockedByUser")
+                    b.HasOne("Microsoft.AspNetCore.Identity.IdentityUser", "User")
                         .WithMany()
-                        .HasForeignKey("LoanUnblockedByUserId")
-                        .OnDelete(DeleteBehavior.SetNull);
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
-                    b.Navigation("LoanUnblockedByUser");
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("FarmaciaSolidariaCristiana.Models.Turno", b =>
@@ -991,6 +1184,17 @@ namespace FarmaciaSolidariaCristiana.Migrations
                     b.Navigation("Medicine");
 
                     b.Navigation("Turno");
+                });
+
+            modelBuilder.Entity("FarmaciaSolidariaCristiana.Models.UserDeviceToken", b =>
+                {
+                    b.HasOne("Microsoft.AspNetCore.Identity.IdentityUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
