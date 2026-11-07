@@ -62,6 +62,7 @@ public partial class SolicitarTurnoViewModel : BaseViewModel
     private List<Supply> _allInsumos = new();
     private HashSet<int> _restrictedMedicineIds = new();
     private string _lastCheckedDocument = string.Empty;
+    private bool _restrictedLoadFailed;
 
     // Tipos de documento permitidos
     public List<string> TiposDocumento { get; } = new()
@@ -154,12 +155,14 @@ public partial class SolicitarTurnoViewModel : BaseViewModel
         {
             _restrictedMedicineIds.Clear();
             _lastCheckedDocument = string.Empty;
+            _restrictedLoadFailed = false;
             return;
         }
 
         var doc = DocumentoIdentidad.Trim().ToUpper();
-        if (doc == _lastCheckedDocument) return;
+        if (doc == _lastCheckedDocument && !_restrictedLoadFailed) return;
         _lastCheckedDocument = doc;
+        _restrictedLoadFailed = false;
 
         try
         {
@@ -181,10 +184,24 @@ public partial class SolicitarTurnoViewModel : BaseViewModel
                         "Un mismo medicamento no puede retirarse en más de un turno por mes.");
                 }
             }
+            else
+            {
+                _restrictedMedicineIds.Clear();
+                _restrictedLoadFailed = true;
+                Console.WriteLine($"[SolicitarTurno] GetRestrictedMedicinesAsync returned failure for {doc}");
+                await ShowErrorAsync(
+                    "No se pudo verificar los medicamentos ya solicitados este mes por este paciente. " +
+                    "Se volverá a intentar al enviar la solicitud.");
+            }
         }
         catch (Exception ex)
         {
+            _restrictedMedicineIds.Clear();
+            _restrictedLoadFailed = true;
             Console.WriteLine($"[SolicitarTurno] Error loading restricted medicines: {ex.Message}");
+            await ShowErrorAsync(
+                "No se pudo verificar los medicamentos ya solicitados este mes por este paciente. " +
+                "Se volverá a intentar al enviar la solicitud.");
         }
     }
 
@@ -533,6 +550,37 @@ public partial class SolicitarTurnoViewModel : BaseViewModel
             "¿Está seguro de enviar esta solicitud de turno?");
 
         if (!confirm) return;
+
+        var currentDoc = DocumentoIdentidad.Trim().ToUpper();
+        if (IsMedicamento && (currentDoc != _lastCheckedDocument || _restrictedLoadFailed))
+        {
+            await LoadRestrictedMedicinesAsync();
+        }
+
+        if (IsMedicamento && _restrictedLoadFailed)
+        {
+            var continuar = await ShowConfirmAsync(
+                "Verificación no disponible",
+                "No se pudo verificar si algún medicamento ya fue solicitado por este paciente este mes. " +
+                "El servidor validará al enviar y rechazará duplicados. ¿Desea continuar?");
+            if (!continuar) return;
+        }
+
+        if (IsMedicamento)
+        {
+            var duplicados = ItemsSeleccionados
+                .Where(i => _restrictedMedicineIds.Contains(i.Id))
+                .ToList();
+
+            if (duplicados.Any())
+            {
+                var nombres = string.Join(", ", duplicados.Select(d => d.Name));
+                await ShowErrorAsync(
+                    $"El medicamento \"{nombres}\" ya fue solicitado por este paciente este mes. " +
+                    "Un mismo paciente no puede retirar el mismo medicamento en más de un turno por mes natural.");
+                return;
+            }
+        }
 
         IsBusy = true;
         try
