@@ -2,7 +2,7 @@
 # Guard anti-regresión de hora de Cuba (Fase 5 del plan de timezone).
 #
 # Falla (exit 1) si encuentra DateTime.Now / DateTime.Today fuera de la whitelist.
-# Uso: ./check-no-datetime-now.sh   (recomendado correrlo antes de cada deploy)
+# Uso: bash scripts/check-no-datetime-now.sh   (recomendado correrlo antes de cada deploy)
 #
 # Regla: todo timestamp de negocio debe salir de CubaTime (Helpers/CubaTime.cs),
 # calculado desde UTC hacia America/Havana — nunca de la hora del host ni del teléfono.
@@ -19,7 +19,7 @@ WHITELIST=(
   "FarmaciaSolidariaCristiana.Maui/Services/PollingNotificationService.cs"
 )
 
-cd "$(dirname "$0")"
+cd "$(dirname "$0")/.."
 
 matches=$(grep -rn --include='*.cs' --include='*.cshtml' --include='*.xaml' \
   -E 'DateTime\.(Now|Today)([^A-Za-z]|$)' \

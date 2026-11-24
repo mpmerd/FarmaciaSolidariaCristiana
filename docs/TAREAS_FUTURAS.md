@@ -910,12 +910,12 @@ public async Task EnviarEmailReprogramacion(
 - ✅ Reportes con inventarios separados
 
 ### Versión 1.2 (En planificación)
-- Donaciones de insumos
+- Donaciones de insumos (Completado)
 - Filtros avanzados en reportes
 - Dashboard con estadísticas
 
 ### Versión 2.0 (Largo plazo)
-- Sistema de notificaciones por email
+- Sistema de notificaciones por email (Completado)
 - Sistema de auditoría completo
 - Multi-idioma
 

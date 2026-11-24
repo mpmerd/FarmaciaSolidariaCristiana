@@ -13,7 +13,7 @@ Sistema web para la gestión de medicamentos, entregas y donaciones de la Farmac
   - Aprobación/rechazo por farmacéuticos con notificaciones email
   - Verificación por documento de identidad (cifrado SHA-256)
   - Anti-abuso: límite de 2 turnos por mes por usuario y 30 turnos por día
-  - Horario de atención: Martes y Viernes de 1:00 PM a 4:00 PM
+  - Horario de atención: Martes y Jueves de 1:00 PM a 4:00 PM
   - Dashboard interactivo con DataTables y filtros avanzados
   - Números de turno únicos secuenciales por día
 - ✅ CRUD Medicamentos con búsqueda CIMA API (código nacional español)
@@ -73,7 +73,7 @@ dotnet ef database update
 # 1. Desde tu Mac: Publicar y transferir
 cd FarmaciaSolidariaCristiana
 dotnet publish -c Release -o ./publish
-scp setup-ubuntu.sh usuario@TU_SERVIDOR_IP:~/
+scp scripts/setup-ubuntu.sh usuario@TU_SERVIDOR_IP:~/
 rsync -avz --progress ./publish/ usuario@TU_SERVIDOR_IP:~/farmacia-files/
 
 # 2. En el servidor Ubuntu: Instalar
@@ -90,7 +90,7 @@ Ver **[DEPLOYMENT_UBUNTU.md](./DEPLOYMENT_UBUNTU.md)** para instrucciones detall
 ```bash
 # 1. Desde tu Mac
 dotnet publish -c Release -o ./publish
-scp update-app.sh usuario@TU_SERVIDOR_IP:~/
+scp scripts/update-app.sh usuario@TU_SERVIDOR_IP:~/
 rsync -avz --progress ./publish/ usuario@TU_SERVIDOR_IP:~/farmacia-new/
 
 # 2. En Ubuntu
@@ -100,17 +100,20 @@ bash update-app.sh
 
 ## 📚 Documentación
 
-- **[SECURITY.md](./SECURITY.md)** - ⚠️ **Guía de seguridad y credenciales** (LEER PRIMERO)
-- **[TURNOS_SYSTEM.md](./TURNOS_SYSTEM.md)** - Sistema de Turnos (documentación completa)
-- **[API_DOCUMENTATION.md](./API_DOCUMENTATION.md)** - Documentación de la API REST
-- **[DEPLOYMENT_UBUNTU.md](./DEPLOYMENT_UBUNTU.md)** - Despliegue en Ubuntu Server
-- **[DEPLOYMENT_SOMEE.md](./DEPLOYMENT_SOMEE.md)** - Despliegue en somee.com
-- **[ONESIGNAL_INTEGRATION.md](./ONESIGNAL_INTEGRATION.md)** - Integración de notificaciones push
-- **[QUICK_COMMANDS.md](./QUICK_COMMANDS.md)** - Comandos rápidos de referencia
-- **[CHANGELOG.md](./CHANGELOG.md)** - Historial de cambios
+- **[AGENTS.md](./AGENTS.md)** - 🤖 Contexto para agentes de IA (se carga automáticamente en opencode)
+- **[docs/SECURITY.md](./docs/SECURITY.md)** - ⚠️ **Guía de seguridad y credenciales** (LEER PRIMERO)
+- **[docs/BASE_DE_DATOS.md](./docs/BASE_DE_DATOS.md)** - Esquema y reglas de la base de datos
+- **[docs/CONTEXTO_COMPLETO.md](./docs/CONTEXTO_COMPLETO.md)** - Contexto histórico completo del proyecto
+- **[docs/TURNOS_SYSTEM.md](./docs/TURNOS_SYSTEM.md)** - Sistema de Turnos (documentación completa)
+- **[docs/API_DOCUMENTATION.md](./docs/API_DOCUMENTATION.md)** - Documentación de la API REST
+- **[docs/DEPLOYMENT_UBUNTU.md](./docs/DEPLOYMENT_UBUNTU.md)** - Despliegue en Ubuntu Server
+- **[docs/DEPLOYMENT_SOMEE.md](./docs/DEPLOYMENT_SOMEE.md)** - Despliegue en somee.com
+- **[docs/ONESIGNAL_INTEGRATION.md](./docs/ONESIGNAL_INTEGRATION.md)** - Integración de notificaciones push
+- **[docs/QUICK_COMMANDS.md](./docs/QUICK_COMMANDS.md)** - Comandos rápidos de referencia
+- **[docs/CHANGELOG.md](./docs/CHANGELOG.md)** - Historial de cambios
 - **.env.example** - Plantilla de variables de entorno
-- **setup-ubuntu.sh** - Script de instalación en Ubuntu
-- **update-app.sh** - Script de actualización del servidor
+- **scripts/** - Scripts de instalación, despliegue y verificación
+- **sql/** - Parches SQL históricos aplicados a producción
 
 ## 🔧 Tecnologías
 
@@ -189,7 +192,7 @@ FarmaciaSolidariaCristiana.sln
 - HTTPS habilitado en producción
 - Imágenes y documentos servidos desde rutas no predecibles
 
-> ⚠️ **IMPORTANTE:** Lee [SECURITY.md](./SECURITY.md) antes de configurar el proyecto. Nunca incluyas credenciales reales en el código o en el repositorio.
+> ⚠️ **IMPORTANTE:** Lee [docs/SECURITY.md](./docs/SECURITY.md) antes de configurar el proyecto. Nunca incluyas credenciales reales en el código o en el repositorio.
 
 ## 🌐 HTTPS en Producción
 
@@ -222,7 +225,7 @@ sudo journalctl -u farmacia.service -f
 
 ## 🐛 Solución de Problemas
 
-Ver **[DEPLOYMENT_UBUNTU.md](./DEPLOYMENT_UBUNTU.md)** sección "Solución de Problemas"
+Ver **[docs/DEPLOYMENT_UBUNTU.md](./docs/DEPLOYMENT_UBUNTU.md)** sección "Solución de Problemas"
 
 ---
 

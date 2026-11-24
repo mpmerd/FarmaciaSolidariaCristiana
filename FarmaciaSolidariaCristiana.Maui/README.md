@@ -12,7 +12,7 @@ Aplicación móvil para Android e iOS que consume la API REST de Farmacia Solida
 
 ## 🛠️ Requisitos
 
-- .NET 9 SDK
+- .NET 10 SDK
 - Visual Studio 2022+ con workload MAUI o VS Code con extensión .NET MAUI
 - Para Android: Android SDK, JDK 17+
 - Para iOS: macOS con Xcode 15+
@@ -75,20 +75,20 @@ Formato recomendado: PNG 24x24px o SVG.
 
 ```bash
 # Debug
-dotnet build -f net9.0-android
+dotnet build -f net10.0-android
 
 # Release APK
-dotnet publish -f net9.0-android -c Release
+dotnet publish -f net10.0-android -c Release
 ```
 
 ### iOS (solo macOS)
 
 ```bash
 # Debug
-dotnet build -f net9.0-ios
+dotnet build -f net10.0-ios
 
 # Release
-dotnet publish -f net9.0-ios -c Release
+dotnet publish -f net10.0-ios -c Release
 ```
 
 ## 📂 Estructura del Proyecto

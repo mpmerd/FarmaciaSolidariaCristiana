@@ -24,7 +24,7 @@ namespace FarmaciaSolidariaCristiana.Services
         Task<(bool HasCapacity, int CurrentCount, string? Reason)> CheckDailyCapacityAsync(DateTime fecha);
 
         /// <summary>
-        /// Obtiene el próximo slot disponible (Martes/Viernes, 1-4 PM, cada 6 minutos)
+        /// Obtiene el próximo slot disponible (Martes/Jueves, 1-4 PM, cada 6 minutos)
         /// Busca desde la próxima semana en adelante hasta encontrar disponibilidad
         /// </summary>
         Task<DateTime> GetNextAvailableSlotAsync();
