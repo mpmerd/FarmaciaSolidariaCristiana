@@ -120,6 +120,10 @@ namespace FarmaciaSolidariaCristiana.Controllers
                     // Add user to selected role
                     if (!string.IsNullOrEmpty(model.Role))
                     {
+                        if (!await _roleManager.RoleExistsAsync(model.Role))
+                        {
+                            await _roleManager.CreateAsync(new IdentityRole(model.Role));
+                        }
                         await _userManager.AddToRoleAsync(user, model.Role);
                     }
 
@@ -217,6 +221,10 @@ namespace FarmaciaSolidariaCristiana.Controllers
                 
                 if (!string.IsNullOrEmpty(model.NewRole))
                 {
+                    if (!await _roleManager.RoleExistsAsync(model.NewRole))
+                    {
+                        await _roleManager.CreateAsync(new IdentityRole(model.NewRole));
+                    }
                     await _userManager.AddToRoleAsync(user, model.NewRole);
                 }
 
