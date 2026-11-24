@@ -4,8 +4,10 @@
 
 set -e
 
+# El script vive en scripts/ pero opera desde la raíz del repo
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PUBLISH_DIR="$SCRIPT_DIR/FarmaciaSolidariaCristiana/publish"
+REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+PUBLISH_DIR="$REPO_DIR/FarmaciaSolidariaCristiana/publish"
 
 FTP_HOST="farmaciasolidaria.somee.com"
 FTP_USER="maikelpelaez"

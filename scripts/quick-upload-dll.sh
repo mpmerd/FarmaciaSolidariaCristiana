@@ -12,8 +12,10 @@ echo "Ingresa la contraseña FTP de Somee:"
 read -s FTP_PASS
 echo ""
 
+# El script vive en scripts/ pero opera desde la raíz del repo
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PUBLISH_DIR="$SCRIPT_DIR/FarmaciaSolidariaCristiana/publish"
+REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+PUBLISH_DIR="$REPO_DIR/FarmaciaSolidariaCristiana/publish"
 
 echo "Subiendo archivos desde: $PUBLISH_DIR"
 lftp -u "$FTP_USER","$FTP_PASS" "$FTP_HOST" << FTPEOF

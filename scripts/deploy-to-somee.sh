@@ -19,12 +19,12 @@ NC='\033[0m'
 echo -e "${BLUE}=========================================="
 echo "Farmacia Solidaria Cristiana"
 echo "DESPLIEGUE COMPLETO a Somee.com"
-echo "==========================================${NC}"
+echo -e "==========================================${NC}"
 echo ""
 
 # Guard de hora de Cuba: abortar si hay DateTime.Now/Today fuera de whitelist
 echo -e "${YELLOW}Guard anti-regresión de hora de Cuba...${NC}"
-./check-no-datetime-now.sh
+"$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/check-no-datetime-now.sh
 echo ""
 
 # Verificar que estamos en la rama developerConApi (comparación insensible a mayúsculas)
@@ -72,13 +72,14 @@ FTP_HOST="farmaciasolidaria.somee.com"
 FTP_USER="maikelpelaez"
 FTP_REMOTE_PATH="/www.farmaciasolidaria.somee.com"
 
-# Directorio de publish fijo
+# El script vive en scripts/ pero opera desde la raíz del repo
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PUBLISH_DIR="$SCRIPT_DIR/publish"
-VIEWS_SOURCE="$SCRIPT_DIR/FarmaciaSolidariaCristiana/Views"
+REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+PUBLISH_DIR="$REPO_DIR/publish"
+VIEWS_SOURCE="$REPO_DIR/FarmaciaSolidariaCristiana/Views"
 
 echo -e "${YELLOW}📦 Compilando proyecto para producción...${NC}"
-dotnet publish "$SCRIPT_DIR/FarmaciaSolidariaCristiana/FarmaciaSolidariaCristiana.csproj" -c Release -o "$PUBLISH_DIR"
+dotnet publish "$REPO_DIR/FarmaciaSolidariaCristiana/FarmaciaSolidariaCristiana.csproj" -c Release -o "$PUBLISH_DIR"
 if [ $? -ne 0 ]; then
     echo -e "${RED}❌ Error al compilar el proyecto${NC}"
     exit 1

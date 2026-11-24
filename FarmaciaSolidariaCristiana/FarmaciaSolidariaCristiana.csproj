@@ -25,7 +25,7 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
-    <PackageReference Include="SixLabors.ImageSharp" Version="3.2.1" />
+    <PackageReference Include="SixLabors.ImageSharp" Version="3.1.11" />
     <!-- Pin explícito: anula la referencia transitiva vulnerable (NU1903, GHSA-846f-f764-76mx) -->
     <PackageReference Include="System.Security.Cryptography.Pkcs" Version="9.0.23" />
   </ItemGroup>
