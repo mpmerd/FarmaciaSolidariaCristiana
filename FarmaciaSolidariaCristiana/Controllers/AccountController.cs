@@ -212,15 +212,15 @@ namespace FarmaciaSolidariaCristiana.Controllers
                     }
                 }
 
-                // Update role
+                // Update role (NewRole vacío = mantener el rol actual)
                 var currentRoles = await _userManager.GetRolesAsync(user);
-                if (currentRoles.Any())
+                if (!string.IsNullOrEmpty(model.NewRole) && !currentRoles.Contains(model.NewRole))
                 {
-                    await _userManager.RemoveFromRolesAsync(user, currentRoles);
-                }
-                
-                if (!string.IsNullOrEmpty(model.NewRole))
-                {
+                    if (currentRoles.Any())
+                    {
+                        await _userManager.RemoveFromRolesAsync(user, currentRoles);
+                    }
+
                     if (!await _roleManager.RoleExistsAsync(model.NewRole))
                     {
                         await _roleManager.CreateAsync(new IdentityRole(model.NewRole));
