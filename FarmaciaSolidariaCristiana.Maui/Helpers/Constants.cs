@@ -31,6 +31,7 @@ public static class Constants
     public const string RoleFarmaceutico = "Farmaceutico";
     public const string RoleViewer = "viewer";
     public const string RoleViewerPublic = "viewerpublic";
+    public const string RoleViewerPublicPlus = "viewerpublicplus";
 
     // Colores de la app (estilo Bootstrap)
     public const string PrimaryColor = "#0d6efd";

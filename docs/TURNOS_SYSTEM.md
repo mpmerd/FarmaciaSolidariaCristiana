@@ -9,7 +9,7 @@ El **Sistema de Turnos** es una funcionalidad avanzada diseñada para gestionar 
 Cárdenas es una ciudad de más de 250,000 habitantes con alta demanda de medicamentos. El sistema de turnos fue implementado para:
 
 - **Organizar** el flujo de solicitudes de medicamentos
-- **Prevenir abusos** con mecanismos de control (2 turnos por mes, máximo 30 turnos por día)
+- **Prevenir abusos** con mecanismos de control (2 turnos por mes —10 con rol ViewerPublicPlus—, máximo 30 turnos por día)
 - **Garantizar transparencia** con números de turno únicos
 - **Facilitar verificación** mediante documentos de identidad cifrados
 - **Automatizar notificaciones** por email
@@ -87,7 +87,7 @@ Lógica de negocio centralizada para gestión de turnos.
 **Métodos principales:**
 
 1. **`CanUserRequestTurnoAsync(userId)`**
-   - Valida límite de 2 turnos por mes
+   - Valida límite de turnos por mes según rol: 2 (ViewerPublic y resto), 10 (ViewerPublicPlus)
    - Retorna `(bool canRequest, string reason)`
    - Query: Busca turnos del usuario en el mes actual con estado != Rechazado
 
@@ -168,7 +168,7 @@ Métodos agregados para turnos:
 - **Fecha preferida:** Mínimo 24h, máximo 1 mes futuro, solo Martes y Viernes de 1:00 PM a 4:00 PM
 - **Medicamentos:** Al menos 1, cantidades válidas vs stock
 - **Archivos:** Tarjetón obligatorio, receta opcional, máx 5MB, formatos JPG/PNG/PDF
-- **Anti-abuso:** 2 turnos por mes por usuario, máximo 30 turnos por día
+- **Anti-abuso:** 2 turnos por mes por usuario (10 con rol ViewerPublicPlus; el límite de 2 por documento de identidad no varía), máximo 30 turnos por día
 - **Estado:** Solo se puede aprobar/rechazar turnos "Pendiente"
 
 ### Vistas

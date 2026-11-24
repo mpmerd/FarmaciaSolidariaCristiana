@@ -29,7 +29,7 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
         /// Obtiene todas las entregas con filtros opcionales
         /// </summary>
         [HttpGet]
-        [Authorize(Roles = "Admin,Farmaceutico,Viewer,ViewerPublic")]
+        [Authorize(Roles = "Admin,Farmaceutico,Viewer,ViewerPublic,ViewerPublicPlus")]
         [ProducesResponseType(typeof(ApiResponse<PagedResult<DeliveryDto>>), 200)]
         public async Task<IActionResult> GetAll(
             [FromQuery] int page = 1, 
@@ -127,7 +127,7 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
         /// Obtiene una entrega por ID
         /// </summary>
         [HttpGet("{id}")]
-        [Authorize(Roles = "Admin,Farmaceutico,Viewer,ViewerPublic")]
+        [Authorize(Roles = "Admin,Farmaceutico,Viewer,ViewerPublic,ViewerPublicPlus")]
         [ProducesResponseType(typeof(ApiResponse<DeliveryDto>), 200)]
         [ProducesResponseType(typeof(ApiResponse<object>), 404)]
         public async Task<IActionResult> GetById(int id)
@@ -378,7 +378,7 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
         /// Obtiene entregas por identificación de paciente
         /// </summary>
         [HttpGet("by-patient/{identification}")]
-        [Authorize(Roles = "Admin,Farmaceutico,Viewer,ViewerPublic")]
+        [Authorize(Roles = "Admin,Farmaceutico,Viewer,ViewerPublic,ViewerPublicPlus")]
         [ProducesResponseType(typeof(ApiResponse<List<DeliveryDto>>), 200)]
         public async Task<IActionResult> GetByPatientIdentification(string identification)
         {

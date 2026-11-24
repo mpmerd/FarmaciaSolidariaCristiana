@@ -106,7 +106,7 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
         /// Obtiene los turnos del usuario actual
         /// </summary>
         [HttpGet("my")]
-        [Authorize(Roles = "Admin,Farmaceutico,Viewer,ViewerPublic")]
+        [Authorize(Roles = "Admin,Farmaceutico,Viewer,ViewerPublic,ViewerPublicPlus")]
         [ProducesResponseType(typeof(ApiResponse<List<TurnoDto>>), 200)]
         public async Task<IActionResult> GetMyTurnos()
         {
@@ -129,7 +129,7 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
         /// Obtiene un turno por ID
         /// </summary>
         [HttpGet("{id}")]
-        [Authorize(Roles = "Admin,Farmaceutico,Viewer,ViewerPublic")]
+        [Authorize(Roles = "Admin,Farmaceutico,Viewer,ViewerPublic,ViewerPublicPlus")]
         [ProducesResponseType(typeof(ApiResponse<TurnoDto>), 200)]
         [ProducesResponseType(typeof(ApiResponse<object>), 404)]
         public async Task<IActionResult> GetById(int id)
@@ -225,7 +225,7 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
         /// Descarga el PDF de un turno aprobado
         /// </summary>
         [HttpGet("{id}/pdf")]
-        [Authorize(Roles = "Admin,Farmaceutico,Viewer,ViewerPublic")]
+        [Authorize(Roles = "Admin,Farmaceutico,Viewer,ViewerPublic,ViewerPublicPlus")]
         [ProducesResponseType(typeof(FileContentResult), 200)]
         [ProducesResponseType(typeof(ApiResponse<object>), 404)]
         public async Task<IActionResult> DownloadPdf(int id)
@@ -294,7 +294,7 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
         /// Verifica si el usuario puede solicitar un turno
         /// </summary>
         [HttpGet("can-request")]
-        [Authorize(Roles = "Admin,Farmaceutico,Viewer,ViewerPublic")]
+        [Authorize(Roles = "Admin,Farmaceutico,Viewer,ViewerPublic,ViewerPublicPlus")]
         [ProducesResponseType(typeof(ApiResponse<CanRequestTurnoDto>), 200)]
         public async Task<IActionResult> CanRequestTurno()
         {
@@ -312,7 +312,7 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
         /// Obtiene el próximo slot disponible
         /// </summary>
         [HttpGet("next-slot")]
-        [Authorize(Roles = "Admin,Farmaceutico,Viewer,ViewerPublic")]
+        [Authorize(Roles = "Admin,Farmaceutico,Viewer,ViewerPublic,ViewerPublicPlus")]
         [ProducesResponseType(typeof(ApiResponse<DateTime>), 200)]
         public async Task<IActionResult> GetNextAvailableSlot()
         {
@@ -325,7 +325,7 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
         /// Permite a la app móvil validar antes de enviar la solicitud.
         /// </summary>
         [HttpGet("restricted-medicines/{documentoIdentidad}")]
-        [Authorize(Roles = "ViewerPublic")]
+        [Authorize(Roles = "ViewerPublic,ViewerPublicPlus")]
         [ProducesResponseType(typeof(ApiResponse<List<int>>), 200)]
         public async Task<IActionResult> GetRestrictedMedicines(string documentoIdentidad)
         {
@@ -345,7 +345,7 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
         /// Crea una nueva solicitud de turno (para usuarios ViewerPublic desde app móvil)
         /// </summary>
         [HttpPost]
-        [Authorize(Roles = "ViewerPublic")]
+        [Authorize(Roles = "ViewerPublic,ViewerPublicPlus")]
         [ProducesResponseType(typeof(ApiResponse<TurnoDto>), 200)]
         [ProducesResponseType(typeof(ApiResponse<object>), 400)]
         public async Task<IActionResult> CreateTurno([FromBody] CreateTurnoApiDto model)
@@ -496,7 +496,7 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
         /// Sube un documento a un turno existente
         /// </summary>
         [HttpPost("{id}/documents")]
-        [Authorize(Roles = "ViewerPublic")]
+        [Authorize(Roles = "ViewerPublic,ViewerPublicPlus")]
         [ProducesResponseType(typeof(ApiResponse<TurnoDocumentoDto>), 200)]
         [ProducesResponseType(typeof(ApiResponse<object>), 400)]
         public async Task<IActionResult> UploadDocument(int id, [FromForm] IFormFile file, [FromForm] string documentType, [FromForm] string? description)

@@ -160,6 +160,7 @@ public partial class DashboardViewModel : BaseViewModel
             "farmaceutico" => "Farmacéutico",
             "viewer" => "Visualizador",
             "viewerpublic" => "Paciente",
+            "viewerpublicplus" => "Usuario Turnos Plus",
             _ => "Usuario"
         };
     }

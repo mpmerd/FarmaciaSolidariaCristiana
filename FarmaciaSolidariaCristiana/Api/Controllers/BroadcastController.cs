@@ -53,8 +53,10 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
             if (!ModelState.IsValid)
                 return ApiError("Datos inválidos");
 
-            // Destinatarios: SOLO pacientes (ViewerPublic). Se excluyen Admin, Farmaceutico y Viewer.
-            var users = await _userManager.GetUsersInRoleAsync("ViewerPublic");
+            // Destinatarios: SOLO pacientes (ViewerPublic y ViewerPublicPlus). Se excluyen Admin, Farmaceutico y Viewer.
+            var users = (await _userManager.GetUsersInRoleAsync("ViewerPublic"))
+                .UnionBy(await _userManager.GetUsersInRoleAsync("ViewerPublicPlus"), x => x.Id)
+                .ToList();
 
             var activityDays = _configuration.GetValue<int?>("AppSettings:BroadcastEmailActivityDays") ?? 7;
             var activityCutoff = DateTime.UtcNow.AddDays(-activityDays);

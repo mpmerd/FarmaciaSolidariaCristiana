@@ -200,30 +200,33 @@ public partial class AppShell : Shell
     
     private void ConfigureMenuForRole(string role)
     {
-        // ViewerPublic (Paciente): Dashboard, Mis Turnos, Medicamentos, Insumos, Donaciones, Entregas, Patrocinadores
+        // ViewerPublic/ViewerPublicPlus (Paciente): Dashboard, Mis Turnos, Medicamentos, Insumos, Donaciones, Entregas, Patrocinadores
         // Viewer: + Pacientes, Reportes
         // Farmaceutico: + Gestión completa
         // Admin: + Avanzado
-        
-        bool isViewer = role == Constants.RoleViewer;
-        bool isFarmaceutico = role == Constants.RoleFarmaceutico;
-        bool isAdmin = role == Constants.RoleAdmin;
+
+        var normalizedRole = role.ToLowerInvariant();
+        bool isViewer = normalizedRole == Constants.RoleViewer;
+        bool isFarmaceutico = normalizedRole == Constants.RoleFarmaceutico;
+        bool isAdmin = normalizedRole == Constants.RoleAdmin;
         bool isViewerOrHigher = isViewer || isFarmaceutico || isAdmin;
-        
+        bool isPublicPatient = normalizedRole == Constants.RoleViewerPublic
+                            || normalizedRole == Constants.RoleViewerPublicPlus;
+
         // Pacientes - Viewer, Farmaceutico, Admin
         FlyoutPacientes.IsVisible = isViewerOrHigher;
 
         // Bloqueos - Farmaceutico, Admin only
         FlyoutBloqueos.IsVisible = isFarmaceutico || isAdmin;
-        
-        // Reportes - Viewer, Farmaceutico, Admin  
+
+        // Reportes - Viewer, Farmaceutico, Admin
         FlyoutReportes.IsVisible = isViewerOrHigher;
-        
+
         // Avanzado - Admin only
         FlyoutAvanzado.IsVisible = isAdmin;
-        
+
         // Update Turnos title based on role
-        if (role == Constants.RoleViewerPublic)
+        if (isPublicPatient)
         {
             FlyoutTurnos.Title = "Mis Turnos";
         }
@@ -243,12 +246,13 @@ public partial class AppShell : Shell
     
     private string GetRoleDisplayName(string role)
     {
-        return role switch
+        return role.ToLowerInvariant() switch
         {
             Constants.RoleAdmin => "Administrador",
             Constants.RoleFarmaceutico => "Farmacéutico",
             Constants.RoleViewer => "Visualizador",
             Constants.RoleViewerPublic => "Paciente",
+            Constants.RoleViewerPublicPlus => "Usuario Turnos Plus",
             _ => "Usuario"
         };
     }

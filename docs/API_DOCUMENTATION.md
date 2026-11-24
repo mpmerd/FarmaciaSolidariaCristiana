@@ -626,7 +626,7 @@ curl -X GET https://tu-dominio.com/api/turnos/stats \
 3. **Token Expirado**: Cuando un token expira, la respuesta incluye el header `Token-Expired: true`. El cliente debe solicitar un nuevo token.
 
 4. **Límites de Turnos**: El sistema mantiene los mismos límites que la web:
-   - 2 turnos por usuario por mes
+   - 2 turnos por usuario por mes (10 si el usuario tiene rol ViewerPublicPlus)
    - 30 turnos por día máximo
 
 5. **Roles**: Los roles se incluyen en el token JWT y se validan en cada petición. No es posible elevar privilegios sin un nuevo login.

@@ -8,7 +8,8 @@ namespace FarmaciaSolidariaCristiana.Services
     public interface ITurnoService
     {
         /// <summary>
-        /// Valida si el usuario puede solicitar un nuevo turno (1 por mes)
+        /// Valida si el usuario puede solicitar un nuevo turno (límite mensual según rol:
+        /// 2 por mes, usuarios ViewerPublicPlus hasta 10)
         /// </summary>
         Task<(bool CanRequest, string? Reason)> CanUserRequestTurnoAsync(string userId);
 

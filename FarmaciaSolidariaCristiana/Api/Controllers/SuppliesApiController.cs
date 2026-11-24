@@ -34,7 +34,7 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
         /// Obtiene todos los insumos
         /// </summary>
         [HttpGet]
-        [Authorize(Roles = "Admin,Farmaceutico,Viewer,ViewerPublic")]
+        [Authorize(Roles = "Admin,Farmaceutico,Viewer,ViewerPublic,ViewerPublicPlus")]
         [ProducesResponseType(typeof(ApiResponse<List<SupplyDto>>), 200)]
         public async Task<IActionResult> GetAll([FromQuery] int page = 1, [FromQuery] int pageSize = 20, [FromQuery] string? search = null)
         {
@@ -90,7 +90,7 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
         /// Obtiene un insumo por ID
         /// </summary>
         [HttpGet("{id}")]
-        [Authorize(Roles = "Admin,Farmaceutico,Viewer,ViewerPublic")]
+        [Authorize(Roles = "Admin,Farmaceutico,Viewer,ViewerPublic,ViewerPublicPlus")]
         [ProducesResponseType(typeof(ApiResponse<SupplyDto>), 200)]
         [ProducesResponseType(typeof(ApiResponse<object>), 404)]
         public async Task<IActionResult> GetById(int id)
@@ -244,7 +244,7 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
         /// Obtiene insumos con stock disponible
         /// </summary>
         [HttpGet("available")]
-        [Authorize(Roles = "Admin,Farmaceutico,Viewer,ViewerPublic")]
+        [Authorize(Roles = "Admin,Farmaceutico,Viewer,ViewerPublic,ViewerPublicPlus")]
         [ProducesResponseType(typeof(ApiResponse<List<SupplyDto>>), 200)]
         public async Task<IActionResult> GetAvailable()
         {

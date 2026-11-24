@@ -21,7 +21,7 @@ Aplicación dual: web de gestión (MVC + Razor + Bootstrap 5) y API REST (`/api/
 
 ## Servicios principales (`Services/`)
 
-- `TurnoService` — reglas de turnos (límite 2/mes por usuario y por documento, 30/día, slots Martes/Jueves 1–4 PM), hash SHA-256 de identidad, PDFs con iText7.
+- `TurnoService` — reglas de turnos (límite 2/mes por usuario —10 con rol ViewerPublicPlus— y 2/mes por documento, 30/día, slots Martes/Jueves 1–4 PM), hash SHA-256 de identidad, PDFs con iText7.
 - `TurnoCleanupService` — BackgroundService horario: cancela turnos aprobados no atendidos.
 - `PendingNotificationService` — notificaciones por polling (la app MAUI consulta cada 30 s `/api/notifications/pending` + heartbeat).
 - `OneSignalNotificationService` (+ `NullOneSignalNotificationService` si no está configurado) — push opcional; FCM no funciona en Cuba.

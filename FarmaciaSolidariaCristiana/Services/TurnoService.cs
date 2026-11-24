@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Identity;
 using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
@@ -29,6 +30,14 @@ namespace FarmaciaSolidariaCristiana.Services
         private readonly IWebHostEnvironment _environment;
         private readonly IImageCompressionService _imageCompressionService;
         private readonly ILogger<TurnoService> _logger;
+        private readonly UserManager<IdentityUser> _userManager;
+
+        /// <summary>
+        /// Límite mensual de turnos por usuario según su rol:
+        /// usuarios ViewerPublicPlus tienen un límite ampliado, el resto 2.
+        /// </summary>
+        private const int LimiteTurnosMesDefault = 2;
+        private const int LimiteTurnosMesViewerPublicPlus = 10;
 
         public TurnoService(
             ApplicationDbContext context, 
@@ -37,7 +46,8 @@ namespace FarmaciaSolidariaCristiana.Services
             IPendingNotificationService pendingNotificationService,
             IWebHostEnvironment environment,
             IImageCompressionService imageCompressionService,
-            ILogger<TurnoService> logger)
+            ILogger<TurnoService> logger,
+            UserManager<IdentityUser> userManager)
         {
             _context = context;
             _emailService = emailService;
@@ -46,10 +56,26 @@ namespace FarmaciaSolidariaCristiana.Services
             _environment = environment;
             _imageCompressionService = imageCompressionService;
             _logger = logger;
+            _userManager = userManager;
         }
 
         /// <summary>
-        /// Valida si el usuario puede solicitar un turno (límite: 2 por mes)
+        /// Obtiene el límite mensual de turnos del usuario según su rol.
+        /// Los usuarios con rol ViewerPublicPlus pueden solicitar hasta 10 turnos por mes;
+        /// el resto tiene el límite estándar de 2.
+        /// </summary>
+        private async Task<int> GetMonthlyTurnoLimitAsync(string userId)
+        {
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user != null && await _userManager.IsInRoleAsync(user, "ViewerPublicPlus"))
+            {
+                return LimiteTurnosMesViewerPublicPlus;
+            }
+            return LimiteTurnosMesDefault;
+        }
+
+        /// <summary>
+        /// Valida si el usuario puede solicitar un turno (límite según rol: 2 por mes, ViewerPublicPlus 10)
         /// Los turnos cancelados por no presentación también cuentan contra este límite como penalización.
         /// </summary>
         public async Task<(bool CanRequest, string? Reason)> CanUserRequestTurnoAsync(string userId)
@@ -69,9 +95,11 @@ namespace FarmaciaSolidariaCristiana.Services
                             (t.Estado == EstadoTurno.Cancelado && t.CanceladoPorNoPresentacion)))
                 .CountAsync();
 
-            if (turnosEsteMes >= 2)
+            var limite = await GetMonthlyTurnoLimitAsync(userId);
+
+            if (turnosEsteMes >= limite)
             {
-                return (false, "Ya has alcanzado el límite de turnos este mes. Límite: 2 turnos por mes.");
+                return (false, $"Ya has alcanzado el límite de turnos este mes. Límite: {limite} turnos por mes.");
             }
 
             return (true, null);

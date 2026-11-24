@@ -43,7 +43,7 @@ SQL Server vía EF Core. Fuente de verdad del esquema: `FarmaciaSolidariaCristia
 ### Turnos (sistema de citas)
 
 - Horario de atención: **Martes y Jueves, 1:00–4:00 PM**, slots de 6 minutos → máximo **30 turnos/día**.
-- Anti-abuso: máximo **2 turnos por mes por usuario** Y **2 turnos por mes por documento de identidad** (un usuario puede pedir turnos para distintos pacientes; cada documento tiene su propio límite).
+- Anti-abuso: máximo **2 turnos por mes por usuario** (10 si tiene rol ViewerPublicPlus) Y **2 turnos por mes por documento de identidad** (un usuario puede pedir turnos para distintos pacientes; cada documento tiene su propio límite).
 - Estados: `Pendiente` → `Aprobado`/`Rechazado` → `Completado`/`Cancelado`. Flujo gestionado en `Services/TurnoService.cs`.
 - Números de turno únicos secuenciales por día.
 - Documentos de identidad: carnet cubano (11 dígitos) o pasaporte (1–3 letras + 6–7 dígitos); validación con regex del proyecto; se persisten **solo como hash SHA-256**.

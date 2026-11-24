@@ -14,7 +14,7 @@ public partial class UsuariosViewModel : BaseViewModel
     private UserDto? selectedUser;
 
     [ObservableProperty]
-    private List<string> rolesDisponibles = new() { "Admin", "Farmaceutico", "Viewer", "ViewerPublic" };
+    private List<string> rolesDisponibles = new() { "Admin", "Farmaceutico", "Viewer", "ViewerPublic", "ViewerPublicPlus" };
 
     [ObservableProperty]
     private bool isRefreshing;
@@ -280,6 +280,7 @@ public partial class UsuariosViewModel : BaseViewModel
             "Farmaceutico" => "#28a745", // Verde
             "Viewer" => "#17a2b8",       // Azul info
             "ViewerPublic" => "#6c757d", // Gris
+            "ViewerPublicPlus" => "#fd7e14", // Naranja
             _ => "#6c757d"
         };
     }
@@ -292,6 +293,7 @@ public partial class UsuariosViewModel : BaseViewModel
             "Farmaceutico" => "Farmacéutico",
             "Viewer" => "Visualizador",
             "ViewerPublic" => "Paciente",
+            "ViewerPublicPlus" => "Usuario Turnos Plus",
             _ => role
         };
     }

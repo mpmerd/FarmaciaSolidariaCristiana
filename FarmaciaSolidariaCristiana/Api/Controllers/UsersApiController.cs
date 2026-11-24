@@ -89,6 +89,8 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
             return ApiOk(dto);
         }
 
+        private static readonly string[] ValidRoles = { "Admin", "Farmaceutico", "Viewer", "ViewerPublic", "ViewerPublicPlus" };
+
         /// <summary>
         /// Crea un nuevo usuario
         /// </summary>
@@ -98,6 +100,12 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
         {
             if (!ModelState.IsValid)
                 return ApiError("Datos inválidos");
+
+            if (!ValidRoles.Contains(request.Role))
+                return ApiValidationError(new Dictionary<string, string[]>
+                {
+                    { "Role", new[] { $"Rol inválido: {request.Role}. Roles permitidos: {string.Join(", ", ValidRoles)}" } }
+                });
 
             var existingUser = await _userManager.FindByNameAsync(request.UserName);
             if (existingUser != null)
@@ -143,6 +151,12 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
         [ProducesResponseType(typeof(ApiResponse<UserManagementDto>), 200)]
         public async Task<IActionResult> Update(string id, [FromBody] UpdateUserApiRequest request)
         {
+            if (!ValidRoles.Contains(request.NewRole))
+                return ApiValidationError(new Dictionary<string, string[]>
+                {
+                    { "NewRole", new[] { $"Rol inválido: {request.NewRole}. Roles permitidos: {string.Join(", ", ValidRoles)}" } }
+                });
+
             var user = await _userManager.FindByIdAsync(id);
             if (user == null)
                 return ApiError("Usuario no encontrado", 404);
@@ -233,7 +247,7 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
         [ProducesResponseType(typeof(ApiResponse<List<string>>), 200)]
         public IActionResult GetRoles()
         {
-            var roles = new List<string> { "Admin", "Farmaceutico", "Viewer", "ViewerPublic" };
+            var roles = new List<string> { "Admin", "Farmaceutico", "Viewer", "ViewerPublic", "ViewerPublicPlus" };
             return ApiOk(roles);
         }
 
@@ -245,7 +259,8 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
                 "Farmaceutico" => 2,
                 "Viewer" => 3,
                 "ViewerPublic" => 4,
-                _ => 5
+                "ViewerPublicPlus" => 5,
+                _ => 6
             };
         }
     }

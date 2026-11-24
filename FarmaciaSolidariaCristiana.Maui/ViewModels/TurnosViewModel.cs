@@ -91,8 +91,9 @@ public partial class TurnosViewModel : BaseViewModel, IRecipient<TurnosReprogram
             // Solo Admin puede reprogramar turnos
             IsAdmin = await AuthService.IsInRoleAsync(Constants.RoleAdmin);
             
-            // Solo viewerpublic puede crear turnos
-            IsViewerPublic = await AuthService.IsInRoleAsync(Constants.RoleViewerPublic);
+            // Solo viewerpublic/viewerpublicplus puede crear turnos
+            IsViewerPublic = await AuthService.IsInAnyRoleAsync(
+                Constants.RoleViewerPublic, Constants.RoleViewerPublicPlus);
             CanCreateTurno = IsViewerPublic;
 
             // Cargar turnos según rol

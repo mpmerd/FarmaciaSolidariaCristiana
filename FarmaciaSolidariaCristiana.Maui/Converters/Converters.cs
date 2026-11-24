@@ -380,6 +380,7 @@ public class RoleToColorConverter : IValueConverter
                 "Farmaceutico" => Color.FromArgb("#28a745"), // Verde
                 "Viewer" => Color.FromArgb("#17a2b8"),       // Azul info
                 "ViewerPublic" => Color.FromArgb("#6c757d"), // Gris
+                "ViewerPublicPlus" => Color.FromArgb("#fd7e14"), // Naranja
                 _ => Color.FromArgb("#6c757d")
             };
         }

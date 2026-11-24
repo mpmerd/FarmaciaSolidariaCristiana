@@ -73,7 +73,7 @@
                                     <small>Reportes</small>
                                 </a>
                             </li>
-                            @if (User.IsInRole("ViewerPublic"))
+                            @if (User.IsInRole("ViewerPublic") || User.IsInRole("ViewerPublicPlus"))
                             {
                                 <li class="nav-item">
                                     <a class="nav-link text-white text-center" asp-controller="Turnos" asp-action="Index">

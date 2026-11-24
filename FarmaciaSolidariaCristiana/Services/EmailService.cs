@@ -505,6 +505,20 @@ namespace FarmaciaSolidariaCristiana.Services
             }
         }
 
+        /// <summary>
+        /// Obtiene el límite mensual de turnos del usuario por su email
+        /// (rol ViewerPublicPlus: 10, resto: 2, igual que TurnoService)
+        /// </summary>
+        private async Task<int> GetMonthlyTurnoLimitAsync(string email)
+        {
+            var user = await _userManager.FindByEmailAsync(email);
+            if (user != null && await _userManager.IsInRoleAsync(user, "ViewerPublicPlus"))
+            {
+                return 10;
+            }
+            return 2;
+        }
+
         public async Task SendTurnoCanceladoByUserEmailAsync(
             string destinatario, 
             string nombreUsuario, 
@@ -513,6 +527,7 @@ namespace FarmaciaSolidariaCristiana.Services
             string motivo)
         {
             var subject = $"Turno #{numeroTurno:000} Cancelado";
+            var limiteTurnos = await GetMonthlyTurnoLimitAsync(destinatario);
             
             var body = $@"
                 <!DOCTYPE html>
@@ -546,7 +561,7 @@ namespace FarmaciaSolidariaCristiana.Services
                             
                             <p>Si necesitas solicitar un nuevo turno, puedes hacerlo desde nuestra plataforma.</p>
                             
-                            <p><strong>Recuerda:</strong> Puedes solicitar hasta 2 turnos por mes.</p>
+                            <p><strong>Recuerda:</strong> Puedes solicitar hasta {limiteTurnos} turnos por mes.</p>
                             
                             <div class='footer'>
                                 <p>Saludos,<br/>
@@ -700,6 +715,7 @@ namespace FarmaciaSolidariaCristiana.Services
             DateTime fechaTurno)
         {
             var subject = $"Turno #{numeroTurno:000} Cancelado por No Asistencia";
+            var limiteTurnos = await GetMonthlyTurnoLimitAsync(destinatario);
             
             var body = $@"
                 <!DOCTYPE html>
@@ -734,10 +750,10 @@ namespace FarmaciaSolidariaCristiana.Services
                             <div class='warning'>
                                 <p><strong>⚠️ Importante:</strong></p>
                                 <ul>
-                                    <li>Este turno cuenta como uno de tus <strong>2 turnos mensuales permitidos</strong></li>
+                                    <li>Este turno cuenta como uno de tus <strong>{limiteTurnos} turnos mensuales permitidos</strong></li>
                                     <li>Las cantidades reservadas han sido devueltas al stock</li>
                                     <li>Si aún necesitas medicamentos/insumos, debes solicitar un nuevo turno</li>
-                                    <li>Recuerda: máximo 2 turnos por mes</li>
+                                    <li>Recuerda: máximo {limiteTurnos} turnos por mes</li>
                                 </ul>
                             </div>
                             
@@ -819,7 +835,7 @@ namespace FarmaciaSolidariaCristiana.Services
                                 <li>Contador de turnos mensuales del usuario <strong>NO recuperado</strong></li>
                             </ul>
                             
-                            <p><strong>ℹ️ Nota:</strong> Este turno cuenta como uno de los 2 turnos mensuales permitidos para este usuario.</p>
+                            <p><strong>ℹ️ Nota:</strong> Este turno cuenta como uno de los turnos mensuales permitidos para este usuario.</p>
                             
                             <div class='footer'>
                                 <p>Sistema Automático de Gestión de Turnos<br/>

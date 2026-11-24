@@ -49,6 +49,7 @@
                     <Label Text="• Farmacéutico: Gestiona medicamentos, entregas, turnos" FontSize="13" TextColor="{StaticResource Gray600}"/>
                     <Label Text="• Viewer: Solo visualiza información y reportes" FontSize="13" TextColor="{StaticResource Gray600}"/>
                     <Label Text="• Paciente: Solicita turnos y ve su información" FontSize="13" TextColor="{StaticResource Gray600}"/>
+                    <Label Text="• Usuario Turnos Plus: Como Paciente, pero hasta 10 turnos por mes" FontSize="13" TextColor="{StaticResource Gray600}"/>
                 </StackLayout>
             </Frame>
 

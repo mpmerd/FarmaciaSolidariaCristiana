@@ -56,6 +56,7 @@ public partial class ProfileViewModel : BaseViewModel
             "Farmaceutico" => "Farmacéutico",
             "Viewer" => "Visualizador",
             "ViewerPublic" => "Paciente",
+            "ViewerPublicPlus" => "Usuario Turnos Plus",
             _ => role
         };
     }

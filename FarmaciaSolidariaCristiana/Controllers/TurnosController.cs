@@ -49,8 +49,8 @@ namespace FarmaciaSolidariaCristiana.Controllers
         {
             var userId = _userManager.GetUserId(User);
             
-            // Si es ViewerPublic, mostrar sus turnos
-            if (User.IsInRole("ViewerPublic"))
+            // Si es ViewerPublic o ViewerPublicPlus, mostrar sus turnos
+            if (User.IsInRole("ViewerPublic") || User.IsInRole("ViewerPublicPlus"))
             {
                 var userTurnos = await _turnoService.GetUserTurnosAsync(userId!);
                 ViewData["UserTurnos"] = userTurnos;
@@ -77,7 +77,7 @@ namespace FarmaciaSolidariaCristiana.Controllers
         /// Formulario para solicitar un turno
         /// Solo para usuarios con rol ViewerPublic
         /// </summary>
-        [Authorize(Roles = "ViewerPublic")]
+        [Authorize(Roles = "ViewerPublic,ViewerPublicPlus")]
         public async Task<IActionResult> RequestForm()
         {
             var userId = _userManager.GetUserId(User);
@@ -118,7 +118,7 @@ namespace FarmaciaSolidariaCristiana.Controllers
         /// </summary>
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [Authorize(Roles = "ViewerPublic")]
+        [Authorize(Roles = "ViewerPublic,ViewerPublicPlus")]
         public async Task<IActionResult> RequestForm(
             [Bind("DocumentoIdentidad,NotasSolicitante")] TurnoRequestViewModel model,
             List<int> medicineIds,
@@ -389,7 +389,7 @@ namespace FarmaciaSolidariaCristiana.Controllers
         /// <summary>
         /// Muestra confirmación de solicitud de turno
         /// </summary>
-        [Authorize(Roles = "ViewerPublic")]
+        [Authorize(Roles = "ViewerPublic,ViewerPublicPlus")]
         public async Task<IActionResult> Confirmation(int id)
         {
             var turno = await _turnoService.GetTurnoByIdAsync(id);
@@ -668,7 +668,7 @@ namespace FarmaciaSolidariaCristiana.Controllers
         /// Usado por el formulario MVC para ocultar medicamentos restringidos en la búsqueda.
         /// </summary>
         [HttpGet]
-        [Authorize(Roles = "ViewerPublic")]
+        [Authorize(Roles = "ViewerPublic,ViewerPublicPlus")]
         public async Task<JsonResult> GetRestrictedMedicinesForDocument(string documentoIdentidad)
         {
             if (string.IsNullOrWhiteSpace(documentoIdentidad))
@@ -683,7 +683,7 @@ namespace FarmaciaSolidariaCristiana.Controllers
         /// Permite a un usuario cancelar su turno aprobado (si faltan más de 7 días)
         /// </summary>
         [HttpPost]
-        [Authorize(Roles = "ViewerPublic")]
+        [Authorize(Roles = "ViewerPublic,ViewerPublicPlus")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Cancel(int id, string motivoCancelacion)
         {

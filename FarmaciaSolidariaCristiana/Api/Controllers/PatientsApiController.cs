@@ -209,7 +209,7 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
         /// Obtiene los documentos médicos de un paciente
         /// </summary>
         [HttpGet("{id}/documents")]
-        [Authorize(Roles = "Admin,Farmaceutico,Viewer,ViewerPublic")]
+        [Authorize(Roles = "Admin,Farmaceutico,Viewer,ViewerPublic,ViewerPublicPlus")]
         [ProducesResponseType(typeof(ApiResponse<List<PatientDocumentDto>>), 200)]
         [ProducesResponseType(typeof(ApiResponse<object>), 404)]
         public async Task<IActionResult> GetDocuments(int id)
@@ -781,7 +781,7 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
         /// Descarga un documento de paciente (para ver en la app)
         /// </summary>
         [HttpGet("{patientId}/documents/{documentId}/download")]
-        [Authorize(Roles = "Admin,Farmaceutico,Viewer,ViewerPublic")]
+        [Authorize(Roles = "Admin,Farmaceutico,Viewer,ViewerPublic,ViewerPublicPlus")]
         public async Task<IActionResult> DownloadDocument(int patientId, int documentId)
         {
             var document = await _context.PatientDocuments

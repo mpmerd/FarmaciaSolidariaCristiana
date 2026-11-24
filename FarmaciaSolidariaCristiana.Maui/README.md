@@ -120,6 +120,7 @@ FarmaciaSolidariaCristiana.Maui/
 | **Farmaceutico** | ✅ | Gestión | CRUD | CRUD | CRUD | CRUD | CRUD | ✅ | ❌ |
 | **Viewer** | ✅ | Ver | Ver | Ver | Ver | Ver | Ver | ✅ | ❌ |
 | **ViewerPublic** | ✅ | Mis Turnos | Ver | Ver | Ver | Ver | ❌ | ❌ | ❌ |
+| **ViewerPublicPlus** | ✅ | Mis Turnos (hasta 10/mes) | Ver | Ver | Ver | Ver | ❌ | ❌ | ❌ |
 
 ## 🔔 Notificaciones Push
 

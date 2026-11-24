@@ -40,7 +40,7 @@
                         </p>
                     </div>
 
-                    @if (User.IsInRole("ViewerPublic"))
+                    @if (User.IsInRole("ViewerPublic") || User.IsInRole("ViewerPublicPlus"))
                     {
                         <!-- Buscar Medicamentos Antes de Solicitar -->
                         <div class="row mb-4">
@@ -83,7 +83,7 @@
                                                 <i class="bi bi-plus-circle"></i> Solicitar Turno
                                             </a>
                                             <p class="text-muted mt-2 small">
-                                                <i class="bi bi-shield-check"></i> Límite: 2 turnos por mes
+                                                <i class="bi bi-shield-check"></i> Límite: @(User.IsInRole("ViewerPublicPlus") ? 10 : 2) turnos por mes
                                             </p>
                                             <div class="alert alert-warning mt-3 mb-0" role="alert">
                                                 <i class="bi bi-info-circle-fill"></i>

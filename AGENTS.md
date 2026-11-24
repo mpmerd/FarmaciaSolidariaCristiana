@@ -50,7 +50,7 @@ bash scripts/check-no-datetime-now.sh
 
 ## Roles (idénticos en web y API)
 
-`Admin` (todo) · `Farmaceutico` (CRUD operativo + gestión de turnos) · `Viewer` (solo lectura) · `ViewerPublic` (solicita turnos y consulta los suyos). Autorización declarativa: `[Authorize(Roles = "...")]`.
+`Admin` (todo) · `Farmaceutico` (CRUD operativo + gestión de turnos) · `Viewer` (solo lectura) · `ViewerPublic` (solicita turnos y consulta los suyos) · `ViewerPublicPlus` (como ViewerPublic pero hasta 10 turnos/mes; el límite de 2 por documento de identidad se mantiene). Autorización declarativa: `[Authorize(Roles = "...")]`.
 
 ## Mapa del backend (`FarmaciaSolidariaCristiana/`)
 
@@ -78,7 +78,7 @@ bash scripts/check-no-datetime-now.sh
 
 17 entidades propias en `Models/` + tablas ASP.NET Identity. Núcleo: `Turno` (citas) con `TurnoMedicamento`/`TurnoInsumo` (N:M) y `TurnoDocumento`; `Donation`/`Delivery` (movimientos de stock); `Patient` + `PatientDocument`. Soporte: `Sponsor`, `FechaBloqueada`, `NavbarDecoration`, `PendingNotification`, `UserDeviceToken`, `BroadcastEmailQueueItem`.
 
-Reglas de negocio clave: máximo 2 turnos/mes por usuario **y** por documento de identidad; 30 turnos/día; horario de atención **Martes y Jueves** 1–4 PM (slots de 6 min); estados Pendiente → Aprobado/Rechazado → Completado/Cancelado.
+Reglas de negocio clave: máximo 2 turnos/mes por usuario (10 si tiene rol `ViewerPublicPlus`) **y** 2 por documento de identidad; 30 turnos/día; horario de atención **Martes y Jueves** 1–4 PM (slots de 6 min); estados Pendiente → Aprobado/Rechazado → Completado/Cancelado.
 
 **Esquema completo (entidades, relaciones, índices): `docs/BASE_DE_DATOS.md`.**
 
