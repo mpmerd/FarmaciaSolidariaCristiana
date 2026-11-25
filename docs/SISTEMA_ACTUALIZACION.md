@@ -104,12 +104,12 @@ Sube el APK y archivos relacionados al servidor FTP.
 
 ## 🔧 Configuración FTP
 
-El archivo `subir_apk.sh` contiene las credenciales FTP:
+El archivo `subir_apk.sh` lee las credenciales FTP de variables de entorno (nunca hardcodeadas):
 
 ```bash
-FTP_HOST="155.254.246.18"
-FTP_USER="maikelpelaez"
-FTP_PASS="***REDACTED-FTP-PASS***"
+export FTP_HOST="<host-somee>"
+export FTP_USER="<usuario>"
+export FTP_PASS="<contraseña>"
 FTP_PATH="/www.farmaciasolidaria.somee.com/android"
 ```
 
