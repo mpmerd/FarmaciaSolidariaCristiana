@@ -61,6 +61,7 @@ public partial class SolicitarTurnoViewModel : BaseViewModel
     private List<Medicine> _allMedicamentos = new();
     private List<Supply> _allInsumos = new();
     private HashSet<int> _restrictedMedicineIds = new();
+    private HashSet<int> _restrictedSupplyIds = new();
     private string _lastCheckedDocument = string.Empty;
     private bool _restrictedLoadFailed;
 
@@ -90,7 +91,7 @@ public partial class SolicitarTurnoViewModel : BaseViewModel
     {
         ValidateDocumento();
         UpdateCanSubmit();
-        _ = LoadRestrictedMedicinesAsync();
+        _ = LoadRestrictedItemsAsync();
     }
 
     partial void OnIsMedicamentoChanged(bool value)
@@ -149,11 +150,12 @@ public partial class SolicitarTurnoViewModel : BaseViewModel
         CanSubmit = IsDocumentoValid && ItemsSeleccionados.Count > 0;
     }
 
-    private async Task LoadRestrictedMedicinesAsync()
+    private async Task LoadRestrictedItemsAsync()
     {
         if (!IsDocumentoValid)
         {
             _restrictedMedicineIds.Clear();
+            _restrictedSupplyIds.Clear();
             _lastCheckedDocument = string.Empty;
             _restrictedLoadFailed = false;
             return;
@@ -166,13 +168,22 @@ public partial class SolicitarTurnoViewModel : BaseViewModel
 
         try
         {
-            var result = await ApiService.GetRestrictedMedicinesAsync(doc);
-            if (result.Success && result.Data != null)
+            var medTask = ApiService.GetRestrictedMedicinesAsync(doc);
+            var insTask = ApiService.GetRestrictedSuppliesAsync(doc);
+            await Task.WhenAll(medTask, insTask);
+
+            var medResult = await medTask;
+            var insResult = await insTask;
+
+            if (medResult.Success && medResult.Data != null &&
+                insResult.Success && insResult.Data != null)
             {
-                _restrictedMedicineIds = new HashSet<int>(result.Data);
+                _restrictedMedicineIds = new HashSet<int>(medResult.Data);
+                _restrictedSupplyIds = new HashSet<int>(insResult.Data);
                 // Remover items ya seleccionados que estén restringidos
+                var idsRestringidos = IsMedicamento ? _restrictedMedicineIds : _restrictedSupplyIds;
                 var itemsToRemove = ItemsSeleccionados
-                    .Where(i => _restrictedMedicineIds.Contains(i.Id) && IsMedicamento)
+                    .Where(i => idsRestringidos.Contains(i.Id))
                     .ToList();
                 foreach (var item in itemsToRemove)
                     ItemsSeleccionados.Remove(item);
@@ -180,27 +191,29 @@ public partial class SolicitarTurnoViewModel : BaseViewModel
                 {
                     UpdateCanSubmit();
                     await ShowErrorAsync(
-                        "Se removieron medicamentos que este paciente ya solicitó este mes. " +
-                        "Un mismo medicamento no puede retirarse en más de un turno por mes.");
+                        "Se removieron medicamentos o insumos que este paciente ya solicitó este mes. " +
+                        "Un mismo paciente no puede retirar el mismo medicamento o insumo en más de un turno por mes.");
                 }
             }
             else
             {
                 _restrictedMedicineIds.Clear();
+                _restrictedSupplyIds.Clear();
                 _restrictedLoadFailed = true;
-                Console.WriteLine($"[SolicitarTurno] GetRestrictedMedicinesAsync returned failure for {doc}");
+                Console.WriteLine($"[SolicitarTurno] Carga de medicamentos/insumos restringidos falló para {doc}");
                 await ShowErrorAsync(
-                    "No se pudo verificar los medicamentos ya solicitados este mes por este paciente. " +
+                    "No se pudo verificar los medicamentos e insumos ya solicitados este mes por este paciente. " +
                     "Se volverá a intentar al enviar la solicitud.");
             }
         }
         catch (Exception ex)
         {
             _restrictedMedicineIds.Clear();
+            _restrictedSupplyIds.Clear();
             _restrictedLoadFailed = true;
-            Console.WriteLine($"[SolicitarTurno] Error loading restricted medicines: {ex.Message}");
+            Console.WriteLine($"[SolicitarTurno] Error loading restricted items: {ex.Message}");
             await ShowErrorAsync(
-                "No se pudo verificar los medicamentos ya solicitados este mes por este paciente. " +
+                "No se pudo verificar los medicamentos e insumos ya solicitados este mes por este paciente. " +
                 "Se volverá a intentar al enviar la solicitud.");
         }
     }
@@ -295,7 +308,9 @@ public partial class SolicitarTurnoViewModel : BaseViewModel
                 .Select(s => new ItemBusqueda
                 {
                     Id = s.Id,
-                    Name = s.Name,
+                    Name = _restrictedSupplyIds.Contains(s.Id)
+                        ? $"{s.Name} (ya solicitado este mes)"
+                        : s.Name,
                     Stock = s.StockQuantity,
                     Unit = s.Unit,
                     Tipo = "Insumo"
@@ -303,13 +318,11 @@ public partial class SolicitarTurnoViewModel : BaseViewModel
                 .ToList();
         }
 
-        // Excluir items ya seleccionados y medicamentos restringidos
+        // Excluir items ya seleccionados y medicamentos/insumos restringidos
         var idsSeleccionados = ItemsSeleccionados.Select(i => i.Id).ToHashSet();
         results = results.Where(r => !idsSeleccionados.Contains(r.Id)).ToList();
-        if (IsMedicamento)
-        {
-            results = results.Where(r => !_restrictedMedicineIds.Contains(r.Id)).ToList();
-        }
+        var idsRestringidos = IsMedicamento ? _restrictedMedicineIds : _restrictedSupplyIds;
+        results = results.Where(r => !idsRestringidos.Contains(r.Id)).ToList();
 
         ResultadosBusqueda = new ObservableCollection<ItemBusqueda>(results);
         ShowSearchResults = results.Count > 0;
@@ -320,12 +333,14 @@ public partial class SolicitarTurnoViewModel : BaseViewModel
     {
         if (item == null) return;
 
-        // Verificar restricción de medicamento por mes
-        if (IsMedicamento && _restrictedMedicineIds.Contains(item.Id))
+        // Verificar restricción de medicamento/insumo por mes
+        var restrictedIds = IsMedicamento ? _restrictedMedicineIds : _restrictedSupplyIds;
+        if (restrictedIds.Contains(item.Id))
         {
+            var tipoItem = IsMedicamento ? "medicamento" : "insumo";
             await ShowErrorAsync(
-                $"El medicamento \"{item.Name}\" ya fue solicitado por este paciente este mes. " +
-                "Un mismo paciente no puede retirar el mismo medicamento en más de un turno por mes natural.");
+                $"El {tipoItem} \"{item.Name}\" ya fue solicitado por este paciente este mes. " +
+                "Un mismo paciente no puede retirar el mismo medicamento o insumo en más de un turno por mes natural.");
             return;
         }
 
@@ -552,34 +567,33 @@ public partial class SolicitarTurnoViewModel : BaseViewModel
         if (!confirm) return;
 
         var currentDoc = DocumentoIdentidad.Trim().ToUpper();
-        if (IsMedicamento && (currentDoc != _lastCheckedDocument || _restrictedLoadFailed))
+        if (currentDoc != _lastCheckedDocument || _restrictedLoadFailed)
         {
-            await LoadRestrictedMedicinesAsync();
+            await LoadRestrictedItemsAsync();
         }
 
-        if (IsMedicamento && _restrictedLoadFailed)
+        if (_restrictedLoadFailed)
         {
             var continuar = await ShowConfirmAsync(
                 "Verificación no disponible",
-                "No se pudo verificar si algún medicamento ya fue solicitado por este paciente este mes. " +
+                "No se pudo verificar si algún medicamento o insumo ya fue solicitado por este paciente este mes. " +
                 "El servidor validará al enviar y rechazará duplicados. ¿Desea continuar?");
             if (!continuar) return;
         }
 
-        if (IsMedicamento)
-        {
-            var duplicados = ItemsSeleccionados
-                .Where(i => _restrictedMedicineIds.Contains(i.Id))
-                .ToList();
+        var idsRestringidosSubmit = IsMedicamento ? _restrictedMedicineIds : _restrictedSupplyIds;
+        var duplicados = ItemsSeleccionados
+            .Where(i => idsRestringidosSubmit.Contains(i.Id))
+            .ToList();
 
-            if (duplicados.Any())
-            {
-                var nombres = string.Join(", ", duplicados.Select(d => d.Name));
-                await ShowErrorAsync(
-                    $"El medicamento \"{nombres}\" ya fue solicitado por este paciente este mes. " +
-                    "Un mismo paciente no puede retirar el mismo medicamento en más de un turno por mes natural.");
-                return;
-            }
+        if (duplicados.Any())
+        {
+            var nombres = string.Join(", ", duplicados.Select(d => d.Name));
+            var tipoItem = IsMedicamento ? "medicamento" : "insumo";
+            await ShowErrorAsync(
+                $"El {tipoItem} \"{nombres}\" ya fue solicitado por este paciente este mes. " +
+                "Un mismo paciente no puede retirar el mismo medicamento o insumo en más de un turno por mes natural.");
+            return;
         }
 
         IsBusy = true;

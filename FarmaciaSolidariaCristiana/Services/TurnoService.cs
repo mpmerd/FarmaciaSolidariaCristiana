@@ -176,6 +176,32 @@ namespace FarmaciaSolidariaCristiana.Services
         }
 
         /// <summary>
+        /// Obtiene los IDs de insumos que un paciente ya tiene en turnos activos del mes actual.
+        /// Un paciente no puede retirar el mismo insumo en más de un turno por mes natural.
+        /// </summary>
+        public async Task<List<int>> GetPatientSupplyIdsThisMonthAsync(string documentoIdentidad)
+        {
+            var now = CubaTime.Now;
+            var startOfMonth = new DateTime(now.Year, now.Month, 1);
+            var startOfNextMonth = startOfMonth.AddMonths(1);
+            var documentHash = HashDocument(documentoIdentidad);
+
+            var supplyIds = await _context.TurnoInsumos
+                .Where(ti => ti.Turno != null &&
+                             ti.Turno.DocumentoIdentidadHash == documentHash &&
+                             ti.Turno.FechaSolicitud >= startOfMonth &&
+                             ti.Turno.FechaSolicitud < startOfNextMonth &&
+                             (ti.Turno.Estado == EstadoTurno.Pendiente ||
+                              ti.Turno.Estado == EstadoTurno.Aprobado ||
+                              ti.Turno.Estado == EstadoTurno.Completado))
+                .Select(ti => ti.SupplyId)
+                .Distinct()
+                .ToListAsync();
+
+            return supplyIds;
+        }
+
+        /// <summary>
         /// Valida si hay disponibilidad para un día específico (límite: 30 turnos por día)
         /// </summary>
         public async Task<(bool HasCapacity, int CurrentCount, string? Reason)> CheckDailyCapacityAsync(DateTime fecha)

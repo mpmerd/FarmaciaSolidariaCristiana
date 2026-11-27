@@ -234,6 +234,7 @@
         let selectedMedicines = [];
         let selectedSupplies = [];
         let restrictedMedicineIds = [];
+        let restrictedSupplyIds = [];
 
         $(document).ready(function() {
             // Elementos
@@ -269,7 +270,7 @@
                 }
             });
 
-            // ========== MEDICAMENTOS RESTRINGIDOS ==========
+            // ========== ÍTEMS RESTRINGIDOS (MEDICAMENTOS E INSUMOS) ==========
 
             // Carga los medicamentos que el paciente ya solicitó este mes (según documento)
             function loadRestrictedMedicines(documento) {
@@ -302,9 +303,42 @@
                 });
             }
 
+            // Carga los insumos que el paciente ya solicitó este mes (según documento)
+            function loadRestrictedSupplies(documento) {
+                restrictedSupplyIds = [];
+                if (!documento || documento.length < 9) return;
+
+                $.ajax({
+                    url: '@Url.Action("GetRestrictedSuppliesForDocument", "Turnos")',
+                    type: 'GET',
+                    data: { documentoIdentidad: documento },
+                    success: function(response) {
+                        restrictedSupplyIds = response.restrictedIds || [];
+                        if (restrictedSupplyIds.length > 0) {
+                            // Remover del carrito los insumos ahora restringidos
+                            var removedSupplies = [];
+                            selectedSupplies = selectedSupplies.filter(function(s) {
+                                if (restrictedSupplyIds.includes(s.id)) {
+                                    removedSupplies.push(s.name);
+                                    suppliesList.find('.supply-card[data-id="' + s.id + '"]').remove();
+                                    return false;
+                                }
+                                return true;
+                            });
+                            if (removedSupplies.length > 0) {
+                                if (selectedSupplies.length === 0) emptySupplyMessage.show();
+                                alert('Se quitaron los siguientes insumos porque este paciente ya los solicitó este mes: ' + removedSupplies.join(', ') + '.');
+                            }
+                        }
+                    }
+                });
+            }
+
             // Cuando cambia el documento, recargar restricciones
             $('#DocumentoIdentidad').on('blur', function() {
-                loadRestrictedMedicines($(this).val().trim().toUpperCase());
+                var doc = $(this).val().trim().toUpperCase();
+                loadRestrictedMedicines(doc);
+                loadRestrictedSupplies(doc);
             });
 
             // ========== MEDICAMENTOS ==========
@@ -464,6 +498,19 @@
                         
                         if (response.supplies && response.supplies.length > 0) {
                             response.supplies.forEach(function(supply) {
+                                var isSupplyRestricted = restrictedSupplyIds.includes(supply.id);
+
+                                if (isSupplyRestricted) {
+                                    // Mostrar como deshabilitado, no seleccionable
+                                    var restrictedItem = $('<div class="list-group-item disabled d-flex justify-content-between align-items-center"></div>')
+                                        .html(
+                                            '<div><strong>' + supply.name + '</strong> <small class="text-muted">(ya solicitado este mes)</small></div>' +
+                                            '<span class="badge bg-secondary">Restringido</span>'
+                                        );
+                                    supplyResults.append(restrictedItem);
+                                    return;
+                                }
+
                                 const stockBadge = supply.stock > 0 
                                     ? `<span class="badge bg-success">Stock: ${supply.stock} ${supply.unit}</span>`
                                     : '<span class="badge bg-danger">Sin stock</span>';

@@ -127,6 +127,12 @@ namespace FarmaciaSolidariaCristiana.Services
         Task<List<int>> GetPatientMedicineIdsThisMonthAsync(string documentoIdentidad);
 
         /// <summary>
+        /// Obtiene los IDs de insumos que un paciente ya tiene en turnos activos del mes actual.
+        /// Un paciente no puede retirar el mismo insumo en más de un turno por mes natural.
+        /// </summary>
+        Task<List<int>> GetPatientSupplyIdsThisMonthAsync(string documentoIdentidad);
+
+        /// <summary>
         /// Obtiene los ítems para el reporte diario de turnos aprobados,
         /// ordenados por hora asignada y con datos de paciente resueltos por hash.
         /// </summary>

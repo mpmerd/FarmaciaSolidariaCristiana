@@ -345,6 +345,9 @@ public class ApiService : IApiService
     public Task<ApiResponse<List<int>>> GetRestrictedMedicinesAsync(string documentoIdentidad)
         => GetAsync<List<int>>($"/api/turnos/restricted-medicines/{Uri.EscapeDataString(documentoIdentidad)}");
 
+    public Task<ApiResponse<List<int>>> GetRestrictedSuppliesAsync(string documentoIdentidad)
+        => GetAsync<List<int>>($"/api/turnos/restricted-supplies/{Uri.EscapeDataString(documentoIdentidad)}");
+
     public async Task<ApiResponse<TurnoDocumentoResponse>> SubirDocumentoTurnoAsync(
         int turnoId, string fileName, string documentType, byte[] fileBytes, string? description)
     {

@@ -342,6 +342,27 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
         }
 
         /// <summary>
+        /// Obtiene los IDs de insumos que un paciente ya tiene en turnos activos del mes actual.
+        /// Permite a la app móvil validar antes de enviar la solicitud.
+        /// </summary>
+        [HttpGet("restricted-supplies/{documentoIdentidad}")]
+        [Authorize(Roles = "ViewerPublic,ViewerPublicPlus")]
+        [ProducesResponseType(typeof(ApiResponse<List<int>>), 200)]
+        public async Task<IActionResult> GetRestrictedSupplies(string documentoIdentidad)
+        {
+            try
+            {
+                var supplyIds = await _turnoService.GetPatientSupplyIdsThisMonthAsync(documentoIdentidad);
+                return ApiOk(supplyIds);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error obteniendo insumos restringidos");
+                return ApiError("Error al verificar insumos restringidos");
+            }
+        }
+
+        /// <summary>
         /// Crea una nueva solicitud de turno (para usuarios ViewerPublic desde app móvil)
         /// </summary>
         [HttpPost]
@@ -426,6 +447,28 @@ namespace FarmaciaSolidariaCristiana.Api.Controllers
                         if (item.Cantidad > 0)
                         {
                             insumos.Add((item.Id, item.Cantidad));
+                        }
+                    }
+
+                    // ✅ Verificar restricción: mismo insumo no puede estar en más de un turno por mes
+                    if (insumos.Any())
+                    {
+                        var supplyIdsThisMonth = await _turnoService.GetPatientSupplyIdsThisMonthAsync(model.DocumentoIdentidad);
+                        var duplicadosInsumos = insumos
+                            .Where(s => supplyIdsThisMonth.Contains(s.SupplyId))
+                            .Select(s => s.SupplyId)
+                            .ToList();
+
+                        if (duplicadosInsumos.Any())
+                        {
+                            var nombresInsumos = await _context.Supplies
+                                .Where(s => duplicadosInsumos.Contains(s.Id))
+                                .Select(s => s.Name)
+                                .ToListAsync();
+
+                            return ApiError(
+                                $"Este paciente ya solicitó los siguientes insumos este mes: {string.Join(", ", nombresInsumos)}. " +
+                                "Un mismo paciente no puede retirar el mismo insumo en más de un turno por mes natural.");
                         }
                     }
                 }

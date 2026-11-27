@@ -117,8 +117,9 @@ public interface IApiService
     // Diagnóstico
     Task<bool> CheckApiHealthAsync();
     
-    // Restricción de medicamentos por mes
+    // Restricción de medicamentos e insumos por mes
     Task<ApiResponse<List<int>>> GetRestrictedMedicinesAsync(string documentoIdentidad);
+    Task<ApiResponse<List<int>>> GetRestrictedSuppliesAsync(string documentoIdentidad);
 
     // Decoración del Navbar
     Task<NavbarDecorationDto?> GetNavbarDecorationAsync();

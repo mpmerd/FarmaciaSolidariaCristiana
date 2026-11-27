@@ -283,6 +283,44 @@ namespace FarmaciaSolidariaCristiana.Controllers
                     }
                 }
 
+                // ✅ Verificar restricción: mismo insumo no puede estar en más de un turno por mes
+                if (insumos.Any())
+                {
+                    var supplyIdsThisMonth = await _turnoService.GetPatientSupplyIdsThisMonthAsync(model.DocumentoIdentidad);
+                    var duplicadosInsumos = insumos
+                        .Where(s => supplyIdsThisMonth.Contains(s.SupplyId))
+                        .Select(s => s.SupplyId)
+                        .ToList();
+
+                    if (duplicadosInsumos.Any())
+                    {
+                        var nombresInsumos = await _context.Supplies
+                            .Where(s => duplicadosInsumos.Contains(s.Id))
+                            .Select(s => s.Name)
+                            .ToListAsync();
+
+                        ModelState.AddModelError("",
+                            $"Este paciente ya solicitó los siguientes insumos este mes: {string.Join(", ", nombresInsumos)}. " +
+                            "Un mismo paciente no puede retirar el mismo insumo en más de un turno por mes natural.");
+
+                        var medicinesReload3 = await _context.Medicines
+                            .Where(m => m.StockQuantity > 0)
+                            .OrderBy(m => m.Name)
+                            .Select(m => new { m.Id, m.Name, m.StockQuantity, m.Unit })
+                            .ToListAsync();
+                        ViewBag.Medicines = medicinesReload3;
+
+                        var suppliesReload3 = await _context.Supplies
+                            .Where(s => s.StockQuantity > 0)
+                            .OrderBy(s => s.Name)
+                            .Select(s => new { s.Id, s.Name, s.StockQuantity, s.Unit })
+                            .ToListAsync();
+                        ViewBag.Supplies = suppliesReload3;
+
+                        return View(model);
+                    }
+                }
+
                 // Crear turno (sin fecha, se asignará al aprobar)
                 var turno = new Turno
                 {
@@ -675,6 +713,22 @@ namespace FarmaciaSolidariaCristiana.Controllers
                 return Json(new { restrictedIds = new List<int>() });
 
             var restrictedIds = await _turnoService.GetPatientMedicineIdsThisMonthAsync(documentoIdentidad);
+            return Json(new { restrictedIds });
+        }
+
+        // GET: Turnos/GetRestrictedSuppliesForDocument
+        /// <summary>
+        /// Retorna los IDs de insumos ya solicitados por el paciente este mes natural.
+        /// Usado por el formulario MVC para ocultar insumos restringidos en la búsqueda.
+        /// </summary>
+        [HttpGet]
+        [Authorize(Roles = "ViewerPublic,ViewerPublicPlus")]
+        public async Task<JsonResult> GetRestrictedSuppliesForDocument(string documentoIdentidad)
+        {
+            if (string.IsNullOrWhiteSpace(documentoIdentidad))
+                return Json(new { restrictedIds = new List<int>() });
+
+            var restrictedIds = await _turnoService.GetPatientSupplyIdsThisMonthAsync(documentoIdentidad);
             return Json(new { restrictedIds });
         }
 
